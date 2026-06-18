@@ -1,0 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+:root{ --display:'Fraunces',serif; --body:'Inter',sans-serif; --mono:'JetBrains Mono',monospace; }
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; background:#FBFAF6; }
+@keyframes pop{ from{ transform:scale(.96); opacity:0 } to{ transform:scale(1); opacity:1 } }
+button{ cursor:pointer; font-family:var(--body); }
+input:focus,select:focus,textarea:focus,button:focus-visible{ outline:2px solid #E8820C; outline-offset:1px; }
+@media (max-width:760px){ .vg-two{ grid-template-columns:1fr !important } }
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important } }
