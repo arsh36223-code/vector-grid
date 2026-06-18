@@ -52,9 +52,9 @@ const INFO = {
   // your seller / registered name
   email: "vectorgridsupport@gmail.com",
   // your contact email
-  phone: "+91 00000 00000",
+  phone: "+91 8439585938",
   // your contact number
-  address: "[Your address], India",
+  address: "P/3 Mayapur, Haridwar, Uttarakhand, India",
   // your business address
   jurisdiction: "Bhopal, Madhya Pradesh",
   // city/state for legal jurisdiction
@@ -75,7 +75,7 @@ const POLICIES = {
   },
   refund: {
     title: "Refund & Cancellation Policy",
-    paras: [`Orders can be cancelled before they are shipped. To cancel, contact us at ${INFO.email} with your order number as soon as possible.`, `If you receive a damaged, defective, or wrong item, notify us within ${INFO.returnWindow} of delivery with photos, and we will arrange a replacement or refund.`, `Approved refunds are processed to your original payment method within ${INFO.refundDays}. The exact time the amount reflects depends on your bank.`, "Certain items may be non-returnable for hygiene or safety reasons; this will be noted on the product where applicable.", `For any refund or cancellation request, email ${INFO.email} or call ${INFO.phone}.`]
+    paras: [`Orders can be cancelled before they are shipped. To cancel, contact us at ${INFO.email} with your order number as soon as possible.`, `If you receive a damaged, defective, or wrong item, notify us within ${INFO.returnWindow} of delivery with photos, and we will arrange a replacement or refund.`, `Approved refunds are processed to your original payment method within ${INFO.refundDays}. The exact time the amount reflects depends on your bank.`, "Certain items may be non-returnable for hygiene or safety reasons; this will be noted on the product where applicable.", `For any refund or cancellation request, email ${INFO.email}.`]
   },
   shipping: {
     title: "Shipping Policy",
