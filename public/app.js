@@ -45,6 +45,47 @@ const SEED = [{
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const esc = s => String(s == null ? "" : s);
+
+/* ===== EDIT YOUR DETAILS HERE (used across the policy pages) ===== */
+const INFO = {
+  legalName: "Vector Grid",
+  // your seller / registered name
+  email: "support@example.com",
+  // your contact email
+  phone: "+91 00000 00000",
+  // your contact number
+  address: "[Your address], India",
+  // your business address
+  jurisdiction: "Bhopal, Madhya Pradesh",
+  // city/state for legal jurisdiction
+  deliveryDays: "3–7 business days",
+  // typical delivery time
+  returnWindow: "7 days",
+  // return/replacement window
+  refundDays: "5–7 business days" // refund processing time
+};
+const POLICIES = {
+  terms: {
+    title: "Terms & Conditions",
+    paras: [`Welcome to ${INFO.legalName}. By using this website and placing an order, you agree to these terms.`, "All products, prices, and availability are subject to change without notice. We make every effort to display products and prices accurately; in case of an error, we may cancel and refund any affected order.", "When you place an order you confirm that the details you provide (name, contact, delivery address) are accurate. You are responsible for keeping these correct.", `Online payments are processed securely by our payment partner, Razorpay. ${INFO.legalName} does not store your card or banking details.`, `To the extent permitted by law, ${INFO.legalName} is not liable for indirect or consequential losses arising from use of this site beyond the value of the order placed.`, `These terms are governed by the laws of India, and disputes are subject to the jurisdiction of courts in ${INFO.jurisdiction}.`]
+  },
+  privacy: {
+    title: "Privacy Policy",
+    paras: [`${INFO.legalName} collects only the information needed to process and deliver your order: your name, phone number, email (optional), and delivery address.`, "We use this information solely to fulfil orders, arrange delivery, and contact you about your purchase. We do not sell or rent your personal information to anyone.", "Payment information is handled directly by Razorpay on their secure systems. We never see or store your card or UPI credentials.", "We may share delivery details with our courier partners only to deliver your order. We retain order records as required for accounting and legal compliance.", `You can ask us to access or delete your personal data by writing to ${INFO.email}.`]
+  },
+  refund: {
+    title: "Refund & Cancellation Policy",
+    paras: [`Orders can be cancelled before they are shipped. To cancel, contact us at ${INFO.email} with your order number as soon as possible.`, `If you receive a damaged, defective, or wrong item, notify us within ${INFO.returnWindow} of delivery with photos, and we will arrange a replacement or refund.`, `Approved refunds are processed to your original payment method within ${INFO.refundDays}. The exact time the amount reflects depends on your bank.`, "Certain items may be non-returnable for hygiene or safety reasons; this will be noted on the product where applicable.", `For any refund or cancellation request, email ${INFO.email} or call ${INFO.phone}.`]
+  },
+  shipping: {
+    title: "Shipping Policy",
+    paras: [`We ship across India. Orders are typically delivered within ${INFO.deliveryDays} after dispatch, depending on your location.`, "Shipping is free on orders above ₹999. A flat ₹49 shipping fee applies to orders below ₹999.", "Cash on Delivery (COD) is available on eligible orders. Prepaid orders are confirmed once payment is verified.", "Once your order is dispatched, we will share tracking details so you can follow its progress.", `Delivery timelines are estimates and may vary due to courier or regional factors. For shipping queries, contact ${INFO.email}.`]
+  },
+  contact: {
+    title: "Contact Us",
+    paras: [`${INFO.legalName}`, `Email: ${INFO.email}`, `Phone: ${INFO.phone}`, `Address: ${INFO.address}`, "We aim to respond to all queries within 1–2 business days."]
+  }
+};
 function App() {
   const storeName = "Vector Grid";
   const [loading, setLoading] = useState(true);
@@ -55,6 +96,11 @@ function App() {
   const [confirmed, setConfirmed] = useState(null);
   const [quick, setQuick] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [page, setPage] = useState(null);
+  const go = p => {
+    setPage(p);
+    window.scrollTo(0, 0);
+  };
   useEffect(() => {
     (async () => {
       let cat = SEED;
@@ -91,11 +137,11 @@ function App() {
   const subtotal = cartItems.reduce((s, i) => s + i.qty * i.price, 0);
   const shipping = subtotal === 0 ? 0 : subtotal >= 999 ? 0 : 49;
   const total = subtotal + shipping;
-  const finishOrder = (form, paymentId, amount) => {
+  const finishOrder = (form, paymentLabel, amount, orderId) => {
     setConfirmed({
-      id: "VG" + Date.now().toString().slice(-8),
+      id: orderId || "VG" + Date.now().toString().slice(-8),
       total: amount,
-      payment: paymentId || "COD",
+      payment: paymentLabel,
       customer: form
     });
     setCart({});
@@ -103,10 +149,39 @@ function App() {
     setCartOpen(false);
   };
   const handlePlace = async form => {
+    const items = cartItems.map(i => ({
+      id: i.id,
+      qty: i.qty
+    }));
+    // ---- Cash on delivery: record order + notify seller ----
     if (form.pay === "COD") {
-      finishOrder(form, "COD", total);
+      setPaying(true);
+      try {
+        const r = await fetch(API + "/api/place-order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            cod: true,
+            items,
+            customer: form
+          })
+        });
+        const j = await r.json();
+        setPaying(false);
+        if (j.ok) {
+          finishOrder(form, "COD", total, j.orderId);
+        } else {
+          alert(j.error || "Could not place the order. Please try again.");
+        }
+      } catch (e) {
+        setPaying(false);
+        alert("Couldn't place the order. Please try again.");
+      }
       return;
     }
+    // ---- Online payment ----
     setPaying(true);
     let data;
     try {
@@ -116,10 +191,7 @@ function App() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          items: cartItems.map(i => ({
-            id: i.id,
-            qty: i.qty
-          }))
+          items
         })
       });
       data = await res.json();
@@ -156,23 +228,30 @@ function App() {
       },
       handler: async resp => {
         try {
-          const v = await fetch(API + "/api/verify", {
+          // verify payment AND record the order in one secure step
+          const r = await fetch(API + "/api/place-order", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
             },
-            body: JSON.stringify(resp)
+            body: JSON.stringify({
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+              items,
+              customer: form
+            })
           });
-          const vj = await v.json();
+          const j = await r.json();
           setPaying(false);
-          if (vj.verified) {
-            finishOrder(form, resp.razorpay_payment_id, paidAmount);
+          if (j.ok) {
+            finishOrder(form, "Paid online", paidAmount, j.orderId);
           } else {
-            alert("Payment could not be verified. If money was deducted it will be auto-refunded — please contact us.");
+            alert(j.error || "Payment could not be verified. If money was deducted it will be auto-refunded — please contact us.");
           }
         } catch (e) {
           setPaying(false);
-          alert("Couldn't verify payment. Please contact us with your payment id.");
+          alert("Couldn't confirm your order. Please contact us with your payment id.");
         }
       },
       modal: {
@@ -203,13 +282,18 @@ function App() {
   }, /*#__PURE__*/React.createElement(Header, {
     storeName: storeName,
     cartCount: cartCount,
-    onCart: () => setCartOpen(true)
-  }), /*#__PURE__*/React.createElement(Store, {
+    onCart: () => setCartOpen(true),
+    onHome: () => go(null)
+  }), page ? /*#__PURE__*/React.createElement(Policy, {
+    pageKey: page,
+    onBack: () => go(null)
+  }) : /*#__PURE__*/React.createElement(Store, {
     products: products,
     onAdd: addToCart,
     onQuick: setQuick
   }), /*#__PURE__*/React.createElement(Footer, {
-    storeName: storeName
+    storeName: storeName,
+    onNav: go
   }), cartOpen && !checkout && /*#__PURE__*/React.createElement(CartDrawer, {
     items: cartItems,
     subtotal: subtotal,
@@ -245,17 +329,20 @@ function App() {
 function Header({
   storeName,
   cartCount,
-  onCart
+  onCart,
+  onHome
 }) {
   return /*#__PURE__*/React.createElement("header", {
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
     style: S.headerInner
   }, /*#__PURE__*/React.createElement("div", {
+    onClick: onHome,
     style: {
       display: "flex",
       alignItems: "baseline",
-      gap: 10
+      gap: 10,
+      cursor: "pointer"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: S.mark
@@ -811,13 +898,82 @@ function Overlay({
     }
   }, children));
 }
-function Footer({
-  storeName
+function Policy({
+  pageKey,
+  onBack
 }) {
+  const data = POLICIES[pageKey] || POLICIES.terms;
+  return /*#__PURE__*/React.createElement("main", {
+    style: {
+      ...S.main,
+      maxWidth: 760
+    }
+  }, /*#__PURE__*/React.createElement("section", {
+    style: {
+      padding: "48px 0 8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: S.linkBtn
+  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 34,
+      fontWeight: 700,
+      letterSpacing: "-.02em",
+      margin: "14px 0 18px"
+    }
+  }, data.title), data.paras.map((p, i) => /*#__PURE__*/React.createElement("p", {
+    key: i,
+    style: {
+      fontSize: 14.5,
+      color: T.inkSoft,
+      lineHeight: 1.65,
+      margin: "0 0 14px"
+    }
+  }, p)), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      marginTop: 24,
+      borderTop: "1px solid " + T.line,
+      paddingTop: 14
+    }
+  }, "Last updated on order. For questions, contact ", INFO.email, ".")));
+}
+function Footer({
+  storeName,
+  onNav
+}) {
+  const links = [["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"]];
   return /*#__PURE__*/React.createElement("footer", {
     style: S.footer
-  }, /*#__PURE__*/React.createElement("span", null, storeName), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
+      display: "flex",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 12,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: T.ink
+    }
+  }, storeName), /*#__PURE__*/React.createElement("nav", {
+    style: {
+      display: "flex",
+      gap: 16,
+      flexWrap: "wrap"
+    }
+  }, links.map(([label, key]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => onNav(key),
+    style: S.footLink
+  }, label)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14,
       color: T.muted
     }
   }, "Delivered across India \xB7 payments secured by Razorpay"));
@@ -1237,14 +1393,21 @@ const S = {
     maxWidth: 1100,
     margin: "0 auto",
     padding: "26px 22px 50px",
-    display: "flex",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 8,
+    display: "block",
     borderTop: "1px solid " + T.line,
     fontSize: 12.5,
     color: T.inkSoft,
     fontFamily: "var(--mono)"
+  },
+  footLink: {
+    border: "none",
+    background: "transparent",
+    color: T.inkSoft,
+    fontFamily: "var(--mono)",
+    fontSize: 12.5,
+    padding: 0,
+    textDecoration: "underline",
+    textUnderlineOffset: "3px"
   }
 };
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));

@@ -1,18 +1,15 @@
 {
   "name": "vector-grid-store",
-  "version": "2.0.0",
-  "description": "Vector Grid store with verified Razorpay payments and hardened security",
+  "version": "3.0.0",
+  "description": "Vector Grid store: verified Razorpay payments, order email capture, dropshipping-ready",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
+    "nodemailer": "^6.9.14",
     "razorpay": "^2.9.5"
   },
-  "engines": {
-    "node": ">=18"
-  }
+  "engines": { "node": ">=18" }
 }
