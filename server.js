@@ -61,18 +61,42 @@ const SUPPLIER_TO = process.env.ORDER_EMAIL_SUPPLIER || "";
    your cost, so the order email tells you exactly what to do.
    ============================================================ */
 const PRODUCTS = [
-  { id: "p1", name: "Minimalist Steel Water Bottle", price: 549, mrp: 899, stock: 42,
+  { id: "p1", name: "Minimalist Steel Water Bottle", price: 549, mrp: 899, stock: 42, category: "Drinkware",
     img: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
     desc: "Insulated 750ml bottle. Keeps cold 24h, hot 12h.",
     cost: 320, supplier: "BaapStore", supplierUrl: "https://supplier.example.com/steel-bottle" },
-  { id: "p2", name: "Linen Cushion Cover (Set of 2)", price: 699, mrp: 1199, stock: 30,
+  { id: "p2", name: "Linen Cushion Cover (Set of 2)", price: 699, mrp: 1199, stock: 30, category: "Home",
     img: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80",
     desc: "16x16 inch, washed linen, hidden zip.",
     cost: 410, supplier: "vFulfill", supplierUrl: "https://supplier.example.com/linen-cushion" },
-  { id: "p3", name: "Wireless Earbuds — Bass Edition", price: 1299, mrp: 2499, stock: 12,
+  { id: "p3", name: "Wireless Earbuds — Bass Edition", price: 1299, mrp: 2499, stock: 12, category: "Audio",
     img: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600&q=80",
     desc: "ENC mic, 40h playback, IPX5.",
     cost: 740, supplier: "Ekomn", supplierUrl: "https://supplier.example.com/earbuds" },
+  { id: "p4", name: "Stoneware Coffee Mug (350ml)", price: 399, mrp: 649, stock: 60, category: "Drinkware",
+    img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
+    desc: "Hand-glazed ceramic mug, microwave safe.",
+    cost: 190, supplier: "Qikink", supplierUrl: "https://supplier.example.com/mug" },
+  { id: "p5", name: "Woven Seagrass Storage Basket", price: 849, mrp: 1499, stock: 18, category: "Home",
+    img: "https://images.unsplash.com/photo-1595408076683-d0d8d5e8e0e9?w=600&q=80",
+    desc: "Handwoven basket with handles. 30cm.",
+    cost: 520, supplier: "vFulfill", supplierUrl: "https://supplier.example.com/basket" },
+  { id: "p6", name: "Portable Bluetooth Speaker", price: 1599, mrp: 2999, stock: 9, category: "Audio",
+    img: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&q=80",
+    desc: "12h playtime, deep bass, IPX6 splash-proof.",
+    cost: 980, supplier: "Ekomn", supplierUrl: "https://supplier.example.com/speaker" },
+  { id: "p7", name: "Heavy Canvas Tote Bag", price: 449, mrp: 799, stock: 75, category: "Accessories",
+    img: "https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80",
+    desc: "12oz cotton canvas, roomy, everyday carry.",
+    cost: 230, supplier: "Qikink", supplierUrl: "https://supplier.example.com/tote" },
+  { id: "p8", name: "Adjustable LED Desk Lamp", price: 1099, mrp: 1899, stock: 22, category: "Tech",
+    img: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80",
+    desc: "3 light modes, touch dimmer, USB-powered.",
+    cost: 640, supplier: "BaapStore", supplierUrl: "https://supplier.example.com/lamp" },
+  { id: "p9", name: "Cotton Bath Towel (Pack of 2)", price: 749, mrp: 1299, stock: 0, category: "Home",
+    img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
+    desc: "500 GSM, quick-dry, soft combed cotton.",
+    cost: 430, supplier: "vFulfill", supplierUrl: "https://supplier.example.com/towel" },
 ];
 
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
@@ -148,7 +172,7 @@ async function notifyOrder(order) {
 
 // Public catalogue (cost/supplier stripped out)
 app.get("/api/products", (req, res) =>
-  res.json(PRODUCTS.map(({ id, name, price, mrp, stock, img, desc }) => ({ id, name, price, mrp, stock, img, desc })))
+  res.json(PRODUCTS.map(({ id, name, price, mrp, stock, img, desc, category }) => ({ id, name, price, mrp, stock, img, desc, category })))
 );
 
 // Create a Razorpay order (amount computed from trusted prices)

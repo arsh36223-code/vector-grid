@@ -24,6 +24,7 @@ const SEED = [{
   price: 549,
   mrp: 899,
   stock: 42,
+  category: "Drinkware",
   img: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
   desc: "Insulated 750ml bottle. Keeps cold 24h, hot 12h."
 }, {
@@ -32,6 +33,7 @@ const SEED = [{
   price: 699,
   mrp: 1199,
   stock: 30,
+  category: "Home",
   img: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80",
   desc: "16x16 inch, washed linen, hidden zip."
 }, {
@@ -40,8 +42,63 @@ const SEED = [{
   price: 1299,
   mrp: 2499,
   stock: 12,
+  category: "Audio",
   img: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600&q=80",
   desc: "ENC mic, 40h playback, IPX5."
+}, {
+  id: "p4",
+  name: "Stoneware Coffee Mug (350ml)",
+  price: 399,
+  mrp: 649,
+  stock: 60,
+  category: "Drinkware",
+  img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
+  desc: "Hand-glazed ceramic mug, microwave safe."
+}, {
+  id: "p5",
+  name: "Woven Seagrass Storage Basket",
+  price: 849,
+  mrp: 1499,
+  stock: 18,
+  category: "Home",
+  img: "https://images.unsplash.com/photo-1595408076683-d0d8d5e8e0e9?w=600&q=80",
+  desc: "Handwoven basket with handles. 30cm."
+}, {
+  id: "p6",
+  name: "Portable Bluetooth Speaker",
+  price: 1599,
+  mrp: 2999,
+  stock: 9,
+  category: "Audio",
+  img: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&q=80",
+  desc: "12h playtime, deep bass, IPX6 splash-proof."
+}, {
+  id: "p7",
+  name: "Heavy Canvas Tote Bag",
+  price: 449,
+  mrp: 799,
+  stock: 75,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80",
+  desc: "12oz cotton canvas, roomy, everyday carry."
+}, {
+  id: "p8",
+  name: "Adjustable LED Desk Lamp",
+  price: 1099,
+  mrp: 1899,
+  stock: 22,
+  category: "Tech",
+  img: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80",
+  desc: "3 light modes, touch dimmer, USB-powered."
+}, {
+  id: "p9",
+  name: "Cotton Bath Towel (Pack of 2)",
+  price: 749,
+  mrp: 1299,
+  stock: 0,
+  category: "Home",
+  img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
+  desc: "500 GSM, quick-dry, soft combed cotton."
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const esc = s => String(s == null ? "" : s);
@@ -370,28 +427,124 @@ function Store({
   onAdd,
   onQuick
 }) {
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState("All");
+  const [sort, setSort] = useState("featured");
+  const cats = useMemo(() => ["All", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))], [products]);
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    let list = products.filter(p => {
+      const inCat = cat === "All" || p.category === cat;
+      const hay = (esc(p.name) + " " + esc(p.desc) + " " + esc(p.category)).toLowerCase();
+      return inCat && (!needle || hay.includes(needle));
+    });
+    const disc = p => p.mrp > p.price ? (p.mrp - p.price) / p.mrp : 0;
+    if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);else if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);else if (sort === "discount") list = [...list].sort((a, b) => disc(b) - disc(a));
+    return list;
+  }, [products, q, cat, sort]);
   return /*#__PURE__*/React.createElement("main", {
     style: S.main
   }, /*#__PURE__*/React.createElement("section", {
     style: S.hero
   }, /*#__PURE__*/React.createElement("p", {
     style: S.eyebrow
-  }, "Free shipping over \u20B9999 \xB7 COD available \xB7 3\u20135 day delivery"), /*#__PURE__*/React.createElement("h1", {
+  }, "Free shipping over \u20B9999 \xB7 COD available \xB7 3\u20137 day delivery"), /*#__PURE__*/React.createElement("h1", {
     style: S.heroH1
-  }, "Things worth", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("em", {
+  }, "Find something", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("em", {
     style: {
       color: T.marigold,
       fontStyle: "normal"
     }
-  }, "shipping"), " to your door."), /*#__PURE__*/React.createElement("p", {
+  }, "worth waiting"), " for."), /*#__PURE__*/React.createElement("p", {
     style: S.heroSub
-  }, "A small, sharp catalogue. Delivered to every pincode in the country.")), /*#__PURE__*/React.createElement("div", {
-    style: S.grid
-  }, products.map(p => {
+  }, "Browse the full range, search what you need, and check out in a tap. Delivered to every pincode in India.")), /*#__PURE__*/React.createElement("div", {
+    style: S.trustBar,
+    className: "vg-trust"
+  }, [["✈️", "Ships pan-India"], ["↩", "Easy 7-day returns"], ["₹", "COD available"], ["✓", "Secure Razorpay checkout"]].map(([i, t]) => /*#__PURE__*/React.createElement("span", {
+    key: t,
+    style: S.trustItem
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    style: S.trustIcon
+  }, i), t))), /*#__PURE__*/React.createElement("div", {
+    style: S.toolbar,
+    className: "vg-toolbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.searchWrap
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    style: S.searchIcon
+  }, "\u2315"), /*#__PURE__*/React.createElement("input", {
+    style: S.searchInput,
+    value: q,
+    onChange: e => setQ(e.target.value),
+    placeholder: "Search products\u2026",
+    "aria-label": "Search products"
+  }), q && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setQ(""),
+    style: S.searchClear,
+    "aria-label": "Clear search"
+  }, "\u2715")), /*#__PURE__*/React.createElement("label", {
+    style: S.sortWrap
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.sortLabel
+  }, "Sort"), /*#__PURE__*/React.createElement("select", {
+    style: S.sortSelect,
+    value: sort,
+    onChange: e => setSort(e.target.value),
+    "aria-label": "Sort products"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "featured"
+  }, "Featured"), /*#__PURE__*/React.createElement("option", {
+    value: "low"
+  }, "Price: low to high"), /*#__PURE__*/React.createElement("option", {
+    value: "high"
+  }, "Price: high to low"), /*#__PURE__*/React.createElement("option", {
+    value: "discount"
+  }, "Biggest discount")))), /*#__PURE__*/React.createElement("div", {
+    style: S.chipsRow,
+    className: "vg-chips"
+  }, cats.map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => setCat(c),
+    style: {
+      ...S.chip,
+      ...(cat === c ? S.chipOn : {})
+    }
+  }, c))), /*#__PURE__*/React.createElement("p", {
+    style: S.countText
+  }, shown.length, " ", shown.length === 1 ? "item" : "items", cat !== "All" ? " in " + cat : "", q ? ` · “${q}”` : ""), shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: S.empty
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 22,
+      margin: 0
+    }
+  }, "Nothing matched that."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      marginTop: 8
+    }
+  }, "Try a different word or category."), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setQ("");
+      setCat("All");
+    },
+    style: {
+      ...S.addBtn,
+      maxWidth: 220,
+      margin: "16px auto 0"
+    }
+  }, "Show everything")) : /*#__PURE__*/React.createElement("div", {
+    style: S.grid,
+    className: "vg-grid"
+  }, shown.map(p => {
     const out = p.stock <= 0;
     return /*#__PURE__*/React.createElement("article", {
       key: p.id,
-      style: S.prodCard
+      style: S.prodCard,
+      className: "vg-card"
     }, /*#__PURE__*/React.createElement("button", {
       style: S.imgWrap,
       onClick: () => onQuick(p),
@@ -408,16 +561,24 @@ function Store({
       style: S.soldOut
     }, "Sold out"), !out && p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
       style: S.discount
-    }, Math.round(100 - p.price / p.mrp * 100), "% off")), /*#__PURE__*/React.createElement("div", {
+    }, Math.round(100 - p.price / p.mrp * 100), "% off"), p.category && /*#__PURE__*/React.createElement("span", {
+      style: S.catTag
+    }, p.category)), /*#__PURE__*/React.createElement("div", {
       style: {
-        padding: "14px 16px 16px"
+        padding: "14px 16px 16px",
+        display: "flex",
+        flexDirection: "column",
+        flex: 1
       }
     }, /*#__PURE__*/React.createElement("h3", {
       style: S.prodName
     }, esc(p.name)), /*#__PURE__*/React.createElement("p", {
       style: S.prodDesc
     }, esc(p.desc)), /*#__PURE__*/React.createElement("div", {
-      style: S.priceRow
+      style: {
+        ...S.priceRow,
+        marginTop: "auto"
+      }
     }, /*#__PURE__*/React.createElement("span", {
       style: S.price
     }, rupee(p.price)), p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
@@ -1058,8 +1219,8 @@ const S = {
     padding: "0 22px 60px"
   },
   hero: {
-    padding: "56px 0 36px",
-    maxWidth: 640
+    padding: "38px 0 18px",
+    maxWidth: 660
   },
   eyebrow: {
     fontFamily: "var(--mono)",
@@ -1067,22 +1228,164 @@ const S = {
     color: T.teal,
     textTransform: "uppercase",
     letterSpacing: ".06em",
-    marginBottom: 16
+    marginBottom: 14
   },
   heroH1: {
     fontFamily: "var(--display)",
-    fontSize: "clamp(38px,6vw,62px)",
-    lineHeight: 1.02,
+    fontSize: "clamp(30px,5vw,50px)",
+    lineHeight: 1.04,
     fontWeight: 700,
     letterSpacing: "-.02em",
     margin: 0
   },
   heroSub: {
-    fontSize: 16,
+    fontSize: 15.5,
     color: T.inkSoft,
-    marginTop: 18,
-    maxWidth: 440,
+    marginTop: 16,
+    maxWidth: 460,
     lineHeight: 1.5
+  },
+  trustBar: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px 18px",
+    alignItems: "center",
+    padding: "12px 16px",
+    background: T.tint,
+    border: "1px solid " + T.line,
+    borderRadius: 12,
+    marginBottom: 22
+  },
+  trustItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    fontFamily: "var(--mono)",
+    fontSize: 12,
+    color: T.inkSoft
+  },
+  trustIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    background: T.card,
+    color: T.marigoldDark,
+    fontSize: 11.5,
+    fontWeight: 700
+  },
+  toolbar: {
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    flexWrap: "wrap"
+  },
+  searchWrap: {
+    position: "relative",
+    flex: "1 1 260px",
+    display: "flex",
+    alignItems: "center"
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 14,
+    fontSize: 18,
+    color: T.muted,
+    pointerEvents: "none"
+  },
+  searchInput: {
+    width: "100%",
+    border: "1px solid " + T.line,
+    borderRadius: 999,
+    padding: "11px 38px",
+    fontSize: 14.5,
+    background: T.card,
+    color: T.ink,
+    fontFamily: "var(--body)"
+  },
+  searchClear: {
+    position: "absolute",
+    right: 12,
+    border: "none",
+    background: "transparent",
+    color: T.muted,
+    fontSize: 13
+  },
+  sortWrap: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8
+  },
+  sortLabel: {
+    fontFamily: "var(--mono)",
+    fontSize: 11,
+    color: T.muted,
+    textTransform: "uppercase",
+    letterSpacing: ".06em"
+  },
+  sortSelect: {
+    border: "1px solid " + T.line,
+    borderRadius: 999,
+    padding: "9px 14px",
+    fontSize: 13.5,
+    background: T.card,
+    color: T.ink,
+    fontFamily: "var(--body)",
+    fontWeight: 600
+  },
+  chipsRow: {
+    display: "flex",
+    gap: 9,
+    marginBottom: 14,
+    overflowX: "auto",
+    paddingBottom: 4
+  },
+  chip: {
+    flex: "0 0 auto",
+    border: "1.5px solid " + T.line,
+    background: T.card,
+    color: T.inkSoft,
+    borderRadius: 999,
+    padding: "8px 16px",
+    fontSize: 13,
+    fontWeight: 600,
+    whiteSpace: "nowrap"
+  },
+  chipOn: {
+    borderColor: T.ink,
+    background: T.ink,
+    color: T.paper
+  },
+  countText: {
+    fontFamily: "var(--mono)",
+    fontSize: 12,
+    color: T.muted,
+    margin: "0 0 16px"
+  },
+  empty: {
+    textAlign: "center",
+    padding: "60px 20px",
+    border: "1px dashed " + T.line,
+    borderRadius: 16,
+    background: T.card
+  },
+  catTag: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    background: "rgba(251,250,246,.92)",
+    color: T.inkSoft,
+    fontSize: 10.5,
+    fontWeight: 700,
+    padding: "3px 8px",
+    borderRadius: 999,
+    fontFamily: "var(--mono)",
+    textTransform: "uppercase",
+    letterSpacing: ".04em"
   },
   grid: {
     display: "grid",

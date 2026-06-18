@@ -4,9 +4,15 @@ const API = "";
 const T = { paper:"#FBFAF6", card:"#FFFFFF", ink:"#191510", inkSoft:"#5C544A", muted:"#9A9085", line:"#E9E3D8", marigold:"#E8820C", marigoldDark:"#C96A00", teal:"#0E5C53", tint:"#FBF1E2", danger:"#B23B2E" };
 const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh","Andaman & Nicobar"];
 const SEED = [
-  { id:"p1", name:"Minimalist Steel Water Bottle", price:549, mrp:899, stock:42, img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Insulated 750ml bottle. Keeps cold 24h, hot 12h." },
-  { id:"p2", name:"Linen Cushion Cover (Set of 2)", price:699, mrp:1199, stock:30, img:"https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80", desc:"16x16 inch, washed linen, hidden zip." },
-  { id:"p3", name:"Wireless Earbuds — Bass Edition", price:1299, mrp:2499, stock:12, img:"https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600&q=80", desc:"ENC mic, 40h playback, IPX5." },
+  { id:"p1", name:"Minimalist Steel Water Bottle", price:549, mrp:899, stock:42, category:"Drinkware", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Insulated 750ml bottle. Keeps cold 24h, hot 12h." },
+  { id:"p2", name:"Linen Cushion Cover (Set of 2)", price:699, mrp:1199, stock:30, category:"Home", img:"https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80", desc:"16x16 inch, washed linen, hidden zip." },
+  { id:"p3", name:"Wireless Earbuds — Bass Edition", price:1299, mrp:2499, stock:12, category:"Audio", img:"https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600&q=80", desc:"ENC mic, 40h playback, IPX5." },
+  { id:"p4", name:"Stoneware Coffee Mug (350ml)", price:399, mrp:649, stock:60, category:"Drinkware", img:"https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80", desc:"Hand-glazed ceramic mug, microwave safe." },
+  { id:"p5", name:"Woven Seagrass Storage Basket", price:849, mrp:1499, stock:18, category:"Home", img:"https://images.unsplash.com/photo-1595408076683-d0d8d5e8e0e9?w=600&q=80", desc:"Handwoven basket with handles. 30cm." },
+  { id:"p6", name:"Portable Bluetooth Speaker", price:1599, mrp:2999, stock:9, category:"Audio", img:"https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&q=80", desc:"12h playtime, deep bass, IPX6 splash-proof." },
+  { id:"p7", name:"Heavy Canvas Tote Bag", price:449, mrp:799, stock:75, category:"Accessories", img:"https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80", desc:"12oz cotton canvas, roomy, everyday carry." },
+  { id:"p8", name:"Adjustable LED Desk Lamp", price:1099, mrp:1899, stock:22, category:"Tech", img:"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80", desc:"3 light modes, touch dimmer, USB-powered." },
+  { id:"p9", name:"Cotton Bath Towel (Pack of 2)", price:749, mrp:1299, stock:0, category:"Home", img:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80", desc:"500 GSM, quick-dry, soft combed cotton." },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const esc = (s) => String(s==null?"":s);
@@ -161,28 +167,86 @@ function Header({storeName,cartCount,onCart,onHome}){
 }
 
 function Store({products,onAdd,onQuick}){
+  const [q,setQ]=useState("");
+  const [cat,setCat]=useState("All");
+  const [sort,setSort]=useState("featured");
+  const cats=useMemo(()=>["All",...Array.from(new Set(products.map(p=>p.category).filter(Boolean)))],[products]);
+  const shown=useMemo(()=>{
+    const needle=q.trim().toLowerCase();
+    let list=products.filter(p=>{
+      const inCat = cat==="All" || p.category===cat;
+      const hay=(esc(p.name)+" "+esc(p.desc)+" "+esc(p.category)).toLowerCase();
+      return inCat && (!needle || hay.includes(needle));
+    });
+    const disc=p=>p.mrp>p.price?(p.mrp-p.price)/p.mrp:0;
+    if(sort==="low") list=[...list].sort((a,b)=>a.price-b.price);
+    else if(sort==="high") list=[...list].sort((a,b)=>b.price-a.price);
+    else if(sort==="discount") list=[...list].sort((a,b)=>disc(b)-disc(a));
+    return list;
+  },[products,q,cat,sort]);
+
   return (<main style={S.main}>
     <section style={S.hero}>
-      <p style={S.eyebrow}>Free shipping over ₹999 · COD available · 3–5 day delivery</p>
-      <h1 style={S.heroH1}>Things worth<br/><em style={{color:T.marigold,fontStyle:"normal"}}>shipping</em> to your door.</h1>
-      <p style={S.heroSub}>A small, sharp catalogue. Delivered to every pincode in the country.</p>
+      <p style={S.eyebrow}>Free shipping over ₹999 · COD available · 3–7 day delivery</p>
+      <h1 style={S.heroH1}>Find something<br/><em style={{color:T.marigold,fontStyle:"normal"}}>worth waiting</em> for.</h1>
+      <p style={S.heroSub}>Browse the full range, search what you need, and check out in a tap. Delivered to every pincode in India.</p>
     </section>
-    <div style={S.grid}>
-      {products.map(p=>{ const out=p.stock<=0; return (
-        <article key={p.id} style={S.prodCard}>
+
+    <div style={S.trustBar} className="vg-trust">
+      {[["✈️","Ships pan-India"],["↩","Easy 7-day returns"],["₹","COD available"],["✓","Secure Razorpay checkout"]].map(([i,t])=>(
+        <span key={t} style={S.trustItem}><span aria-hidden="true" style={S.trustIcon}>{i}</span>{t}</span>
+      ))}
+    </div>
+
+    <div style={S.toolbar} className="vg-toolbar">
+      <div style={S.searchWrap}>
+        <span aria-hidden="true" style={S.searchIcon}>⌕</span>
+        <input style={S.searchInput} value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products…" aria-label="Search products" />
+        {q && <button onClick={()=>setQ("")} style={S.searchClear} aria-label="Clear search">✕</button>}
+      </div>
+      <label style={S.sortWrap}><span style={S.sortLabel}>Sort</span>
+        <select style={S.sortSelect} value={sort} onChange={e=>setSort(e.target.value)} aria-label="Sort products">
+          <option value="featured">Featured</option>
+          <option value="low">Price: low to high</option>
+          <option value="high">Price: high to low</option>
+          <option value="discount">Biggest discount</option>
+        </select>
+      </label>
+    </div>
+
+    <div style={S.chipsRow} className="vg-chips">
+      {cats.map(c=>(
+        <button key={c} onClick={()=>setCat(c)} style={{...S.chip,...(cat===c?S.chipOn:{})}}>{c}</button>
+      ))}
+    </div>
+
+    <p style={S.countText}>{shown.length} {shown.length===1?"item":"items"}{cat!=="All"?" in "+cat:""}{q?` · “${q}”`:""}</p>
+
+    {shown.length===0 ? (
+      <div style={S.empty}>
+        <p style={{fontFamily:"var(--display)",fontSize:22,margin:0}}>Nothing matched that.</p>
+        <p style={{color:T.inkSoft,marginTop:8}}>Try a different word or category.</p>
+        <button onClick={()=>{setQ("");setCat("All");}} style={{...S.addBtn,maxWidth:220,margin:"16px auto 0"}}>Show everything</button>
+      </div>
+    ) : (
+    <div style={S.grid} className="vg-grid">
+      {shown.map(p=>{ const out=p.stock<=0; return (
+        <article key={p.id} style={S.prodCard} className="vg-card">
           <button style={S.imgWrap} onClick={()=>onQuick(p)} aria-label={"View "+esc(p.name)}>
             <img src={p.img} alt={esc(p.name)} style={S.img} loading="lazy" onError={(e)=>{e.currentTarget.style.opacity=0.25;}} />
             {out && <span style={S.soldOut}>Sold out</span>}
             {!out && p.mrp>p.price && <span style={S.discount}>{Math.round(100-(p.price/p.mrp)*100)}% off</span>}
+            {p.category && <span style={S.catTag}>{p.category}</span>}
           </button>
-          <div style={{padding:"14px 16px 16px"}}>
+          <div style={{padding:"14px 16px 16px",display:"flex",flexDirection:"column",flex:1}}>
             <h3 style={S.prodName}>{esc(p.name)}</h3>
             <p style={S.prodDesc}>{esc(p.desc)}</p>
-            <div style={S.priceRow}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
+            <div style={{...S.priceRow,marginTop:"auto"}}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
             <button disabled={out} onClick={()=>onAdd(p.id)} style={{...S.addBtn,...(out?S.addBtnDisabled:{})}}>{out?"Sold out":"Add to cart"}</button>
           </div>
         </article>); })}
     </div>
+    )}
   </main>);
 }
 
@@ -300,7 +364,13 @@ const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var
   headerInner:{maxWidth:1100,margin:"0 auto",padding:"14px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10},
   mark:{color:T.marigold,fontSize:18}, wordmark:{fontFamily:"var(--display)",fontWeight:700,fontSize:22,letterSpacing:"-.01em"}, tagline:{fontFamily:"var(--mono)",fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".08em"},
   cartBtn:{position:"relative",border:"none",background:T.marigold,color:"#fff",borderRadius:999,padding:"8px 18px",fontSize:13,fontWeight:700}, cartBadge:{position:"absolute",top:-6,right:-6,background:T.ink,color:"#fff",borderRadius:999,fontSize:11,minWidth:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 4px"},
-  main:{maxWidth:1100,margin:"0 auto",padding:"0 22px 60px"}, hero:{padding:"56px 0 36px",maxWidth:640}, eyebrow:{fontFamily:"var(--mono)",fontSize:12,color:T.teal,textTransform:"uppercase",letterSpacing:".06em",marginBottom:16}, heroH1:{fontFamily:"var(--display)",fontSize:"clamp(38px,6vw,62px)",lineHeight:1.02,fontWeight:700,letterSpacing:"-.02em",margin:0}, heroSub:{fontSize:16,color:T.inkSoft,marginTop:18,maxWidth:440,lineHeight:1.5},
+  main:{maxWidth:1100,margin:"0 auto",padding:"0 22px 60px"}, hero:{padding:"38px 0 18px",maxWidth:660}, eyebrow:{fontFamily:"var(--mono)",fontSize:12,color:T.teal,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}, heroH1:{fontFamily:"var(--display)",fontSize:"clamp(30px,5vw,50px)",lineHeight:1.04,fontWeight:700,letterSpacing:"-.02em",margin:0}, heroSub:{fontSize:15.5,color:T.inkSoft,marginTop:16,maxWidth:460,lineHeight:1.5},
+  trustBar:{display:"flex",flexWrap:"wrap",gap:"8px 18px",alignItems:"center",padding:"12px 16px",background:T.tint,border:"1px solid "+T.line,borderRadius:12,marginBottom:22},
+  trustItem:{display:"inline-flex",alignItems:"center",gap:7,fontFamily:"var(--mono)",fontSize:12,color:T.inkSoft}, trustIcon:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:20,height:20,borderRadius:6,background:T.card,color:T.marigoldDark,fontSize:11.5,fontWeight:700},
+  toolbar:{display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap"}, searchWrap:{position:"relative",flex:"1 1 260px",display:"flex",alignItems:"center"}, searchIcon:{position:"absolute",left:14,fontSize:18,color:T.muted,pointerEvents:"none"}, searchInput:{width:"100%",border:"1px solid "+T.line,borderRadius:999,padding:"11px 38px",fontSize:14.5,background:T.card,color:T.ink,fontFamily:"var(--body)"}, searchClear:{position:"absolute",right:12,border:"none",background:"transparent",color:T.muted,fontSize:13},
+  sortWrap:{display:"inline-flex",alignItems:"center",gap:8}, sortLabel:{fontFamily:"var(--mono)",fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".06em"}, sortSelect:{border:"1px solid "+T.line,borderRadius:999,padding:"9px 14px",fontSize:13.5,background:T.card,color:T.ink,fontFamily:"var(--body)",fontWeight:600},
+  chipsRow:{display:"flex",gap:9,marginBottom:14,overflowX:"auto",paddingBottom:4}, chip:{flex:"0 0 auto",border:"1.5px solid "+T.line,background:T.card,color:T.inkSoft,borderRadius:999,padding:"8px 16px",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}, chipOn:{borderColor:T.ink,background:T.ink,color:T.paper},
+  countText:{fontFamily:"var(--mono)",fontSize:12,color:T.muted,margin:"0 0 16px"}, empty:{textAlign:"center",padding:"60px 20px",border:"1px dashed "+T.line,borderRadius:16,background:T.card}, catTag:{position:"absolute",bottom:10,left:10,background:"rgba(251,250,246,.92)",color:T.inkSoft,fontSize:10.5,fontWeight:700,padding:"3px 8px",borderRadius:999,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"},
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:20}, prodCard:{background:T.card,border:"1px solid "+T.line,borderRadius:16,overflow:"hidden",display:"flex",flexDirection:"column"}, imgWrap:{border:"none",padding:0,background:"#F2EEE5",position:"relative",aspectRatio:"4/3",overflow:"hidden",display:"block"}, img:{width:"100%",height:"100%",objectFit:"cover",display:"block"}, soldOut:{position:"absolute",inset:0,background:"rgba(25,21,16,.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontFamily:"var(--mono)",fontSize:13}, discount:{position:"absolute",top:10,left:10,background:T.teal,color:"#fff",fontSize:11,fontWeight:700,padding:"4px 9px",borderRadius:999,fontFamily:"var(--mono)"},
   prodName:{fontFamily:"var(--display)",fontSize:17,fontWeight:600,margin:0,lineHeight:1.2}, prodDesc:{fontSize:12.5,color:T.inkSoft,marginTop:6,lineHeight:1.45,minHeight:36}, priceRow:{display:"flex",alignItems:"baseline",gap:8,marginTop:10}, price:{fontSize:18,fontWeight:800,color:T.ink}, mrp:{fontSize:13,color:T.muted,textDecoration:"line-through"},
   addBtn:{width:"100%",marginTop:12,border:"1.5px solid "+T.ink,background:T.ink,color:T.paper,borderRadius:10,padding:"10px",fontWeight:700,fontSize:13.5}, addBtnDisabled:{background:"transparent",color:T.muted,borderColor:T.line,cursor:"not-allowed"},

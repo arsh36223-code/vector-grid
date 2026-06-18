@@ -5,5 +5,16 @@ html,body{ margin:0; padding:0; background:#FBFAF6; }
 @keyframes pop{ from{ transform:scale(.96); opacity:0 } to{ transform:scale(1); opacity:1 } }
 button{ cursor:pointer; font-family:var(--body); }
 input:focus,select:focus,textarea:focus,button:focus-visible{ outline:2px solid #E8820C; outline-offset:1px; }
-@media (max-width:760px){ .vg-two{ grid-template-columns:1fr !important } }
-@media (prefers-reduced-motion: reduce){ *{ animation:none !important } }
+.vg-card{ transition:transform .15s ease, box-shadow .15s ease; }
+.vg-card:hover{ transform:translateY(-3px); box-shadow:0 12px 30px rgba(25,21,16,.09); }
+.vg-card img{ transition:transform .3s ease; }
+.vg-card:hover img{ transform:scale(1.04); }
+.vg-chips::-webkit-scrollbar{ height:0; }
+@media (max-width:760px){
+  .vg-two{ grid-template-columns:1fr !important }
+  .vg-grid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important }
+}
+@media (max-width:430px){
+  .vg-grid{ gap:10px !important }
+}
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important } .vg-card,.vg-card img{ transition:none !important } .vg-card:hover{ transform:none } .vg-card:hover img{ transform:none } }
