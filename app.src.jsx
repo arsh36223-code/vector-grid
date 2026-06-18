@@ -155,7 +155,7 @@ function App(){
 
 function Header({storeName,cartCount,onCart,onHome}){
   return (<header style={S.header}><div style={S.headerInner}>
-    <div onClick={onHome} style={{display:"flex",alignItems:"baseline",gap:10,cursor:"pointer"}}><span style={S.mark}>◆</span><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
+    <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-icon.svg" alt="Vector Grid" width="36" height="36" style={{display:"block",borderRadius:10}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
     <button onClick={onCart} style={S.cartBtn} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
   </div></header>);
 }

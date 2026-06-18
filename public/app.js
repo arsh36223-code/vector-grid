@@ -340,13 +340,20 @@ function Header({
     onClick: onHome,
     style: {
       display: "flex",
-      alignItems: "baseline",
-      gap: 10,
+      alignItems: "center",
+      gap: 12,
       cursor: "pointer"
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.mark
-  }, "\u25C6"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "/vectorgrid-icon.svg",
+    alt: "Vector Grid",
+    width: "36",
+    height: "36",
+    style: {
+      display: "block",
+      borderRadius: 10
+    }
+  }), /*#__PURE__*/React.createElement("span", {
     style: S.wordmark
   }, storeName), /*#__PURE__*/React.createElement("span", {
     style: S.tagline
