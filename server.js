@@ -51,7 +51,7 @@ const mailer = (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SM
     })
   : null;
 if (!mailer) console.warn("⚠️  Email not configured — orders will be logged to server logs only.");
-const ORDER_TO = process.env.ORDER_EMAIL_TO || process.env.SMTP_USER || "";
+const ORDER_TO = process.env.ORDER_EMAIL_TO || process.env.SMTP_USER || "vectorgridsupport@gmail.com";
 const SUPPLIER_TO = process.env.ORDER_EMAIL_SUPPLIER || "";
 
 /* ============================================================

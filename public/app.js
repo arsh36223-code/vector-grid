@@ -50,7 +50,7 @@ const esc = s => String(s == null ? "" : s);
 const INFO = {
   legalName: "Vector Grid",
   // your seller / registered name
-  email: "support@example.com",
+  email: "vectorgridsupport@gmail.com",
   // your contact email
   phone: "+91 00000 00000",
   // your contact number

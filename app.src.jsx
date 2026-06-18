@@ -14,7 +14,7 @@ const esc = (s) => String(s==null?"":s);
 /* ===== EDIT YOUR DETAILS HERE (used across the policy pages) ===== */
 const INFO = {
   legalName: "Vector Grid",                 // your seller / registered name
-  email: "support@example.com",             // your contact email
+  email: "vectorgridsupport@gmail.com",     // your contact email
   phone: "+91 00000 00000",                 // your contact number
   address: "[Your address], India",         // your business address
   jurisdiction: "Bhopal, Madhya Pradesh",   // city/state for legal jurisdiction
