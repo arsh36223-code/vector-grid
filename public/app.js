@@ -790,9 +790,14 @@ function QuickView({
       ...S.modal,
       maxWidth: 720,
       padding: 0,
-      overflow: "hidden"
+      overflow: "hidden",
+      position: "relative"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    style: S.quickClose,
+    "aria-label": "Close"
+  }, "\u2715"), /*#__PURE__*/React.createElement("div", {
     className: "vg-two",
     style: {
       display: "grid",
@@ -811,11 +816,14 @@ function QuickView({
     style: {
       padding: 28
     }
-  }, /*#__PURE__*/React.createElement("h2", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    style: S.quickBack
+  }, "\u2190 Back to products"), /*#__PURE__*/React.createElement("h2", {
     style: {
       ...S.prodName,
       fontSize: 22,
-      marginBottom: 8
+      margin: "10px 0 8px"
     }
   }, esc(product.name)), /*#__PURE__*/React.createElement("div", {
     style: S.priceRow
@@ -1805,6 +1813,32 @@ const S = {
     fontWeight: 600,
     fontSize: 13,
     padding: "6px 4px"
+  },
+  quickClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 5,
+    border: "none",
+    background: "rgba(26,22,18,.6)",
+    color: "#fff",
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    fontSize: 15,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backdropFilter: "blur(4px)"
+  },
+  quickBack: {
+    border: "none",
+    background: "transparent",
+    color: T.teal,
+    fontWeight: 600,
+    fontSize: 13,
+    padding: 0,
+    marginBottom: 2
   },
   cartBtn: {
     position: "relative",

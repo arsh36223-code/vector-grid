@@ -12,7 +12,6 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const path = require("path");
 const Razorpay = require("razorpay");
-const nodemailer = require("nodemailer");
 const { Pool } = require("pg");
 
 const app = express();
@@ -42,18 +41,12 @@ const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 if (!KEY_ID || !KEY_SECRET) console.warn("⚠️  Razorpay keys not set — online payments disabled until set.");
 const razorpay = (KEY_ID && KEY_SECRET) ? new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET }) : null;
 
-// ---- Email (orders are sent to you) ----
-const mailer = (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: (Number(process.env.SMTP_PORT) || 465) === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 12000,
-    })
-  : null;
-if (!mailer) console.warn("⚠️  Email not configured — orders will be logged to server logs only.");
-const ORDER_TO = process.env.ORDER_EMAIL_TO || process.env.SMTP_USER || "vectorgridsupport@gmail.com";
+// ---- Email (orders are sent to you, via Resend over HTTPS — works on Render) ----
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+// Sender: defaults to Resend's shared test address so it works before you own a domain.
+const ORDER_FROM = process.env.ORDER_EMAIL_FROM || "Vector Grid <onboarding@resend.dev>";
+if (!RESEND_API_KEY) console.warn("⚠️  No RESEND_API_KEY — orders will be logged to server logs only (no email).");
+const ORDER_TO = process.env.ORDER_EMAIL_TO || "vectorgridsupport@gmail.com";
 const SUPPLIER_TO = process.env.ORDER_EMAIL_SUPPLIER || "";
 
 // ---- Database (stores orders so customers can track them) ----
@@ -209,13 +202,19 @@ async function notifyOrder(order) {
   ].filter(x => x !== "").join("\n");
 
   console.log("==== ORDER ====\n" + body + "\n===============");  // backup record in server logs
-  if (!mailer || !ORDER_TO) return;
-  const to = [ORDER_TO, SUPPLIER_TO].filter(Boolean).join(",");
-  await mailer.sendMail({
-    from: process.env.SMTP_USER, to,
-    subject: `New order ${order.id} — ${order.paid ? "PAID" : "COD"} — ${rupee(order.total)}`,
-    text: body,
+  if (!RESEND_API_KEY || !ORDER_TO) return;
+  const to = [ORDER_TO, SUPPLIER_TO].filter(Boolean);
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: ORDER_FROM,
+      to,
+      subject: `New order ${order.id} — ${order.paid ? "PAID" : "COD"} — ${rupee(order.total)}`,
+      text: body,
+    }),
   });
+  if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 
 // Public catalogue (cost/supplier stripped out)
