@@ -5,17 +5,17 @@ const {
 } = React;
 const API = "";
 const T = {
-  paper: "#FBFAF6",
-  card: "#FFFFFF",
-  ink: "#191510",
-  inkSoft: "#5C544A",
-  muted: "#9A9085",
-  line: "#E9E3D8",
-  marigold: "#E8820C",
+  paper: "#13100D",
+  card: "#1C1814",
+  ink: "#F3EFE8",
+  inkSoft: "#B9B0A3",
+  muted: "#8A8175",
+  line: "#2F2922",
+  marigold: "#EF901E",
   marigoldDark: "#C96A00",
-  teal: "#0E5C53",
-  tint: "#FBF1E2",
-  danger: "#B23B2E"
+  teal: "#2CBBA9",
+  tint: "#221A11",
+  danger: "#E5685A"
 };
 const INDIAN_STATES = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu & Kashmir", "Ladakh", "Puducherry", "Chandigarh", "Andaman & Nicobar"];
 const SEED = [{
@@ -1006,7 +1006,7 @@ function Checkout({
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 18
+      marginBottom: 14
     }
   }, /*#__PURE__*/React.createElement("h2", {
     style: S.modalTitle
@@ -1014,6 +1014,16 @@ function Checkout({
     onClick: onBack,
     style: S.linkBtn
   }, "\u2190 Back")), /*#__PURE__*/React.createElement("div", {
+    style: S.coTrust
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.coTrustItem
+  }, "\uD83D\uDD12 Secure checkout"), /*#__PURE__*/React.createElement("span", {
+    style: S.coTrustItem
+  }, "\u21A9 7-day returns"), /*#__PURE__*/React.createElement("span", {
+    style: S.coTrustItem
+  }, "\u20B9 COD available"), /*#__PURE__*/React.createElement("span", {
+    style: S.coTrustItem
+  }, "\u2708 Ships pan-India")), /*#__PURE__*/React.createElement("div", {
     className: "vg-two",
     style: {
       display: "grid",
@@ -1172,7 +1182,29 @@ function Checkout({
       marginTop: 10,
       lineHeight: 1.5
     }
-  }, "Online payments are processed securely by Razorpay. Your card details never touch this site.")))));
+  }, "Online payments are processed securely by Razorpay. Your card details never touch this site."), /*#__PURE__*/React.createElement("div", {
+    style: S.coSecure
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.coSecureRow
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("span", null, "Payments secured by ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.ink
+    }
+  }, "Razorpay"), " \u2014 UPI, cards & netbanking. Your card details never touch this site.")), /*#__PURE__*/React.createElement("div", {
+    style: S.coSecureRow
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u21A9"), /*#__PURE__*/React.createElement("span", null, "Easy ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.ink
+    }
+  }, "7-day returns"), " on every order.")), /*#__PURE__*/React.createElement("div", {
+    style: S.coSecureRow
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83D\uDCE6"), /*#__PURE__*/React.createElement("span", null, "Dispatched in 24\u201348h \xB7 delivered in 3\u20137 days, pan-India.")))))));
 }
 function Field({
   label,
@@ -1797,7 +1829,7 @@ const S = {
     fontWeight: 700,
     fontSize: 22,
     letterSpacing: "-.01em",
-    color: T.paper
+    color: T.ink
   },
   tagline: {
     fontFamily: "var(--mono)",
@@ -1809,7 +1841,7 @@ const S = {
   trackLink: {
     border: "none",
     background: "transparent",
-    color: T.paper,
+    color: T.ink,
     fontWeight: 600,
     fontSize: 13,
     padding: "6px 4px"
@@ -1854,7 +1886,7 @@ const S = {
     position: "absolute",
     top: -6,
     right: -6,
-    background: T.ink,
+    background: "#0F0C09",
     color: "#fff",
     borderRadius: 999,
     fontSize: 11,
@@ -2024,7 +2056,7 @@ const S = {
     height: 20,
     borderRadius: 6,
     background: T.card,
-    color: T.marigoldDark,
+    color: T.marigold,
     fontSize: 11.5,
     fontWeight: 700
   },
@@ -2108,9 +2140,9 @@ const S = {
     whiteSpace: "nowrap"
   },
   chipOn: {
-    borderColor: T.ink,
-    background: T.ink,
-    color: T.paper
+    borderColor: T.marigold,
+    background: T.marigold,
+    color: "#1a1309"
   },
   countText: {
     fontFamily: "var(--mono)",
@@ -2129,7 +2161,8 @@ const S = {
     position: "absolute",
     bottom: 10,
     left: 10,
-    background: "rgba(251,250,246,.92)",
+    background: "rgba(15,12,9,.82)",
+    backdropFilter: "blur(4px)",
     color: T.inkSoft,
     fontSize: 10.5,
     fontWeight: 700,
@@ -2145,9 +2178,9 @@ const S = {
     gap: 20
   },
   prodCard: {
-    background: T.card,
-    border: "1px solid " + T.line,
-    borderRadius: 16,
+    background: "linear-gradient(180deg,#221C16,#191510)",
+    border: "1px solid rgba(255,255,255,.07)",
+    borderRadius: 18,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column"
@@ -2155,7 +2188,7 @@ const S = {
   imgWrap: {
     border: "none",
     padding: 0,
-    background: "#F2EEE5",
+    background: "#14110D",
     position: "relative",
     aspectRatio: "4/3",
     overflow: "hidden",
@@ -2241,7 +2274,7 @@ const S = {
   drawerScrim: {
     position: "fixed",
     inset: 0,
-    background: "rgba(25,21,16,.4)",
+    background: "rgba(6,5,3,.55)",
     zIndex: 50,
     display: "flex",
     justifyContent: "flex-end"
@@ -2283,7 +2316,7 @@ const S = {
     height: 60,
     borderRadius: 10,
     objectFit: "cover",
-    background: "#eee"
+    background: "#221E18"
   },
   cartName: {
     fontSize: 14,
@@ -2328,7 +2361,7 @@ const S = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(25,21,16,.45)",
+    background: "rgba(6,5,3,.6)",
     zIndex: 60,
     display: "flex",
     alignItems: "center",
@@ -2391,7 +2424,7 @@ const S = {
   payChipOn: {
     borderColor: T.teal,
     color: T.teal,
-    background: "#EAF4F2"
+    background: "rgba(44,187,169,.14)"
   },
   payOpt: {
     display: "flex",
@@ -2406,7 +2439,7 @@ const S = {
   },
   payOptOn: {
     borderColor: T.teal,
-    background: "#EAF4F2"
+    background: "rgba(44,187,169,.12)"
   },
   payRadio: {
     flex: "0 0 auto",
@@ -2513,6 +2546,39 @@ const S = {
     padding: 0,
     textDecoration: "underline",
     textUnderlineOffset: "3px"
+  },
+  coTrust: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px 16px",
+    padding: "10px 14px",
+    background: T.tint,
+    border: "1px solid " + T.line,
+    borderRadius: 10,
+    marginBottom: 18
+  },
+  coTrustItem: {
+    fontFamily: "var(--mono)",
+    fontSize: 11.5,
+    color: T.inkSoft,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6
+  },
+  coSecure: {
+    marginTop: 14,
+    display: "grid",
+    gap: 9,
+    paddingTop: 14,
+    borderTop: "1px solid " + T.line
+  },
+  coSecureRow: {
+    display: "flex",
+    gap: 9,
+    alignItems: "flex-start",
+    fontSize: 11.5,
+    color: T.muted,
+    lineHeight: 1.5
   }
 };
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
