@@ -18,3 +18,5 @@ input:focus,select:focus,textarea:focus,button:focus-visible{ outline:2px solid 
   .vg-grid{ gap:10px !important }
 }
 @media (prefers-reduced-motion: reduce){ *{ animation:none !important } .vg-card,.vg-card img{ transition:none !important } .vg-card:hover{ transform:none } .vg-card:hover img{ transform:none } }
+@media (max-width:760px){ .vg-pay{ grid-template-columns:1fr !important } }
+@media (max-width:760px){ .vg-admin{ grid-template-columns:1fr !important } }

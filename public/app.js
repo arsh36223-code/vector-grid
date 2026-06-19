@@ -340,14 +340,20 @@ function App() {
     storeName: storeName,
     cartCount: cartCount,
     onCart: () => setCartOpen(true),
-    onHome: () => go(null)
-  }), page ? /*#__PURE__*/React.createElement(Policy, {
+    onHome: () => go(null),
+    onTrack: () => go("track")
+  }), page === "track" ? /*#__PURE__*/React.createElement(TrackOrder, {
+    onBack: () => go(null)
+  }) : page === "admin" ? /*#__PURE__*/React.createElement(AdminOrders, {
+    onBack: () => go(null)
+  }) : page ? /*#__PURE__*/React.createElement(Policy, {
     pageKey: page,
     onBack: () => go(null)
   }) : /*#__PURE__*/React.createElement(Store, {
     products: products,
     onAdd: addToCart,
-    onQuick: setQuick
+    onQuick: setQuick,
+    onTrack: () => go("track")
   }), /*#__PURE__*/React.createElement(Footer, {
     storeName: storeName,
     onNav: go
@@ -387,7 +393,8 @@ function Header({
   storeName,
   cartCount,
   onCart,
-  onHome
+  onHome,
+  onTrack
 }) {
   return /*#__PURE__*/React.createElement("header", {
     style: S.header
@@ -402,30 +409,193 @@ function Header({
       cursor: "pointer"
     }
   }, /*#__PURE__*/React.createElement("img", {
-    src: "/vectorgrid-icon.svg",
+    src: "/vectorgrid-mark.svg",
     alt: "Vector Grid",
-    width: "36",
-    height: "36",
+    width: "34",
+    height: "34",
     style: {
-      display: "block",
-      borderRadius: 10
+      display: "block"
     }
   }), /*#__PURE__*/React.createElement("span", {
     style: S.wordmark
   }, storeName), /*#__PURE__*/React.createElement("span", {
     style: S.tagline
-  }, "ships pan-India")), /*#__PURE__*/React.createElement("button", {
+  }, "ships pan-India")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 14
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onTrack,
+    style: S.trackLink
+  }, "Track order"), /*#__PURE__*/React.createElement("button", {
     onClick: onCart,
     style: S.cartBtn,
     "aria-label": "Open cart"
   }, "Cart", cartCount > 0 && /*#__PURE__*/React.createElement("span", {
     style: S.cartBadge
-  }, cartCount))));
+  }, cartCount)))));
+}
+function Hero({
+  onShop,
+  onTrack
+}) {
+  const ref = React.useRef(null);
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = cv.getContext("2d");
+    let w = 0,
+      h = 0,
+      dpr = Math.min(window.devicePixelRatio || 1, 2),
+      raf = 0,
+      t = 0;
+    const COLORS = ["#E8820C", "#F3A23E", "#27B3A3"];
+    let pts = [];
+    function size() {
+      const r = cv.getBoundingClientRect();
+      w = r.width;
+      h = r.height;
+      cv.width = w * dpr;
+      cv.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const n = Math.max(28, Math.min(70, Math.round(w / 16)));
+      pts = Array.from({
+        length: n
+      }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - .5) * .25,
+        vy: (Math.random() - .5) * .25,
+        r: Math.random() * 1.8 + .6,
+        c: COLORS[Math.random() * COLORS.length | 0]
+      }));
+    }
+    function orb(cx, cy, rad, col, a) {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      g.addColorStop(0, col + a);
+      g.addColorStop(1, "#00000000");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+    function frame() {
+      t += 0.004;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#161310";
+      ctx.fillRect(0, 0, w, h);
+      orb(w * (0.30 + Math.sin(t) * 0.05), h * (0.42 + Math.cos(t * 0.8) * 0.06), Math.max(w, h) * 0.45, "#E8820C", "2e");
+      orb(w * (0.74 + Math.cos(t * 0.7) * 0.05), h * (0.62 + Math.sin(t) * 0.05), Math.max(w, h) * 0.40, "#27B3A3", "26");
+      for (const p of pts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > w) p.vx *= -1;
+        if (p.y < 0 || p.y > h) p.vy *= -1;
+      }
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const a = pts[i],
+            b = pts[j];
+          const dx = a.x - b.x,
+            dy = a.y - b.y;
+          const d = dx * dx + dy * dy;
+          if (d < 11000) {
+            ctx.strokeStyle = "rgba(243,162,62," + 0.10 * (1 - d / 11000) + ")";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+      }
+      for (const p of pts) {
+        ctx.fillStyle = p.c;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 7);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      raf = requestAnimationFrame(frame);
+    }
+    function still() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#161310";
+      ctx.fillRect(0, 0, w, h);
+      orb(w * 0.32, h * 0.42, Math.max(w, h) * 0.45, "#E8820C", "2e");
+      orb(w * 0.74, h * 0.6, Math.max(w, h) * 0.4, "#27B3A3", "26");
+      for (const p of pts) {
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 7);
+        ctx.fill();
+      }
+    }
+    size();
+    if (reduce) {
+      still();
+    } else {
+      frame();
+    }
+    const onR = () => {
+      size();
+      if (reduce) still();
+    };
+    window.addEventListener("resize", onR);
+    const onVis = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else if (!reduce) {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(frame);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onR);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+  return /*#__PURE__*/React.createElement("section", {
+    style: S.heroWrap
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: ref,
+    style: S.heroCanvas,
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    style: S.heroOverlay
+  }), /*#__PURE__*/React.createElement("div", {
+    style: S.heroContent
+  }, /*#__PURE__*/React.createElement("p", {
+    style: S.heroEyebrow
+  }, "Curated goods \xB7 delivered across India \u2708"), /*#__PURE__*/React.createElement("h1", {
+    style: S.heroTitle
+  }, "Things worth", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: S.heroAccent
+  }, "waiting"), " for."), /*#__PURE__*/React.createElement("p", {
+    style: S.heroLede
+  }, "A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap \u2014 Cash on Delivery or secure online payment."), /*#__PURE__*/React.createElement("div", {
+    style: S.heroBtns
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onShop,
+    style: S.heroPrimary
+  }, "Shop the collection"), /*#__PURE__*/React.createElement("button", {
+    onClick: onTrack,
+    style: S.heroGhost
+  }, "Track your order"))), /*#__PURE__*/React.createElement("button", {
+    onClick: onShop,
+    style: S.heroScroll,
+    "aria-label": "Scroll to products"
+  }, "\u2193"));
 }
 function Store({
   products,
   onAdd,
-  onQuick
+  onQuick,
+  onTrack
 }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
@@ -442,22 +612,18 @@ function Store({
     if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);else if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);else if (sort === "discount") list = [...list].sort((a, b) => disc(b) - disc(a));
     return list;
   }, [products, q, cat, sort]);
-  return /*#__PURE__*/React.createElement("main", {
-    style: S.main
-  }, /*#__PURE__*/React.createElement("section", {
-    style: S.hero
-  }, /*#__PURE__*/React.createElement("p", {
-    style: S.eyebrow
-  }, "Free shipping over \u20B9999 \xB7 COD available \xB7 3\u20137 day delivery"), /*#__PURE__*/React.createElement("h1", {
-    style: S.heroH1
-  }, "Find something", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("em", {
-    style: {
-      color: T.marigold,
-      fontStyle: "normal"
-    }
-  }, "worth waiting"), " for."), /*#__PURE__*/React.createElement("p", {
-    style: S.heroSub
-  }, "Browse the full range, search what you need, and check out in a tap. Delivered to every pincode in India.")), /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Hero, {
+    onShop: () => {
+      const e = document.getElementById("shop");
+      if (e) e.scrollIntoView({
+        behavior: "smooth"
+      });
+    },
+    onTrack: onTrack
+  }), /*#__PURE__*/React.createElement("main", {
+    style: S.main,
+    id: "shop"
+  }, /*#__PURE__*/React.createElement("div", {
     style: S.trustBar,
     className: "vg-trust"
   }, [["✈️", "Ships pan-India"], ["↩", "Easy 7-day returns"], ["₹", "COD available"], ["✓", "Secure Razorpay checkout"]].map(([i, t]) => /*#__PURE__*/React.createElement("span", {
@@ -591,7 +757,7 @@ function Store({
         ...(out ? S.addBtnDisabled : {})
       }
     }, out ? "Sold out" : "Add to cart")));
-  })));
+  }))));
 }
 function QuickView({
   product,
@@ -902,23 +1068,41 @@ function Checkout({
   }, INDIAN_STATES.map(s => /*#__PURE__*/React.createElement("option", {
     key: s
   }, s)))), /*#__PURE__*/React.createElement(Field, {
-    label: "Payment"
+    label: "How would you like to pay?"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "vg-pay",
     style: {
-      display: "flex",
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
       gap: 10
     }
-  }, ["Online", "COD"].map(m => /*#__PURE__*/React.createElement("button", {
-    key: m,
+  }, [["Online", "Pay online", "UPI · Cards · Netbanking"], ["COD", "Cash on Delivery", "Pay when it arrives"]].map(([val, title, sub]) => /*#__PURE__*/React.createElement("button", {
+    key: val,
+    type: "button",
     onClick: () => setF({
       ...f,
-      pay: m
+      pay: val
     }),
     style: {
-      ...S.payChip,
-      ...(f.pay === m ? S.payChipOn : {})
+      ...S.payOpt,
+      ...(f.pay === val ? S.payOptOn : {})
     }
-  }, m === "Online" ? "Pay online (UPI/Card)" : "Cash on delivery"))))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...S.payRadio,
+      ...(f.pay === val ? S.payRadioOn : {})
+    }
+  }, f.pay === val ? "✓" : ""), /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.payTitle
+  }, title), /*#__PURE__*/React.createElement("span", {
+    style: S.paySub
+  }, sub))))))), /*#__PURE__*/React.createElement("div", {
     style: S.summary
   }, /*#__PURE__*/React.createElement("h3", {
     style: S.summaryTitle
@@ -1041,7 +1225,18 @@ function Confirmation({
       color: T.inkSoft,
       marginTop: 16
     }
-  }, "Shipping to ", esc(order.customer.name), ", ", esc(order.customer.city), ", ", esc(order.customer.state), " \u2014 ", esc(order.customer.pincode)), /*#__PURE__*/React.createElement("button", {
+  }, "Shipping to ", esc(order.customer.name), ", ", esc(order.customer.city), ", ", esc(order.customer.state), " \u2014 ", esc(order.customer.pincode)), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      color: T.muted,
+      marginTop: 10,
+      fontFamily: "var(--mono)"
+    }
+  }, "Track anytime with order ID ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.ink
+    }
+  }, "#", order.id), " + your phone number, from the \u201CTrack order\u201D link up top."), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.primaryBtn,
@@ -1109,11 +1304,407 @@ function Policy({
     }
   }, "Last updated on order. For questions, contact ", INFO.email, ".")));
 }
+function TrackOrder({
+  onBack
+}) {
+  const [id, setId] = useState("");
+  const [phone, setPhone] = useState("");
+  const [res, setRes] = useState(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const steps = ["Placed", "Packed", "Shipped", "Delivered"];
+  const submit = async () => {
+    setErr("");
+    setRes(null);
+    if (!id.trim() || phone.replace(/\D/g, "").length < 10) {
+      setErr("Enter your order ID and 10-digit phone number.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch(API + "/api/track", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: id,
+          phone
+        })
+      });
+      const j = await r.json();
+      setBusy(false);
+      if (r.ok) {
+        setRes(j);
+      } else {
+        setErr(j.error || "Couldn't find that order.");
+      }
+    } catch (e) {
+      setBusy(false);
+      setErr("Something went wrong. Please try again.");
+    }
+  };
+  const idx = res ? res.status === "Cancelled" ? -1 : steps.indexOf(res.status) : -1;
+  return /*#__PURE__*/React.createElement("main", {
+    style: {
+      ...S.main,
+      maxWidth: 620
+    }
+  }, /*#__PURE__*/React.createElement("section", {
+    style: {
+      padding: "40px 0 8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: S.linkBtn
+  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 32,
+      fontWeight: 700,
+      letterSpacing: "-.02em",
+      margin: "14px 0 6px"
+    }
+  }, "Track your order"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      marginBottom: 20,
+      fontSize: 14.5
+    }
+  }, "Enter your order ID and the phone number you ordered with."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12,
+      maxWidth: 420
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: id,
+    onChange: e => setId(e.target.value),
+    placeholder: "Order ID (e.g. VG12345678)"
+  }), /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: phone,
+    onChange: e => setPhone(e.target.value),
+    placeholder: "Phone number (10 digits)",
+    inputMode: "numeric",
+    maxLength: 10
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: submit,
+    disabled: busy,
+    style: {
+      ...S.primaryBtn,
+      ...(busy ? S.addBtnDisabled : {})
+    }
+  }, busy ? "Checking…" : "Track order"), err && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      fontSize: 13
+    }
+  }, err)), res && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 28,
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 16,
+      padding: 24
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontFamily: "var(--mono)"
+    }
+  }, "#", esc(res.id)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 13
+    }
+  }, res.itemCount, " item", res.itemCount === 1 ? "" : "s", " \xB7 ", rupee(res.total))), res.status === "Cancelled" ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      marginTop: 16,
+      fontWeight: 600
+    }
+  }, "This order was cancelled. Contact us if you need help.") : /*#__PURE__*/React.createElement("div", {
+    style: S.stepper
+  }, steps.map((s, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: s
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.stepDot,
+      background: i <= idx ? T.teal : T.line,
+      color: i <= idx ? "#fff" : T.muted
+    }
+  }, i <= idx ? "✓" : i + 1), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: i <= idx ? T.ink : T.muted,
+      fontFamily: "var(--mono)"
+    }
+  }, s)), i < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.stepLine,
+      background: i < idx ? T.teal : T.line
+    }
+  })))), res.trackingUrl && /*#__PURE__*/React.createElement("a", {
+    href: res.trackingUrl,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      ...S.primaryBtn,
+      display: "inline-block",
+      textAlign: "center",
+      textDecoration: "none",
+      marginTop: 18,
+      padding: "11px 22px"
+    }
+  }, "Track shipment", res.trackingCarrier ? ` · ${esc(res.trackingCarrier)}` : ""), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      marginTop: 14,
+      fontFamily: "var(--mono)"
+    }
+  }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")))));
+}
+function AdminOrders({
+  onBack
+}) {
+  const [key, setKey] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = async k => {
+    setErr("");
+    setBusy(true);
+    try {
+      const r = await fetch(API + "/api/admin/orders", {
+        headers: {
+          "x-admin-key": k
+        }
+      });
+      const j = await r.json();
+      setBusy(false);
+      if (r.ok) {
+        setOrders(j.orders || []);
+        setAuthed(true);
+      } else {
+        setErr(j.error || "Could not load orders.");
+        setAuthed(false);
+      }
+    } catch (e) {
+      setBusy(false);
+      setErr("Something went wrong. Please try again.");
+    }
+  };
+  return /*#__PURE__*/React.createElement("main", {
+    style: {
+      ...S.main,
+      maxWidth: 840
+    }
+  }, /*#__PURE__*/React.createElement("section", {
+    style: {
+      padding: "40px 0 8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: S.linkBtn
+  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 32,
+      fontWeight: 700,
+      letterSpacing: "-.02em",
+      margin: "14px 0 6px"
+    }
+  }, "Manage orders"), !authed ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12,
+      maxWidth: 360,
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 14
+    }
+  }, "Enter your admin key to view and update orders."), /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    type: "password",
+    value: key,
+    onChange: e => setKey(e.target.value),
+    placeholder: "Admin key"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => load(key),
+    disabled: busy,
+    style: {
+      ...S.primaryBtn,
+      ...(busy ? S.addBtnDisabled : {})
+    }
+  }, busy ? "Checking…" : "Open"), err && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      fontSize: 13
+    }
+  }, err)) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 13
+    }
+  }, orders.length, " order", orders.length === 1 ? "" : "s"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => load(key),
+    style: S.linkBtn
+  }, "Refresh")), orders.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted
+    }
+  }, "No orders yet."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12
+    }
+  }, orders.map(o => /*#__PURE__*/React.createElement(AdminRow, {
+    key: o.id,
+    o: o,
+    adminKey: key,
+    onSaved: () => load(key)
+  }))))));
+}
+function AdminRow({
+  o,
+  adminKey,
+  onSaved
+}) {
+  const [status, setStatus] = useState(o.status || "Placed");
+  const [carrier, setCarrier] = useState(o.tracking_carrier || "");
+  const [url, setUrl] = useState(o.tracking_url || "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const save = async () => {
+    setSaving(true);
+    setMsg("");
+    try {
+      const r = await fetch(API + "/api/admin/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey
+        },
+        body: JSON.stringify({
+          orderId: o.id,
+          status,
+          trackingCarrier: carrier,
+          trackingUrl: url
+        })
+      });
+      const j = await r.json();
+      setSaving(false);
+      if (r.ok) {
+        setMsg("Saved ✓");
+        onSaved && onSaved();
+      } else {
+        setMsg(j.error || "Failed");
+      }
+    } catch (e) {
+      setSaving(false);
+      setMsg("Failed");
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontFamily: "var(--mono)",
+      fontSize: 13
+    }
+  }, "#", esc(o.id)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      color: T.inkSoft
+    }
+  }, esc(o.name), " \xB7 ", esc(o.city), ", ", esc(o.state), " \xB7 ", rupee(o.total), " \xB7 ", o.paid ? "Paid" : "COD")), /*#__PURE__*/React.createElement("div", {
+    className: "vg-admin",
+    style: {
+      display: "grid",
+      gridTemplateColumns: "150px 1fr 1fr auto",
+      gap: 10,
+      marginTop: 12,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("select", {
+    style: S.input,
+    value: status,
+    onChange: e => setStatus(e.target.value)
+  }, ["Placed", "Packed", "Shipped", "Delivered", "Cancelled"].map(s => /*#__PURE__*/React.createElement("option", {
+    key: s
+  }, s))), /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: carrier,
+    onChange: e => setCarrier(e.target.value),
+    placeholder: "Carrier (e.g. Delhivery)"
+  }), /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: url,
+    onChange: e => setUrl(e.target.value),
+    placeholder: "Tracking link (optional)"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: save,
+    disabled: saving,
+    style: {
+      ...S.addBtn,
+      width: "auto",
+      marginTop: 0,
+      padding: "10px 18px"
+    }
+  }, saving ? "…" : "Save")), msg && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: msg.indexOf("Saved") === 0 ? T.teal : T.danger,
+      marginTop: 8,
+      fontFamily: "var(--mono)"
+    }
+  }, msg));
+}
 function Footer({
   storeName,
   onNav
 }) {
-  const links = [["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"]];
+  const links = [["Track order", "track"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
   return /*#__PURE__*/React.createElement("footer", {
     style: S.footer
   }, /*#__PURE__*/React.createElement("div", {
@@ -1157,9 +1748,9 @@ const S = {
     position: "sticky",
     top: 0,
     zIndex: 30,
-    background: "rgba(251,250,246,.88)",
-    backdropFilter: "blur(8px)",
-    borderBottom: "1px solid " + T.line
+    background: "rgba(20,17,14,.82)",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid rgba(255,255,255,.08)"
   },
   headerInner: {
     maxWidth: 1100,
@@ -1179,14 +1770,23 @@ const S = {
     fontFamily: "var(--display)",
     fontWeight: 700,
     fontSize: 22,
-    letterSpacing: "-.01em"
+    letterSpacing: "-.01em",
+    color: T.paper
   },
   tagline: {
     fontFamily: "var(--mono)",
     fontSize: 11,
-    color: T.muted,
+    color: "#9a9286",
     textTransform: "uppercase",
     letterSpacing: ".08em"
+  },
+  trackLink: {
+    border: "none",
+    background: "transparent",
+    color: T.paper,
+    fontWeight: 600,
+    fontSize: 13,
+    padding: "6px 4px"
   },
   cartBtn: {
     position: "relative",
@@ -1244,6 +1844,106 @@ const S = {
     marginTop: 16,
     maxWidth: 460,
     lineHeight: 1.5
+  },
+  heroWrap: {
+    position: "relative",
+    width: "100%",
+    minHeight: "clamp(440px,76vh,640px)",
+    display: "flex",
+    alignItems: "center",
+    overflow: "hidden",
+    background: "#161310"
+  },
+  heroCanvas: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    display: "block"
+  },
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "radial-gradient(120% 90% at 50% 28%, rgba(22,19,16,0) 35%, rgba(22,19,16,.5) 100%)",
+    pointerEvents: "none"
+  },
+  heroContent: {
+    position: "relative",
+    zIndex: 2,
+    maxWidth: 1100,
+    width: "100%",
+    margin: "0 auto",
+    padding: "0 24px"
+  },
+  heroEyebrow: {
+    fontFamily: "var(--mono)",
+    fontSize: 12,
+    letterSpacing: ".12em",
+    textTransform: "uppercase",
+    color: "#F3A23E",
+    margin: "0 0 16px"
+  },
+  heroTitle: {
+    fontFamily: "var(--display)",
+    fontWeight: 700,
+    fontSize: "clamp(40px,8vw,82px)",
+    lineHeight: .98,
+    letterSpacing: "-.025em",
+    color: "#FBFAF6",
+    margin: 0,
+    textShadow: "0 2px 40px rgba(0,0,0,.45)"
+  },
+  heroAccent: {
+    background: "linear-gradient(90deg,#F3A23E,#E8820C 55%,#27B3A3)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+    fontStyle: "italic"
+  },
+  heroLede: {
+    color: "rgba(251,250,246,.74)",
+    fontSize: "clamp(15px,1.6vw,18px)",
+    lineHeight: 1.55,
+    maxWidth: 520,
+    margin: "22px 0 30px"
+  },
+  heroBtns: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  heroPrimary: {
+    border: "none",
+    background: "#E8820C",
+    color: "#fff",
+    fontWeight: 700,
+    fontSize: 15,
+    borderRadius: 999,
+    padding: "13px 26px",
+    boxShadow: "0 10px 30px rgba(232,130,12,.35)"
+  },
+  heroGhost: {
+    border: "1.5px solid rgba(251,250,246,.3)",
+    background: "rgba(251,250,246,.04)",
+    color: "#FBFAF6",
+    fontWeight: 600,
+    fontSize: 15,
+    borderRadius: 999,
+    padding: "13px 24px"
+  },
+  heroScroll: {
+    position: "absolute",
+    bottom: 18,
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 2,
+    border: "1px solid rgba(251,250,246,.25)",
+    background: "rgba(251,250,246,.06)",
+    color: "#FBFAF6",
+    borderRadius: 999,
+    width: 38,
+    height: 38,
+    fontSize: 16
   },
   trustBar: {
     display: "flex",
@@ -1640,6 +2340,49 @@ const S = {
     borderColor: T.teal,
     color: T.teal,
     background: "#EAF4F2"
+  },
+  payOpt: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    textAlign: "left",
+    border: "1.5px solid " + T.line,
+    background: T.card,
+    borderRadius: 12,
+    padding: "12px 14px",
+    color: T.ink
+  },
+  payOptOn: {
+    borderColor: T.teal,
+    background: "#EAF4F2"
+  },
+  payRadio: {
+    flex: "0 0 auto",
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    border: "2px solid " + T.line,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 800,
+    color: "#fff"
+  },
+  payRadioOn: {
+    borderColor: T.teal,
+    background: T.teal
+  },
+  payTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: T.ink
+  },
+  paySub: {
+    fontSize: 11.5,
+    color: T.inkSoft,
+    marginTop: 2,
+    fontFamily: "var(--mono)"
   },
   summary: {
     background: T.card,

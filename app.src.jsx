@@ -148,8 +148,11 @@ function App(){
 
   return (
     <div style={S.page}>
-      <Header storeName={storeName} cartCount={cartCount} onCart={()=>setCartOpen(true)} onHome={()=>go(null)} />
-      {page ? <Policy pageKey={page} onBack={()=>go(null)} /> : <Store products={products} onAdd={addToCart} onQuick={setQuick} />}
+      <Header storeName={storeName} cartCount={cartCount} onCart={()=>setCartOpen(true)} onHome={()=>go(null)} onTrack={()=>go("track")} />
+      {page==="track" ? <TrackOrder onBack={()=>go(null)} />
+        : page==="admin" ? <AdminOrders onBack={()=>go(null)} />
+        : page ? <Policy pageKey={page} onBack={()=>go(null)} />
+        : <Store products={products} onAdd={addToCart} onQuick={setQuick} onTrack={()=>go("track")} />}
       <Footer storeName={storeName} onNav={go} />
       {cartOpen && !checkout && <CartDrawer items={cartItems} subtotal={subtotal} shipping={shipping} total={total} setQty={setQty} onClose={()=>setCartOpen(false)} onCheckout={()=>{ if(cartItems.length) setCheckout(true); }} />}
       {checkout && <Checkout items={cartItems} total={total} shipping={shipping} subtotal={subtotal} paying={paying} onBack={()=>{ if(!paying) setCheckout(false); }} onPlace={handlePlace} />}
@@ -159,14 +162,65 @@ function App(){
   );
 }
 
-function Header({storeName,cartCount,onCart,onHome}){
+function Header({storeName,cartCount,onCart,onHome,onTrack}){
   return (<header style={S.header}><div style={S.headerInner}>
-    <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-icon.svg" alt="Vector Grid" width="36" height="36" style={{display:"block",borderRadius:10}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
-    <button onClick={onCart} style={S.cartBtn} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
+    <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-mark.svg" alt="Vector Grid" width="34" height="34" style={{display:"block"}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
+    <div style={{display:"flex",alignItems:"center",gap:14}}>
+      <button onClick={onTrack} style={S.trackLink}>Track order</button>
+      <button onClick={onCart} style={S.cartBtn} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
+    </div>
   </div></header>);
 }
 
-function Store({products,onAdd,onQuick}){
+function Hero({onShop,onTrack}){
+  const ref=React.useRef(null);
+  useEffect(()=>{
+    const cv=ref.current; if(!cv) return;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx=cv.getContext("2d"); let w=0,h=0,dpr=Math.min(window.devicePixelRatio||1,2),raf=0,t=0;
+    const COLORS=["#E8820C","#F3A23E","#27B3A3"];
+    let pts=[];
+    function size(){ const r=cv.getBoundingClientRect(); w=r.width; h=r.height; cv.width=w*dpr; cv.height=h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+      const n=Math.max(28,Math.min(70,Math.round(w/16)));
+      pts=Array.from({length:n},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.8+.6,c:COLORS[(Math.random()*COLORS.length)|0]}));
+    }
+    function orb(cx,cy,rad,col,a){ const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,col+a); g.addColorStop(1,"#00000000"); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
+    function frame(){ t+=0.004;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle="#161310"; ctx.fillRect(0,0,w,h);
+      orb(w*(0.30+Math.sin(t)*0.05), h*(0.42+Math.cos(t*0.8)*0.06), Math.max(w,h)*0.45, "#E8820C","2e");
+      orb(w*(0.74+Math.cos(t*0.7)*0.05), h*(0.62+Math.sin(t)*0.05), Math.max(w,h)*0.40, "#27B3A3","26");
+      for(const p of pts){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1; }
+      for(let i=0;i<pts.length;i++){ for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j]; const dx=a.x-b.x,dy=a.y-b.y; const d=dx*dx+dy*dy; if(d<11000){ ctx.strokeStyle="rgba(243,162,62,"+(0.10*(1-d/11000))+")"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } }
+      for(const p of pts){ ctx.fillStyle=p.c; ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
+      ctx.globalAlpha=1;
+      raf=requestAnimationFrame(frame);
+    }
+    function still(){ ctx.clearRect(0,0,w,h); ctx.fillStyle="#161310"; ctx.fillRect(0,0,w,h); orb(w*0.32,h*0.42,Math.max(w,h)*0.45,"#E8820C","2e"); orb(w*0.74,h*0.6,Math.max(w,h)*0.4,"#27B3A3","26"); for(const p of pts){ ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); } }
+    size(); if(reduce){ still(); } else { frame(); }
+    const onR=()=>{ size(); if(reduce) still(); };
+    window.addEventListener("resize",onR);
+    const onVis=()=>{ if(document.hidden){ cancelAnimationFrame(raf); } else if(!reduce){ cancelAnimationFrame(raf); raf=requestAnimationFrame(frame); } };
+    document.addEventListener("visibilitychange",onVis);
+    return ()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize",onR); document.removeEventListener("visibilitychange",onVis); };
+  },[]);
+  return (<section style={S.heroWrap}>
+    <canvas ref={ref} style={S.heroCanvas} aria-hidden="true" />
+    <div style={S.heroOverlay} />
+    <div style={S.heroContent}>
+      <p style={S.heroEyebrow}>Curated goods · delivered across India ✈</p>
+      <h1 style={S.heroTitle}>Things worth<br/><span style={S.heroAccent}>waiting</span> for.</h1>
+      <p style={S.heroLede}>A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap — Cash on Delivery or secure online payment.</p>
+      <div style={S.heroBtns}>
+        <button onClick={onShop} style={S.heroPrimary}>Shop the collection</button>
+        <button onClick={onTrack} style={S.heroGhost}>Track your order</button>
+      </div>
+    </div>
+    <button onClick={onShop} style={S.heroScroll} aria-label="Scroll to products">↓</button>
+  </section>);
+}
+
+function Store({products,onAdd,onQuick,onTrack}){
   const [q,setQ]=useState("");
   const [cat,setCat]=useState("All");
   const [sort,setSort]=useState("featured");
@@ -185,13 +239,9 @@ function Store({products,onAdd,onQuick}){
     return list;
   },[products,q,cat,sort]);
 
-  return (<main style={S.main}>
-    <section style={S.hero}>
-      <p style={S.eyebrow}>Free shipping over ₹999 · COD available · 3–7 day delivery</p>
-      <h1 style={S.heroH1}>Find something<br/><em style={{color:T.marigold,fontStyle:"normal"}}>worth waiting</em> for.</h1>
-      <p style={S.heroSub}>Browse the full range, search what you need, and check out in a tap. Delivered to every pincode in India.</p>
-    </section>
-
+  return (<>
+    <Hero onShop={()=>{const e=document.getElementById("shop"); if(e) e.scrollIntoView({behavior:"smooth"});}} onTrack={onTrack} />
+    <main style={S.main} id="shop">
     <div style={S.trustBar} className="vg-trust">
       {[["✈️","Ships pan-India"],["↩","Easy 7-day returns"],["₹","COD available"],["✓","Secure Razorpay checkout"]].map(([i,t])=>(
         <span key={t} style={S.trustItem}><span aria-hidden="true" style={S.trustIcon}>{i}</span>{t}</span>
@@ -247,7 +297,7 @@ function Store({products,onAdd,onQuick}){
         </article>); })}
     </div>
     )}
-  </main>);
+  </main></>);
 }
 
 function QuickView({product,onClose,onAdd}){ const out=product.stock<=0; return (
@@ -308,7 +358,7 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         <Field label="Address line 2"><input style={S.input} value={f.line2} onChange={up("line2")} maxLength={120} placeholder="Area, landmark" /></Field>
         <div style={S.two}><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
         <Field label="State"><select style={S.input} value={f.state} onChange={up("state")}>{INDIAN_STATES.map(s=><option key={s}>{s}</option>)}</select></Field>
-        <Field label="Payment"><div style={{display:"flex",gap:10}}>{["Online","COD"].map(m=><button key={m} onClick={()=>setF({...f,pay:m})} style={{...S.payChip,...(f.pay===m?S.payChipOn:{})}}>{m==="Online"?"Pay online (UPI/Card)":"Cash on delivery"}</button>)}</div></Field>
+        <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery","Pay when it arrives"]].map(([val,title,sub])=>(<button key={val} type="button" onClick={()=>setF({...f,pay:val})} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>))}</div></Field>
       </div>
       <div style={S.summary}>
         <h3 style={S.summaryTitle}>Order summary</h3>
@@ -330,6 +380,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
     <p style={{color:T.inkSoft,marginTop:4}}>Order <strong style={{fontFamily:"var(--mono)",color:T.ink}}>#{order.id}</strong> · {rupee(order.total)} · {order.payment==="COD"?"Cash on delivery":"Paid online"}</p>
     <div style={S.stepper}>{steps.map((s,idx)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:idx===0?T.teal:T.line,color:idx===0?"#fff":T.muted}}>{idx+1}</div><span style={{fontSize:11,color:idx===0?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{idx<steps.length-1 && <div style={S.stepLine} />}</React.Fragment>))}</div>
     <p style={{fontSize:13,color:T.inkSoft,marginTop:16}}>Shipping to {esc(order.customer.name)}, {esc(order.customer.city)}, {esc(order.customer.state)} — {esc(order.customer.pincode)}</p>
+    <p style={{fontSize:12.5,color:T.muted,marginTop:10,fontFamily:"var(--mono)"}}>Track anytime with order ID <strong style={{color:T.ink}}>#{order.id}</strong> + your phone number, from the “Track order” link up top.</p>
     <button onClick={onClose} style={{...S.primaryBtn,marginTop:20}}>Continue shopping</button>
   </div></Overlay>); }
 
@@ -346,8 +397,104 @@ function Policy({pageKey,onBack}){
   </main>);
 }
 
+function TrackOrder({onBack}){
+  const [id,setId]=useState(""); const [phone,setPhone]=useState("");
+  const [res,setRes]=useState(null); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const steps=["Placed","Packed","Shipped","Delivered"];
+  const submit=async()=>{
+    setErr(""); setRes(null);
+    if(!id.trim()||phone.replace(/\D/g,"").length<10){ setErr("Enter your order ID and 10-digit phone number."); return; }
+    setBusy(true);
+    try{ const r=await fetch(API+"/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:id,phone})});
+      const j=await r.json(); setBusy(false);
+      if(r.ok){ setRes(j); } else { setErr(j.error||"Couldn't find that order."); }
+    }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
+  };
+  const idx = res ? (res.status==="Cancelled"?-1:steps.indexOf(res.status)) : -1;
+  return (<main style={{...S.main,maxWidth:620}}>
+    <section style={{padding:"40px 0 8px"}}>
+      <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
+      <h1 style={{fontFamily:"var(--display)",fontSize:32,fontWeight:700,letterSpacing:"-.02em",margin:"14px 0 6px"}}>Track your order</h1>
+      <p style={{color:T.inkSoft,marginBottom:20,fontSize:14.5}}>Enter your order ID and the phone number you ordered with.</p>
+      <div style={{display:"grid",gap:12,maxWidth:420}}>
+        <input style={S.input} value={id} onChange={e=>setId(e.target.value)} placeholder="Order ID (e.g. VG12345678)" />
+        <input style={S.input} value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone number (10 digits)" inputMode="numeric" maxLength={10} />
+        <button onClick={submit} disabled={busy} style={{...S.primaryBtn,...(busy?S.addBtnDisabled:{})}}>{busy?"Checking…":"Track order"}</button>
+        {err && <p style={{color:T.danger,fontSize:13}}>{err}</p>}
+      </div>
+      {res && (<div style={{marginTop:28,background:T.card,border:"1px solid "+T.line,borderRadius:16,padding:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <strong style={{fontFamily:"var(--mono)"}}>#{esc(res.id)}</strong>
+          <span style={{color:T.inkSoft,fontSize:13}}>{res.itemCount} item{res.itemCount===1?"":"s"} · {rupee(res.total)}</span>
+        </div>
+        {res.status==="Cancelled"
+          ? <p style={{color:T.danger,marginTop:16,fontWeight:600}}>This order was cancelled. Contact us if you need help.</p>
+          : <div style={S.stepper}>{steps.map((s,i)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:i<=idx?T.teal:T.line,color:i<=idx?"#fff":T.muted}}>{i<=idx?"✓":i+1}</div><span style={{fontSize:11,color:i<=idx?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{i<steps.length-1 && <div style={{...S.stepLine,background:i<idx?T.teal:T.line}} />}</React.Fragment>))}</div>}
+        {res.trackingUrl && <a href={res.trackingUrl} target="_blank" rel="noopener noreferrer" style={{...S.primaryBtn,display:"inline-block",textAlign:"center",textDecoration:"none",marginTop:18,padding:"11px 22px"}}>Track shipment{res.trackingCarrier?` · ${esc(res.trackingCarrier)}`:""}</a>}
+        <p style={{fontSize:12,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Updated {new Date(res.updatedAt).toLocaleString("en-IN")}</p>
+      </div>)}
+    </section>
+  </main>);
+}
+
+function AdminOrders({onBack}){
+  const [key,setKey]=useState(""); const [authed,setAuthed]=useState(false);
+  const [orders,setOrders]=useState([]); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const load=async(k)=>{ setErr(""); setBusy(true);
+    try{ const r=await fetch(API+"/api/admin/orders",{headers:{"x-admin-key":k}});
+      const j=await r.json(); setBusy(false);
+      if(r.ok){ setOrders(j.orders||[]); setAuthed(true); } else { setErr(j.error||"Could not load orders."); setAuthed(false); }
+    }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
+  };
+  return (<main style={{...S.main,maxWidth:840}}>
+    <section style={{padding:"40px 0 8px"}}>
+      <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
+      <h1 style={{fontFamily:"var(--display)",fontSize:32,fontWeight:700,letterSpacing:"-.02em",margin:"14px 0 6px"}}>Manage orders</h1>
+      {!authed ? (
+        <div style={{display:"grid",gap:12,maxWidth:360,marginTop:12}}>
+          <p style={{color:T.inkSoft,fontSize:14}}>Enter your admin key to view and update orders.</p>
+          <input style={S.input} type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="Admin key" />
+          <button onClick={()=>load(key)} disabled={busy} style={{...S.primaryBtn,...(busy?S.addBtnDisabled:{})}}>{busy?"Checking…":"Open"}</button>
+          {err && <p style={{color:T.danger,fontSize:13}}>{err}</p>}
+        </div>
+      ) : (
+        <div style={{marginTop:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><span style={{color:T.inkSoft,fontSize:13}}>{orders.length} order{orders.length===1?"":"s"}</span><button onClick={()=>load(key)} style={S.linkBtn}>Refresh</button></div>
+          {orders.length===0 && <p style={{color:T.muted}}>No orders yet.</p>}
+          <div style={{display:"grid",gap:12}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key)} />)}</div>
+        </div>
+      )}
+    </section>
+  </main>);
+}
+function AdminRow({o,adminKey,onSaved}){
+  const [status,setStatus]=useState(o.status||"Placed");
+  const [carrier,setCarrier]=useState(o.tracking_carrier||"");
+  const [url,setUrl]=useState(o.tracking_url||"");
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState("");
+  const save=async()=>{ setSaving(true); setMsg("");
+    try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
+      const j=await r.json(); setSaving(false);
+      if(r.ok){ setMsg("Saved ✓"); onSaved&&onSaved(); } else { setMsg(j.error||"Failed"); }
+    }catch(e){ setSaving(false); setMsg("Failed"); }
+  };
+  return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+      <strong style={{fontFamily:"var(--mono)",fontSize:13}}>#{esc(o.id)}</strong>
+      <span style={{fontSize:13,color:T.inkSoft}}>{esc(o.name)} · {esc(o.city)}, {esc(o.state)} · {rupee(o.total)} · {o.paid?"Paid":"COD"}</span>
+    </div>
+    <div className="vg-admin" style={{display:"grid",gridTemplateColumns:"150px 1fr 1fr auto",gap:10,marginTop:12,alignItems:"center"}}>
+      <select style={S.input} value={status} onChange={e=>setStatus(e.target.value)}>{["Placed","Packed","Shipped","Delivered","Cancelled"].map(s=><option key={s}>{s}</option>)}</select>
+      <input style={S.input} value={carrier} onChange={e=>setCarrier(e.target.value)} placeholder="Carrier (e.g. Delhivery)" />
+      <input style={S.input} value={url} onChange={e=>setUrl(e.target.value)} placeholder="Tracking link (optional)" />
+      <button onClick={save} disabled={saving} style={{...S.addBtn,width:"auto",marginTop:0,padding:"10px 18px"}}>{saving?"…":"Save"}</button>
+    </div>
+    {msg && <p style={{fontSize:12,color:msg.indexOf("Saved")===0?T.teal:T.danger,marginTop:8,fontFamily:"var(--mono)"}}>{msg}</p>}
+  </div>);
+}
+
 function Footer({storeName,onNav}){
-  const links=[["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"]];
+  const links=[["Track order","track"],["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"],["Seller","admin"]];
   return (<footer style={S.footer}>
     <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12,alignItems:"center"}}>
       <span style={{fontWeight:600,color:T.ink}}>{storeName}</span>
@@ -360,11 +507,24 @@ function Footer({storeName,onNav}){
 }
 
 const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var(--body)"},
-  header:{position:"sticky",top:0,zIndex:30,background:"rgba(251,250,246,.88)",backdropFilter:"blur(8px)",borderBottom:"1px solid "+T.line},
+  header:{position:"sticky",top:0,zIndex:30,background:"rgba(20,17,14,.82)",backdropFilter:"blur(10px)",borderBottom:"1px solid rgba(255,255,255,.08)"},
   headerInner:{maxWidth:1100,margin:"0 auto",padding:"14px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10},
-  mark:{color:T.marigold,fontSize:18}, wordmark:{fontFamily:"var(--display)",fontWeight:700,fontSize:22,letterSpacing:"-.01em"}, tagline:{fontFamily:"var(--mono)",fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".08em"},
+  mark:{color:T.marigold,fontSize:18}, wordmark:{fontFamily:"var(--display)",fontWeight:700,fontSize:22,letterSpacing:"-.01em",color:T.paper}, tagline:{fontFamily:"var(--mono)",fontSize:11,color:"#9a9286",textTransform:"uppercase",letterSpacing:".08em"},
+  trackLink:{border:"none",background:"transparent",color:T.paper,fontWeight:600,fontSize:13,padding:"6px 4px"},
   cartBtn:{position:"relative",border:"none",background:T.marigold,color:"#fff",borderRadius:999,padding:"8px 18px",fontSize:13,fontWeight:700}, cartBadge:{position:"absolute",top:-6,right:-6,background:T.ink,color:"#fff",borderRadius:999,fontSize:11,minWidth:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 4px"},
   main:{maxWidth:1100,margin:"0 auto",padding:"0 22px 60px"}, hero:{padding:"38px 0 18px",maxWidth:660}, eyebrow:{fontFamily:"var(--mono)",fontSize:12,color:T.teal,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}, heroH1:{fontFamily:"var(--display)",fontSize:"clamp(30px,5vw,50px)",lineHeight:1.04,fontWeight:700,letterSpacing:"-.02em",margin:0}, heroSub:{fontSize:15.5,color:T.inkSoft,marginTop:16,maxWidth:460,lineHeight:1.5},
+  heroWrap:{position:"relative",width:"100%",minHeight:"clamp(440px,76vh,640px)",display:"flex",alignItems:"center",overflow:"hidden",background:"#161310"},
+  heroCanvas:{position:"absolute",inset:0,width:"100%",height:"100%",display:"block"},
+  heroOverlay:{position:"absolute",inset:0,background:"radial-gradient(120% 90% at 50% 28%, rgba(22,19,16,0) 35%, rgba(22,19,16,.5) 100%)",pointerEvents:"none"},
+  heroContent:{position:"relative",zIndex:2,maxWidth:1100,width:"100%",margin:"0 auto",padding:"0 24px"},
+  heroEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#F3A23E",margin:"0 0 16px"},
+  heroTitle:{fontFamily:"var(--display)",fontWeight:700,fontSize:"clamp(40px,8vw,82px)",lineHeight:.98,letterSpacing:"-.025em",color:"#FBFAF6",margin:0,textShadow:"0 2px 40px rgba(0,0,0,.45)"},
+  heroAccent:{background:"linear-gradient(90deg,#F3A23E,#E8820C 55%,#27B3A3)",WebkitBackgroundClip:"text",backgroundClip:"text",color:"transparent",fontStyle:"italic"},
+  heroLede:{color:"rgba(251,250,246,.74)",fontSize:"clamp(15px,1.6vw,18px)",lineHeight:1.55,maxWidth:520,margin:"22px 0 30px"},
+  heroBtns:{display:"flex",gap:12,flexWrap:"wrap"},
+  heroPrimary:{border:"none",background:"#E8820C",color:"#fff",fontWeight:700,fontSize:15,borderRadius:999,padding:"13px 26px",boxShadow:"0 10px 30px rgba(232,130,12,.35)"},
+  heroGhost:{border:"1.5px solid rgba(251,250,246,.3)",background:"rgba(251,250,246,.04)",color:"#FBFAF6",fontWeight:600,fontSize:15,borderRadius:999,padding:"13px 24px"},
+  heroScroll:{position:"absolute",bottom:18,left:"50%",transform:"translateX(-50%)",zIndex:2,border:"1px solid rgba(251,250,246,.25)",background:"rgba(251,250,246,.06)",color:"#FBFAF6",borderRadius:999,width:38,height:38,fontSize:16},
   trustBar:{display:"flex",flexWrap:"wrap",gap:"8px 18px",alignItems:"center",padding:"12px 16px",background:T.tint,border:"1px solid "+T.line,borderRadius:12,marginBottom:22},
   trustItem:{display:"inline-flex",alignItems:"center",gap:7,fontFamily:"var(--mono)",fontSize:12,color:T.inkSoft}, trustIcon:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:20,height:20,borderRadius:6,background:T.card,color:T.marigoldDark,fontSize:11.5,fontWeight:700},
   toolbar:{display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap"}, searchWrap:{position:"relative",flex:"1 1 260px",display:"flex",alignItems:"center"}, searchIcon:{position:"absolute",left:14,fontSize:18,color:T.muted,pointerEvents:"none"}, searchInput:{width:"100%",border:"1px solid "+T.line,borderRadius:999,padding:"11px 38px",fontSize:14.5,background:T.card,color:T.ink,fontFamily:"var(--body)"}, searchClear:{position:"absolute",right:12,border:"none",background:"transparent",color:T.muted,fontSize:13},
@@ -377,7 +537,8 @@ const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var
   drawerScrim:{position:"fixed",inset:0,background:"rgba(25,21,16,.4)",zIndex:50,display:"flex",justifyContent:"flex-end"}, drawer:{width:"min(420px,100%)",background:T.paper,height:"100%",display:"flex",flexDirection:"column",boxShadow:"-20px 0 60px rgba(0,0,0,.18)"}, drawerHead:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",borderBottom:"1px solid "+T.line}, drawerTitle:{fontFamily:"var(--display)",fontSize:20,margin:0}, xBtn:{border:"none",background:"transparent",fontSize:18,color:T.inkSoft},
   cartRow:{display:"flex",gap:12,padding:"14px 0",borderBottom:"1px solid "+T.line}, cartThumb:{width:60,height:60,borderRadius:10,objectFit:"cover",background:"#eee"}, cartName:{fontSize:14,fontWeight:600,margin:0}, cartPrice:{fontSize:13,color:T.inkSoft,marginTop:2}, qtyRow:{display:"flex",alignItems:"center",gap:8,marginTop:8}, qtyBtn:{width:26,height:26,borderRadius:7,border:"1px solid "+T.line,background:T.card,fontSize:15,lineHeight:1}, qtyNum:{minWidth:18,textAlign:"center",fontWeight:600,fontSize:14}, cartLine:{fontWeight:700,fontSize:14}, drawerFoot:{padding:20,borderTop:"1px solid "+T.line,background:T.card},
   overlay:{position:"fixed",inset:0,background:"rgba(25,21,16,.45)",zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}, modal:{background:T.paper,borderRadius:18,padding:28,width:"100%",boxShadow:"0 30px 80px rgba(0,0,0,.25)"}, modalTitle:{fontFamily:"var(--display)",fontSize:24,margin:0}, linkBtn:{border:"none",background:"transparent",color:T.teal,fontWeight:600,fontSize:13},
-  fieldLabel:{display:"block",fontSize:12,fontWeight:600,color:T.inkSoft,marginBottom:5,fontFamily:"var(--mono)",letterSpacing:".02em"}, input:{width:"100%",border:"1px solid "+T.line,borderRadius:9,padding:"9px 11px",fontSize:14,background:T.card,color:T.ink,fontFamily:"var(--body)"}, two:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}, payChip:{border:"1.5px solid "+T.line,background:T.card,borderRadius:9,padding:"9px 14px",fontSize:12.5,fontWeight:600,color:T.inkSoft}, payChipOn:{borderColor:T.teal,color:T.teal,background:"#EAF4F2"}, summary:{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:20,alignSelf:"start"}, summaryTitle:{fontFamily:"var(--display)",fontSize:16,margin:"0 0 12px"}, primaryBtn:{width:"100%",border:"none",background:T.marigold,color:"#fff",borderRadius:11,padding:"12px",fontWeight:700,fontSize:14.5},
+  fieldLabel:{display:"block",fontSize:12,fontWeight:600,color:T.inkSoft,marginBottom:5,fontFamily:"var(--mono)",letterSpacing:".02em"}, input:{width:"100%",border:"1px solid "+T.line,borderRadius:9,padding:"9px 11px",fontSize:14,background:T.card,color:T.ink,fontFamily:"var(--body)"}, two:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}, payChip:{border:"1.5px solid "+T.line,background:T.card,borderRadius:9,padding:"9px 14px",fontSize:12.5,fontWeight:600,color:T.inkSoft}, payChipOn:{borderColor:T.teal,color:T.teal,background:"#EAF4F2"},
+  payOpt:{display:"flex",alignItems:"center",gap:10,textAlign:"left",border:"1.5px solid "+T.line,background:T.card,borderRadius:12,padding:"12px 14px",color:T.ink}, payOptOn:{borderColor:T.teal,background:"#EAF4F2"}, payRadio:{flex:"0 0 auto",width:20,height:20,borderRadius:999,border:"2px solid "+T.line,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}, payRadioOn:{borderColor:T.teal,background:T.teal}, payTitle:{fontSize:14,fontWeight:700,color:T.ink}, paySub:{fontSize:11.5,color:T.inkSoft,marginTop:2,fontFamily:"var(--mono)"}, summary:{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:20,alignSelf:"start"}, summaryTitle:{fontFamily:"var(--display)",fontSize:16,margin:"0 0 12px"}, primaryBtn:{width:"100%",border:"none",background:T.marigold,color:"#fff",borderRadius:11,padding:"12px",fontWeight:700,fontSize:14.5},
   checkCircle:{width:56,height:56,borderRadius:999,background:T.teal,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto"}, stepper:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:22}, stepDot:{width:30,height:30,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,margin:"0 auto 5px"}, stepLine:{width:34,height:2,background:T.line,marginBottom:18},
   footer:{maxWidth:1100,margin:"0 auto",padding:"26px 22px 50px",display:"block",borderTop:"1px solid "+T.line,fontSize:12.5,color:T.inkSoft,fontFamily:"var(--mono)"}, footLink:{border:"none",background:"transparent",color:T.inkSoft,fontFamily:"var(--mono)",fontSize:12.5,padding:0,textDecoration:"underline",textUnderlineOffset:"3px"} };
 

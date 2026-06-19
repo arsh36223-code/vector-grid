@@ -13,6 +13,7 @@ const crypto = require("crypto");
 const path = require("path");
 const Razorpay = require("razorpay");
 const nodemailer = require("nodemailer");
+const { Pool } = require("pg");
 
 const app = express();
 app.disable("x-powered-by");
@@ -48,11 +49,58 @@ const mailer = (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SM
       port: Number(process.env.SMTP_PORT) || 465,
       secure: (Number(process.env.SMTP_PORT) || 465) === 465,
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 12000,
     })
   : null;
 if (!mailer) console.warn("⚠️  Email not configured — orders will be logged to server logs only.");
 const ORDER_TO = process.env.ORDER_EMAIL_TO || process.env.SMTP_USER || "vectorgridsupport@gmail.com";
 const SUPPLIER_TO = process.env.ORDER_EMAIL_SUPPLIER || "";
+
+// ---- Database (stores orders so customers can track them) ----
+const DB_URL = process.env.DATABASE_URL;
+const DB_SSL = DB_URL && !/localhost|127\.0\.0\.1/.test(DB_URL);
+const pool = DB_URL
+  ? new Pool({ connectionString: DB_URL, ssl: DB_SSL ? { rejectUnauthorized: false } : false, max: 5 })
+  : null;
+if (!pool) console.warn("⚠️  No DATABASE_URL — order tracking is off until a database is connected.");
+
+async function initDb() {
+  if (!pool) return;
+  await pool.query(`CREATE TABLE IF NOT EXISTS orders (
+    id text PRIMARY KEY,
+    name text, phone text, email text,
+    line1 text, line2 text, city text, state text, pincode text,
+    items jsonb, subtotal int, shipping int, total int,
+    paid boolean, payment_id text,
+    status text DEFAULT 'Placed',
+    tracking_url text, tracking_carrier text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+  )`);
+}
+if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => console.error("DB init failed:", e && e.message));
+
+async function saveOrder(o) {
+  if (!pool) return;
+  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price }));
+  await pool.query(
+    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed') ON CONFLICT (id) DO NOTHING`,
+    [o.id, o.customer.name, o.customer.phone, o.customer.email, o.customer.line1, o.customer.line2,
+     o.customer.city, o.customer.state, o.customer.pincode, JSON.stringify(items),
+     o.subtotal, o.shipping, o.total, o.paid, o.paymentId]
+  );
+}
+
+// ---- Seller admin auth (for updating order status) ----
+const ADMIN_KEY = process.env.ADMIN_KEY || "";
+if (!ADMIN_KEY) console.warn("⚠️  No ADMIN_KEY — the Manage Orders page is disabled until you set one.");
+function adminOk(req) {
+  const k = String((req.get && req.get("x-admin-key")) || (req.body && req.body.key) || (req.query && req.query.key) || "");
+  if (!ADMIN_KEY || !k) return false;
+  const a = Buffer.from(k), b = Buffer.from(ADMIN_KEY);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 /* ============================================================
    YOUR PRODUCTS — the source of truth. Customers NEVER see
@@ -213,12 +261,65 @@ app.post("/api/place-order", async (req, res) => {
     }
 
     const order = { id: "VG" + Date.now().toString().slice(-8), ...calc, customer, paid, paymentId };
-    try { await notifyOrder(order); } catch (e) { console.error("notify failed:", e && e.message); }
+    try { await saveOrder(order); } catch (e) { console.error("save failed:", e && e.message); }
+    // Respond immediately so the customer isn't kept waiting; email sends in the background.
     res.json({ ok: true, orderId: order.id, total: order.total });
+    notifyOrder(order).catch((e) => console.error("notify failed:", e && e.message));
   } catch (e) {
     console.error("place-order failed:", e && e.message);
     res.status(500).json({ error: "Could not place order" });
   }
+});
+
+// ---- Customer order tracking (by order ID + phone, no account) ----
+app.post("/api/track", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Order tracking isn't set up yet. Please contact us." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  const phone = String((req.body && req.body.phone) || "").replace(/\D/g, "").slice(-10);
+  if (!id || phone.length !== 10) return res.status(400).json({ error: "Enter your order ID and the 10-digit phone number you ordered with." });
+  try {
+    const r = await pool.query(
+      "SELECT id,status,tracking_url,tracking_carrier,total,items,created_at,updated_at FROM orders WHERE id=$1 AND phone=$2",
+      [id, phone]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: "No order found with that ID and phone number." });
+    const o = r.rows[0];
+    const itemCount = (o.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+    res.json({ id: o.id, status: o.status, trackingUrl: o.tracking_url, trackingCarrier: o.tracking_carrier,
+      total: o.total, itemCount, placedAt: o.created_at, updatedAt: o.updated_at });
+  } catch (e) { console.error("track failed:", e && e.message); res.status(500).json({ error: "Couldn't fetch your order. Please try again." }); }
+});
+
+// ---- Seller: list orders ----
+app.get("/api/admin/orders", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  try {
+    const r = await pool.query(
+      "SELECT id,name,phone,city,state,total,paid,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
+    );
+    res.json({ orders: r.rows });
+  } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }
+});
+
+// ---- Seller: update an order's status / tracking ----
+app.post("/api/admin/update", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  const status = String((req.body && req.body.status) || "").trim();
+  const allowed = ["Placed", "Packed", "Shipped", "Delivered", "Cancelled"];
+  if (!allowed.includes(status)) return res.status(400).json({ error: "Invalid status." });
+  const trackingUrl = String((req.body && req.body.trackingUrl) || "").trim().slice(0, 300);
+  const trackingCarrier = String((req.body && req.body.trackingCarrier) || "").trim().slice(0, 60);
+  try {
+    const r = await pool.query(
+      "UPDATE orders SET status=$2, tracking_url=$3, tracking_carrier=$4, updated_at=now() WHERE id=$1 RETURNING id",
+      [id, status, trackingUrl, trackingCarrier]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: "Order not found." });
+    res.json({ ok: true });
+  } catch (e) { console.error("admin update failed:", e && e.message); res.status(500).json({ error: "Update failed." }); }
 });
 
 app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
