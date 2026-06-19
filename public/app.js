@@ -102,6 +102,22 @@ const SEED = [{
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const esc = s => String(s == null ? "" : s);
+function cardTilt(e) {
+  if (window.matchMedia && (window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  const el = e.currentTarget,
+    r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5,
+    py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.transition = "transform .06s ease-out";
+  el.style.transform = `perspective(900px) rotateY(${px * 7}deg) rotateX(${-py * 7}deg) translateY(-5px)`;
+  el.style.boxShadow = "0 18px 40px rgba(25,21,16,.16)";
+}
+function cardReset(e) {
+  const el = e.currentTarget;
+  el.style.transition = "";
+  el.style.transform = "";
+  el.style.boxShadow = "";
+}
 
 /* ===== EDIT YOUR DETAILS HERE (used across the policy pages) ===== */
 const INFO = {
@@ -710,7 +726,9 @@ function Store({
     return /*#__PURE__*/React.createElement("article", {
       key: p.id,
       style: S.prodCard,
-      className: "vg-card"
+      className: "vg-card",
+      onMouseMove: cardTilt,
+      onMouseLeave: cardReset
     }, /*#__PURE__*/React.createElement("button", {
       style: S.imgWrap,
       onClick: () => onQuick(p),

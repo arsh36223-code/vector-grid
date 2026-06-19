@@ -16,6 +16,15 @@ const SEED = [
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const esc = (s) => String(s==null?"":s);
+function cardTilt(e){
+  if(window.matchMedia && (window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  const el=e.currentTarget, r=el.getBoundingClientRect();
+  const px=(e.clientX-r.left)/r.width-0.5, py=(e.clientY-r.top)/r.height-0.5;
+  el.style.transition="transform .06s ease-out";
+  el.style.transform=`perspective(900px) rotateY(${px*7}deg) rotateX(${-py*7}deg) translateY(-5px)`;
+  el.style.boxShadow="0 18px 40px rgba(25,21,16,.16)";
+}
+function cardReset(e){ const el=e.currentTarget; el.style.transition=""; el.style.transform=""; el.style.boxShadow=""; }
 
 /* ===== EDIT YOUR DETAILS HERE (used across the policy pages) ===== */
 const INFO = {
@@ -281,7 +290,7 @@ function Store({products,onAdd,onQuick,onTrack}){
     ) : (
     <div style={S.grid} className="vg-grid">
       {shown.map(p=>{ const out=p.stock<=0; return (
-        <article key={p.id} style={S.prodCard} className="vg-card">
+        <article key={p.id} style={S.prodCard} className="vg-card" onMouseMove={cardTilt} onMouseLeave={cardReset}>
           <button style={S.imgWrap} onClick={()=>onQuick(p)} aria-label={"View "+esc(p.name)}>
             <img src={p.img} alt={esc(p.name)} style={S.img} loading="lazy" onError={(e)=>{e.currentTarget.style.opacity=0.25;}} />
             {out && <span style={S.soldOut}>Sold out</span>}
