@@ -144,7 +144,7 @@ const POLICIES = {
   },
   privacy: {
     title: "Privacy Policy",
-    paras: [`${INFO.legalName} collects only the information needed to process and deliver your order: your name, phone number, email (optional), and delivery address.`, "We use this information solely to fulfil orders, arrange delivery, and contact you about your purchase. We do not sell or rent your personal information to anyone.", "Payment information is handled directly by Razorpay on their secure systems. We never see or store your card or UPI credentials.", "We may share delivery details with our courier partners only to deliver your order. We retain order records as required for accounting and legal compliance.", `You can ask us to access or delete your personal data by writing to ${INFO.email}.`]
+    paras: [`${INFO.legalName} collects only the information needed to process and deliver your order: your name, phone number, email, and delivery address.`, "We use this information solely to fulfil orders, arrange delivery, and contact you about your purchase. We do not sell or rent your personal information to anyone.", "Payment information is handled directly by Razorpay on their secure systems. We never see or store your card or UPI credentials.", "We may share delivery details with our courier partners only to deliver your order. We retain order records as required for accounting and legal compliance.", `You can ask us to access or delete your personal data by writing to ${INFO.email}.`]
   },
   refund: {
     title: "Refund & Cancellation Policy",
@@ -215,7 +215,10 @@ function App() {
       id: orderId || "VG" + Date.now().toString().slice(-8),
       total: amount,
       payment: paymentLabel,
-      customer: form
+      customer: form,
+      items: cartItems,
+      subtotal,
+      shipping
     });
     setCart({});
     setCheckout(false);
@@ -987,7 +990,7 @@ function Checkout({
     const e = {};
     if (!f.name.trim()) e.name = "Required";
     if (!/^[6-9]\d{9}$/.test(f.phone)) e.phone = "Valid 10-digit mobile";
-    if (f.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) e.email = "Invalid email";
+    if (!f.email.trim()) e.email = "Required for order updates";else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) e.email = "Enter a valid email";
     if (!f.line1.trim()) e.line1 = "Required";
     if (!f.city.trim()) e.city = "Required";
     if (!/^\d{6}$/.test(f.pincode)) e.pincode = "6-digit pincode";
@@ -1051,14 +1054,23 @@ function Checkout({
     inputMode: "numeric",
     placeholder: "10 digits"
   })), /*#__PURE__*/React.createElement(Field, {
-    label: "Email (optional)",
+    label: "Email",
     err: err.email
   }, /*#__PURE__*/React.createElement("input", {
     style: S.input,
+    type: "email",
     value: f.email,
     onChange: up("email"),
-    maxLength: 120
-  }))), /*#__PURE__*/React.createElement(Field, {
+    maxLength: 120,
+    placeholder: "you@example.com"
+  }))), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11.5,
+      color: T.muted,
+      margin: "-6px 0 12px",
+      lineHeight: 1.5
+    }
+  }, "📧 We'll email your order ID and tracking link here, so please enter it correctly."), /*#__PURE__*/React.createElement(Field, {
     label: "Address line 1",
     err: err.line1
   }, /*#__PURE__*/React.createElement("input", {
@@ -1142,20 +1154,42 @@ function Checkout({
     style: S.summary
   }, /*#__PURE__*/React.createElement("h3", {
     style: S.summaryTitle
-  }, "Order summary"), items.map(i => /*#__PURE__*/React.createElement("div", {
+  }, "Order summary"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      margin: "-6px 0 12px",
+      fontFamily: "var(--mono)"
+    }
+  }, items.reduce((n, i) => n + i.qty, 0), " item", items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s", " · ", items.length, " product", items.length === 1 ? "" : "s"), items.map(i => /*#__PURE__*/React.createElement("div", {
     key: i.id,
     style: {
       display: "flex",
       justifyContent: "space-between",
+      gap: 8,
       fontSize: 13,
-      padding: "5px 0",
-      color: T.inkSoft
+      padding: "7px 0",
+      color: T.inkSoft,
+      borderBottom: "1px solid " + T.line
     }
-  }, /*#__PURE__*/React.createElement("span", null, esc(i.name), " × ", i.qty), /*#__PURE__*/React.createElement("span", null, rupee(i.price * i.qty)))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
-      height: 1,
-      background: T.line,
-      margin: "10px 0"
+      flex: 1
+    }
+  }, esc(i.name), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      fontFamily: "var(--mono)"
+    }
+  }, rupee(i.price), " × ", i.qty)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: T.ink
+    }
+  }, rupee(i.price * i.qty)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 8
     }
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Subtotal",
@@ -1230,12 +1264,14 @@ function Confirmation({
   onClose
 }) {
   const steps = ["Placed", "Packed", "Shipped", "Delivered"];
+  const c = order.customer;
+  const items = order.items || [];
   return /*#__PURE__*/React.createElement(Overlay, {
     onClose: onClose
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.modal,
-      maxWidth: 560,
+      maxWidth: 580,
       textAlign: "center"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -1255,7 +1291,13 @@ function Confirmation({
       fontFamily: "var(--mono)",
       color: T.ink
     }
-  }, "#", order.id), " · ", rupee(order.total), " · ", order.payment === "COD" ? "Cash on delivery" : "Paid online"), /*#__PURE__*/React.createElement("div", {
+  }, "#", order.id), " · ", rupee(order.total), " · ", order.payment === "COD" ? "Cash on delivery" : "Paid online"), c && c.email && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      color: T.teal,
+      marginTop: 8
+    }
+  }, "📧 A confirmation with your tracking details has been sent to ", /*#__PURE__*/React.createElement("strong", null, esc(c.email))), /*#__PURE__*/React.createElement("div", {
     style: S.stepper
   }, steps.map((s, idx) => /*#__PURE__*/React.createElement(React.Fragment, {
     key: s
@@ -1277,28 +1319,119 @@ function Confirmation({
     }
   }, s)), idx < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
     style: S.stepLine
-  })))), /*#__PURE__*/React.createElement("p", {
+  })))), items.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "left",
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 16,
+      marginTop: 18
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      margin: "0 0 8px",
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em"
+    }
+  }, "Order details"), items.map(i => /*#__PURE__*/React.createElement("div", {
+    key: i.id,
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 13,
+      padding: "5px 0",
+      color: T.inkSoft
+    }
+  }, /*#__PURE__*/React.createElement("span", null, esc(i.name), " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.muted,
+      fontFamily: "var(--mono)",
+      fontSize: 11
+    }
+  }, "× ", i.qty)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.ink
+    }
+  }, rupee(i.price * i.qty)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 1,
+      background: T.line,
+      margin: "8px 0"
+    }
+  }), order.subtotal != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 12.5,
+      color: T.inkSoft,
+      padding: "2px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Subtotal"), /*#__PURE__*/React.createElement("span", null, rupee(order.subtotal))), order.shipping != null && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 12.5,
+      color: T.inkSoft,
+      padding: "2px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Shipping"), /*#__PURE__*/React.createElement("span", null, order.shipping === 0 ? "Free" : rupee(order.shipping))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 14,
+      fontWeight: 700,
+      color: T.ink,
+      padding: "6px 0 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "Total"), /*#__PURE__*/React.createElement("span", null, rupee(order.total)))), c && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "left",
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 16,
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      margin: "0 0 8px",
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em"
+    }
+  }, "Delivering to"), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 13,
-      color: T.inkSoft,
-      marginTop: 16
+      color: T.ink,
+      margin: 0,
+      lineHeight: 1.6
     }
-  }, "Shipping to ", esc(order.customer.name), ", ", esc(order.customer.city), ", ", esc(order.customer.state), " — ", esc(order.customer.pincode)), /*#__PURE__*/React.createElement("p", {
+  }, esc(c.name), /*#__PURE__*/React.createElement("br", null), esc(c.line1), c.line2 ? ", " + esc(c.line2) : "", /*#__PURE__*/React.createElement("br", null), esc(c.city), ", ", esc(c.state), " — ", esc(c.pincode), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft
+    }
+  }, "📱 ", esc(c.phone), c.email ? " · ✉ " + esc(c.email) : ""))), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 12.5,
       color: T.muted,
-      marginTop: 10,
+      marginTop: 14,
       fontFamily: "var(--mono)"
     }
   }, "Track anytime with order ID ", /*#__PURE__*/React.createElement("strong", {
     style: {
       color: T.ink
     }
-  }, "#", order.id), " + your phone number, from the “Track order” link up top."), /*#__PURE__*/React.createElement("button", {
+  }, "#", order.id), " + your phone number, from the \"Track order\" link up top."), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.primaryBtn,
-      marginTop: 20
+      marginTop: 18
     }
   }, "Continue shopping")));
 }

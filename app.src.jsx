@@ -48,7 +48,7 @@ const POLICIES = {
     `These terms are governed by the laws of India, and disputes are subject to the jurisdiction of courts in ${INFO.jurisdiction}.`,
   ]},
   privacy: { title: "Privacy Policy", paras: [
-    `${INFO.legalName} collects only the information needed to process and deliver your order: your name, phone number, email (optional), and delivery address.`,
+    `${INFO.legalName} collects only the information needed to process and deliver your order: your name, phone number, email, and delivery address.`,
     "We use this information solely to fulfil orders, arrange delivery, and contact you about your purchase. We do not sell or rent your personal information to anyone.",
     "Payment information is handled directly by Razorpay on their secure systems. We never see or store your card or UPI credentials.",
     "We may share delivery details with our courier partners only to deliver your order. We retain order records as required for accounting and legal compliance.",
@@ -105,7 +105,7 @@ function App(){
   const total=subtotal+shipping;
 
   const finishOrder=(form,paymentLabel,amount,orderId)=>{
-    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form });
+    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form, items:cartItems, subtotal, shipping });
     setCart({}); setCheckout(false); setCartOpen(false);
   };
 
@@ -351,7 +351,8 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
   const submit=()=>{ const e={};
     if(!f.name.trim()) e.name="Required";
     if(!/^[6-9]\d{9}$/.test(f.phone)) e.phone="Valid 10-digit mobile";
-    if(f.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) e.email="Invalid email";
+    if(!f.email.trim()) e.email="Required for order updates";
+    else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) e.email="Enter a valid email";
     if(!f.line1.trim()) e.line1="Required";
     if(!f.city.trim()) e.city="Required";
     if(!/^\d{6}$/.test(f.pincode)) e.pincode="6-digit pincode";
@@ -370,7 +371,8 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
     <div className="vg-two" style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:28}}>
       <div>
         <Field label="Full name" err={err.name}><input style={S.input} value={f.name} onChange={up("name")} maxLength={80} /></Field>
-        <div style={S.two}><Field label="Mobile number" err={err.phone}><input style={S.input} value={f.phone} onChange={up("phone")} maxLength={10} inputMode="numeric" placeholder="10 digits" /></Field><Field label="Email (optional)" err={err.email}><input style={S.input} value={f.email} onChange={up("email")} maxLength={120} /></Field></div>
+        <div style={S.two}><Field label="Mobile number" err={err.phone}><input style={S.input} value={f.phone} onChange={up("phone")} maxLength={10} inputMode="numeric" placeholder="10 digits" /></Field><Field label="Email" err={err.email}><input style={S.input} type="email" value={f.email} onChange={up("email")} maxLength={120} placeholder="you@example.com" /></Field></div>
+        <p style={{fontSize:11.5,color:T.muted,margin:"-6px 0 12px",lineHeight:1.5}}>📧 We'll email your order ID and tracking link here, so please enter it correctly.</p>
         <Field label="Address line 1" err={err.line1}><input style={S.input} value={f.line1} onChange={up("line1")} maxLength={120} placeholder="House / flat, street" /></Field>
         <Field label="Address line 2"><input style={S.input} value={f.line2} onChange={up("line2")} maxLength={120} placeholder="Area, landmark" /></Field>
         <div style={S.two}><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
@@ -379,8 +381,12 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
       </div>
       <div style={S.summary}>
         <h3 style={S.summaryTitle}>Order summary</h3>
-        {items.map(i=><div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)} × {i.qty}</span><span>{rupee(i.price*i.qty)}</span></div>)}
-        <div style={{height:1,background:T.line,margin:"10px 0"}} />
+        <p style={{fontSize:12,color:T.muted,margin:"-6px 0 12px",fontFamily:"var(--mono)"}}>{items.reduce((n,i)=>n+i.qty,0)} item{items.reduce((n,i)=>n+i.qty,0)===1?"":"s"} · {items.length} product{items.length===1?"":"s"}</p>
+        {items.map(i=>(<div key={i.id} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,padding:"7px 0",color:T.inkSoft,borderBottom:"1px solid "+T.line}}>
+          <span style={{flex:1}}>{esc(i.name)}<br/><span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>{rupee(i.price)} × {i.qty}</span></span>
+          <span style={{fontWeight:600,color:T.ink}}>{rupee(i.price*i.qty)}</span>
+        </div>))}
+        <div style={{height:8}} />
         <Row label="Subtotal" value={rupee(subtotal)} /><Row label="Shipping" value={shipping===0?"Free":rupee(shipping)} /><Row label="Total" value={rupee(total)} bold />
         <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(total):"Pay "+rupee(total))}</button>
         <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Online payments are processed securely by Razorpay. Your card details never touch this site.</p>
@@ -395,15 +401,27 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
 }
 function Field({label,err,children}){ return <label style={{display:"block",marginBottom:12}}><span style={S.fieldLabel}>{label}{err && <span style={{color:T.danger,marginLeft:6}}>· {err}</span>}</span>{children}</label>; }
 
-function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped","Delivered"]; return (
-  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:560,textAlign:"center"}}>
+function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped","Delivered"]; const c=order.customer; const items=order.items||[]; return (
+  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:580,textAlign:"center"}}>
     <div style={S.checkCircle}>✓</div>
     <h2 style={{...S.modalTitle,marginTop:14}}>Order placed</h2>
     <p style={{color:T.inkSoft,marginTop:4}}>Order <strong style={{fontFamily:"var(--mono)",color:T.ink}}>#{order.id}</strong> · {rupee(order.total)} · {order.payment==="COD"?"Cash on delivery":"Paid online"}</p>
+    {c&&c.email && <p style={{fontSize:12.5,color:T.teal,marginTop:8}}>📧 A confirmation with your tracking details has been sent to <strong>{esc(c.email)}</strong></p>}
     <div style={S.stepper}>{steps.map((s,idx)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:idx===0?T.teal:T.line,color:idx===0?"#fff":T.muted}}>{idx+1}</div><span style={{fontSize:11,color:idx===0?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{idx<steps.length-1 && <div style={S.stepLine} />}</React.Fragment>))}</div>
-    <p style={{fontSize:13,color:T.inkSoft,marginTop:16}}>Shipping to {esc(order.customer.name)}, {esc(order.customer.city)}, {esc(order.customer.state)} — {esc(order.customer.pincode)}</p>
-    <p style={{fontSize:12.5,color:T.muted,marginTop:10,fontFamily:"var(--mono)"}}>Track anytime with order ID <strong style={{color:T.ink}}>#{order.id}</strong> + your phone number, from the “Track order” link up top.</p>
-    <button onClick={onClose} style={{...S.primaryBtn,marginTop:20}}>Continue shopping</button>
+    {items.length>0 && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
+      <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
+      {items.map(i=>(<div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty}</span></span><span style={{color:T.ink}}>{rupee(i.price*i.qty)}</span></div>))}
+      <div style={{height:1,background:T.line,margin:"8px 0"}} />
+      {order.subtotal!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Subtotal</span><span>{rupee(order.subtotal)}</span></div>}
+      {order.shipping!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Shipping</span><span>{order.shipping===0?"Free":rupee(order.shipping)}</span></div>}
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink,padding:"6px 0 0"}}><span>Total</span><span>{rupee(order.total)}</span></div>
+    </div>}
+    {c && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:12}}>
+      <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Delivering to</p>
+      <p style={{fontSize:13,color:T.ink,margin:0,lineHeight:1.6}}>{esc(c.name)}<br/>{esc(c.line1)}{c.line2?", "+esc(c.line2):""}<br/>{esc(c.city)}, {esc(c.state)} — {esc(c.pincode)}<br/><span style={{color:T.inkSoft}}>📱 {esc(c.phone)}{c.email?" · ✉ "+esc(c.email):""}</span></p>
+    </div>}
+    <p style={{fontSize:12.5,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Track anytime with order ID <strong style={{color:T.ink}}>#{order.id}</strong> + your phone number, from the "Track order" link up top.</p>
+    <button onClick={onClose} style={{...S.primaryBtn,marginTop:18}}>Continue shopping</button>
   </div></Overlay>); }
 
 function Overlay({children,onClose}){ return <div style={S.overlay} onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{animation:"pop .18s ease",width:"100%",display:"flex",justifyContent:"center"}}>{children}</div></div>; }
