@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+:root{ --display:'Fraunces',serif; --body:'Inter',sans-serif; --mono:'JetBrains Mono',monospace; }
+*{ box-sizing:border-box; }
+:root{ color-scheme:dark; }
+html,body{ margin:0; padding:0; background:#13100D; color:#F3EFE8; }
+input::placeholder,textarea::placeholder{ color:#8A8175; }
+select option{ background:#1C1814; color:#F3EFE8; }
+::selection{ background:#EF901E; color:#13100D; }
+@keyframes pop{ from{ transform:scale(.96); opacity:0 } to{ transform:scale(1); opacity:1 } }
+button{ cursor:pointer; font-family:var(--body); }
+input:focus,select:focus,textarea:focus,button:focus-visible{ outline:2px solid #E8820C; outline-offset:1px; }
+.vg-card{ transition:transform .15s ease, box-shadow .15s ease; }
+.vg-card:hover{ transform:translateY(-3px); box-shadow:0 18px 42px rgba(0,0,0,.5); }
+.vg-card img{ transition:transform .3s ease; }
+.vg-card:hover img{ transform:scale(1.04); }
+.vg-chips::-webkit-scrollbar{ height:0; }
+@media (max-width:760px){
+  .vg-two{ grid-template-columns:1fr !important }
+  .vg-grid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important }
+}
+@media (max-width:430px){
+  .vg-grid{ gap:10px !important }
+}
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important } .vg-card,.vg-card img{ transition:none !important } .vg-card:hover{ transform:none } .vg-card:hover img{ transform:none } }
+@media (max-width:760px){ .vg-pay{ grid-template-columns:1fr !important } }
+@media (max-width:760px){ .vg-admin{ grid-template-columns:1fr !important } }
+@media (max-width:760px){ .vg-stats{ grid-template-columns:repeat(2,1fr) !important } }
+
+/* Gen-Z polish */
+@keyframes vg-marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.vg-marquee-track { animation: vg-marquee-scroll 22s linear infinite; }
+.vg-marquee:hover .vg-marquee-track { animation-play-state: paused; }
+.vg-card { transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease; }
+.vg-card:hover { border-color: rgba(243,162,62,.45) !important; box-shadow: 0 18px 50px rgba(232,130,12,.18), 0 0 0 1px rgba(243,162,62,.25) !important; }
+.vg-feat-card { transition: transform .15s ease, border-color .2s ease; }
+.vg-feat-card:hover { transform: translateY(-3px); border-color: rgba(243,162,62,.4); }
+@media (max-width:760px){ .vg-feat{ grid-template-columns:1fr 1fr !important; } }
+@media (prefers-reduced-motion: reduce){ .vg-marquee-track{ animation:none !important; } }
+
+/* Add-to-cart animation */
+@keyframes vg-pop { 0%{ transform:scale(1);} 30%{ transform:scale(.94);} 55%{ transform:scale(1.12);} 100%{ transform:scale(1);} }
+.vg-added { animation: vg-pop .42s cubic-bezier(.34,1.56,.64,1); }
+@keyframes vg-cart-bounce { 0%,100%{ transform:scale(1);} 35%{ transform:scale(1.35) rotate(-6deg);} 70%{ transform:scale(.92) rotate(3deg);} }
+.vg-cart-bounce { animation: vg-cart-bounce .5s ease; }
+@media (prefers-reduced-motion: reduce){ .vg-added{ animation:none !important; } }
+@media (max-width:560px){ .vg-about-stats{ grid-template-columns:1fr !important; } }

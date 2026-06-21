@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" width="760" height="240">
+  <rect width="760" height="240" fill="#FBFAF6"/>
+  <defs>
+    <style>.lbl{font-family:'DejaVu Sans',sans-serif;font-size:13px;fill:#5C544A;}</style>
+    <linearGradient id="warm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF6E8"/><stop offset="1" stop-color="#FBE6C2"/>
+    </linearGradient>
+    <!-- reusable paper plane, points up-right -->
+    <g id="plane">
+      <g transform="translate(32,34) rotate(-26) translate(-20,0)">
+        <!-- motion trail -->
+        <g fill="#27B3A3">
+          <circle cx="-7" cy="2" r="2.6"/><circle cx="-15" cy="4.4" r="2"/><circle cx="-22" cy="6.6" r="1.5"/>
+        </g>
+        <!-- bottom (shadowed) facet -->
+        <path d="M48,0 L0,16 L15,2 Z" fill="#C2600A"/>
+        <!-- top (lit) facet -->
+        <path d="M48,0 L0,-16 L15,2 Z" fill="#F3A23E"/>
+        <!-- center fold -->
+        <path d="M48,0 L15,2" stroke="#FBF1E2" stroke-width="1.4" opacity="0.5"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- V1: ink tile -->
+  <g transform="translate(40,30)"><rect width="64" height="64" rx="15" fill="#1A1612" transform="scale(2.0)"/></g>
+  <g transform="translate(40,30) scale(2.0)"><use href="#plane"/></g>
+  <text class="lbl" x="40" y="190">on ink</text>
+
+  <!-- V2: warm tile -->
+  <g transform="translate(300,30) scale(2.0)"><rect width="64" height="64" rx="15" fill="url(#warm)"/><use href="#plane"/></g>
+  <text class="lbl" x="300" y="190">on warm cream</text>
+
+  <!-- V3: standalone on paper -->
+  <g transform="translate(560,30) scale(2.0)"><use href="#plane"/></g>
+  <text class="lbl" x="560" y="190">standalone</text>
+</svg>

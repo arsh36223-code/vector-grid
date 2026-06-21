@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Vector Grid mark">
+  <g transform="translate(34,31) rotate(-26) scale(0.92) translate(-16,0)">
+    <g fill="#27B3A3"><circle cx="-6" cy="2" r="2.3"/><circle cx="-12" cy="4" r="1.7"/><circle cx="-18" cy="6" r="1.2"/></g>
+    <path d="M46,0 L0,15 L15,2 Z" fill="#C2600A"/>
+    <path d="M46,0 L0,-15 L15,2 Z" fill="#F3A23E"/>
+    <path d="M46,0 L15,2" stroke="#FBF1E2" stroke-width="1.4" opacity="0.5"/>
+  </g>
+</svg>
