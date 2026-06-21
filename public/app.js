@@ -101,6 +101,7 @@ const SEED = [{
   desc: "500 GSM, quick-dry, soft combed cotton."
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
+const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
 const esc = s => String(s == null ? "" : s);
 function Stars({
   value,
@@ -258,7 +259,7 @@ function App() {
   const subtotal = cartItems.reduce((s, i) => s + i.qty * i.price, 0);
   const shipping = subtotal === 0 ? 0 : subtotal >= 999 ? 0 : 49;
   const total = subtotal + shipping;
-  const finishOrder = (form, paymentLabel, amount, orderId) => {
+  const finishOrder = (form, paymentLabel, amount, orderId, codFee) => {
     setConfirmed({
       id: orderId || "VG" + Date.now().toString().slice(-8),
       total: amount,
@@ -266,7 +267,8 @@ function App() {
       customer: form,
       items: cartItems,
       subtotal,
-      shipping
+      shipping,
+      codFee: codFee || 0
     });
     setCart({});
     setCheckout(false);
@@ -295,7 +297,7 @@ function App() {
         const j = await r.json();
         setPaying(false);
         if (j.ok) {
-          finishOrder(form, "COD", total, j.orderId);
+          finishOrder(form, "COD", j.total != null ? j.total : total + COD_FEE, j.orderId, COD_FEE);
         } else {
           alert(j.error || "Could not place the order. Please try again.");
         }
@@ -1614,11 +1616,21 @@ function Checkout({
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Shipping",
     value: shipping === 0 ? "Free" : rupee(shipping)
+  }), f.pay === "COD" && COD_FEE > 0 && /*#__PURE__*/React.createElement(Row, {
+    label: "COD fee",
+    value: rupee(COD_FEE)
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Total",
-    value: rupee(total),
+    value: rupee(total + (f.pay === "COD" ? COD_FEE : 0)),
     bold: true
-  }), /*#__PURE__*/React.createElement("button", {
+  }), f.pay === "COD" && COD_FEE > 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      margin: "6px 0 0",
+      lineHeight: 1.5
+    }
+  }, "A ", rupee(COD_FEE), " fee applies to Cash on Delivery orders. Pay online to skip it."), /*#__PURE__*/React.createElement("button", {
     onClick: submit,
     disabled: paying,
     style: {
@@ -1626,7 +1638,7 @@ function Checkout({
       marginTop: 16,
       ...(paying ? S.addBtnDisabled : {})
     }
-  }, paying ? "Opening payment…" : f.pay === "COD" ? "Place order · " + rupee(total) : "Pay " + rupee(total)), /*#__PURE__*/React.createElement("p", {
+  }, paying ? "Opening payment…" : f.pay === "COD" ? "Place order · " + rupee(total + COD_FEE) : "Pay " + rupee(total)), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 11,
       color: T.muted,
@@ -1795,7 +1807,15 @@ function Confirmation({
       color: T.inkSoft,
       padding: "2px 0"
     }
-  }, /*#__PURE__*/React.createElement("span", null, "Shipping"), /*#__PURE__*/React.createElement("span", null, order.shipping === 0 ? "Free" : rupee(order.shipping))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "Shipping"), /*#__PURE__*/React.createElement("span", null, order.shipping === 0 ? "Free" : rupee(order.shipping))), order.codFee > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 12.5,
+      color: T.inkSoft,
+      padding: "2px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "COD fee"), /*#__PURE__*/React.createElement("span", null, rupee(order.codFee))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -3293,6 +3313,7 @@ function AdminRow({
   const [open, setOpen] = useState(false);
   const [fulfill, setFulfill] = useState(false);
   const [copied, setCopied] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const save = async () => {
     setSaving(true);
     setMsg("");
@@ -3376,6 +3397,8 @@ function AdminRow({
   };
   const addressText = `${o.name}\n${o.line1}${o.line2 ? ", " + o.line2 : ""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
   const fullOrderText = `Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n` + items.map(i => `- ${i.name} x${i.qty || 1}`).join("\n");
+  const itemSummary = items.map(i => `${i.name} x${i.qty || 1}`).join(", ");
+  const confirmMsg = `Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2 ? ", " + o.line2 : ""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
   const dt = o.created_at ? new Date(o.created_at) : null;
   const dstr = dt ? dt.toLocaleString("en-IN", {
     day: "numeric",
@@ -3439,7 +3462,17 @@ function AdminRow({
       fontFamily: "var(--mono)",
       fontWeight: 600
     }
-  }, o.paid ? "PAID ONLINE" : "COD")), /*#__PURE__*/React.createElement("div", {
+  }, o.paid ? "PAID ONLINE" : "COD"), o.status !== "Cancelled" && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11.5,
+      padding: "3px 9px",
+      borderRadius: 999,
+      background: o.customer_confirmed ? "rgba(31,158,87,.15)" : "rgba(229,104,90,.15)",
+      color: o.customer_confirmed ? "#34c77b" : "#e5685a",
+      fontFamily: "var(--mono)",
+      fontWeight: 600
+    }
+  }, o.customer_confirmed ? "✓ CONFIRMED" : "⏳ AWAITING CONFIRM")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: T.inkSoft,
@@ -3504,7 +3537,99 @@ function AdminRow({
     style: {
       color: T.ink
     }
-  }, rupee((i.price || 0) * (i.qty || 1))))))), o.status !== "Cancelled" && /*#__PURE__*/React.createElement("div", {
+  }, rupee((i.price || 0) * (i.qty || 1))))))), !o.paid && o.status !== "Cancelled" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid " + T.line,
+      padding: "14px 18px",
+      background: "rgba(232,130,12,.07)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: T.marigold,
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em"
+    }
+  }, "📞 Confirm COD order before shipping"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmOpen(!confirmOpen),
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5,
+      color: T.marigold
+    }
+  }, confirmOpen ? "▾ Hide" : "▸ Show")), confirmOpen && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      margin: "0 0 12px",
+      lineHeight: 1.55
+    }
+  }, "COD orders can be refused at the door, which costs you shipping both ways. A quick confirmation message first prevents most refusals. Copy this and send it via SMS or WhatsApp to ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.inkSoft
+    }
+  }, esc(o.phone)), " before you ship."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 10,
+      padding: 14
+    }
+  }, /*#__PURE__*/React.createElement("pre", {
+    style: {
+      margin: 0,
+      fontFamily: "inherit",
+      fontSize: 13,
+      color: T.ink,
+      whiteSpace: "pre-wrap",
+      lineHeight: 1.6
+    }
+  }, confirmMsg), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      marginTop: 12,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => copy(confirmMsg, "confirm"),
+    style: {
+      ...S.addBtn,
+      width: "auto",
+      marginTop: 0,
+      padding: "9px 16px",
+      fontSize: 12.5
+    }
+  }, copied === "confirm" ? "✓ Copied" : "Copy message"), /*#__PURE__*/React.createElement("a", {
+    href: "tel:" + esc(o.phone),
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5,
+      textDecoration: "none",
+      display: "inline-flex",
+      alignItems: "center"
+    }
+  }, "📱 Call customer"))), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      marginTop: 10,
+      lineHeight: 1.5
+    }
+  }, "Tip: if they don't reply or confirm, hold the order or switch them to prepaid before shipping."))), o.status !== "Cancelled" && /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid " + T.line,
       padding: "14px 18px",
@@ -3537,7 +3662,18 @@ function AdminRow({
     style: {
       marginTop: 12
     }
-  }, /*#__PURE__*/React.createElement("p", {
+  }, !o.customer_confirmed && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "rgba(229,104,90,.12)",
+      border: "1px solid rgba(229,104,90,.3)",
+      borderRadius: 10,
+      padding: "10px 12px",
+      marginBottom: 12,
+      fontSize: 12.5,
+      color: "#e5685a",
+      lineHeight: 1.5
+    }
+  }, "⏳ The customer hasn't confirmed this order yet. We recommend waiting for confirmation (or sending the confirm message above) before you ship."), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 12,
       color: T.muted,

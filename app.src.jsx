@@ -15,6 +15,7 @@ const SEED = [
   { id:"p9", name:"Cotton Bath Towel (Pack of 2)", price:749, mrp:1299, stock:0, category:"Home", img:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80", desc:"500 GSM, quick-dry, soft combed cotton." },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
+const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
 const esc = (s) => String(s==null?"":s);
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
   return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
@@ -117,8 +118,8 @@ function App(){
   const shipping=subtotal===0?0:(subtotal>=999?0:49);
   const total=subtotal+shipping;
 
-  const finishOrder=(form,paymentLabel,amount,orderId)=>{
-    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form, items:cartItems, subtotal, shipping });
+  const finishOrder=(form,paymentLabel,amount,orderId,codFee)=>{
+    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form, items:cartItems, subtotal, shipping, codFee:codFee||0 });
     setCart({}); setCheckout(false); setCartOpen(false);
   };
 
@@ -130,7 +131,7 @@ function App(){
       try{
         const r=await fetch(API+"/api/place-order",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ cod:true, items, customer:form }) });
         const j=await r.json(); setPaying(false);
-        if(j.ok){ finishOrder(form,"COD",total,j.orderId); }
+        if(j.ok){ finishOrder(form,"COD",j.total!=null?j.total:(total+COD_FEE),j.orderId,COD_FEE); }
         else { alert(j.error||"Could not place the order. Please try again."); }
       }catch(e){ setPaying(false); alert("Couldn't place the order. Please try again."); }
       return;
@@ -482,8 +483,11 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
           <span style={{fontWeight:600,color:T.ink}}>{rupee(i.price*i.qty)}</span>
         </div>))}
         <div style={{height:8}} />
-        <Row label="Subtotal" value={rupee(subtotal)} /><Row label="Shipping" value={shipping===0?"Free":rupee(shipping)} /><Row label="Total" value={rupee(total)} bold />
-        <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(total):"Pay "+rupee(total))}</button>
+        <Row label="Subtotal" value={rupee(subtotal)} /><Row label="Shipping" value={shipping===0?"Free":rupee(shipping)} />
+        {f.pay==="COD" && COD_FEE>0 && <Row label="COD fee" value={rupee(COD_FEE)} />}
+        <Row label="Total" value={rupee(total+(f.pay==="COD"?COD_FEE:0))} bold />
+        {f.pay==="COD" && COD_FEE>0 && <p style={{fontSize:11,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>A {rupee(COD_FEE)} fee applies to Cash on Delivery orders. Pay online to skip it.</p>}
+        <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(total+COD_FEE):"Pay "+rupee(total))}</button>
         <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Online payments are processed securely by Razorpay. Your card details never touch this site.</p>
         <div style={S.coSecure}>
           <div style={S.coSecureRow}><span aria-hidden="true">🔒</span><span>Payments secured by <strong style={{color:T.ink}}>Razorpay</strong> — UPI, cards & netbanking. Your card details never touch this site.</span></div>
@@ -509,6 +513,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
       <div style={{height:1,background:T.line,margin:"8px 0"}} />
       {order.subtotal!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Subtotal</span><span>{rupee(order.subtotal)}</span></div>}
       {order.shipping!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Shipping</span><span>{order.shipping===0?"Free":rupee(order.shipping)}</span></div>}
+      {order.codFee>0 && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>COD fee</span><span>{rupee(order.codFee)}</span></div>}
       <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink,padding:"6px 0 0"}}><span>Total</span><span>{rupee(order.total)}</span></div>
     </div>}
     {c && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:12}}>
@@ -825,6 +830,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
   const [url,setUrl]=useState(o.tracking_url||"");
   const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(""); const [open,setOpen]=useState(false);
   const [fulfill,setFulfill]=useState(false); const [copied,setCopied]=useState("");
+  const [confirmOpen,setConfirmOpen]=useState(false);
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
       const j=await r.json(); setSaving(false);
@@ -849,6 +855,8 @@ function AdminRow({o,adminKey,prods,onSaved}){
   };
   const addressText=`${o.name}\n${o.line1}${o.line2?", "+o.line2:""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
   const fullOrderText=`Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n`+items.map(i=>`- ${i.name} x${i.qty||1}`).join("\n");
+  const itemSummary=items.map(i=>`${i.name} x${i.qty||1}`).join(", ");
+  const confirmMsg=`Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2?", "+o.line2:""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
   const dt=o.created_at?new Date(o.created_at):null;
   const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
   return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,overflow:"hidden"}}>
@@ -858,6 +866,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
           <strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(o.id)}</strong>
           <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:999,color:bc[0],background:bc[1],border:bc[1]==="transparent"?"1px solid "+T.line:"none",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{o.status||"Placed"}</span>
           <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.paid?"rgba(31,158,87,.15)":"rgba(232,130,12,.15)",color:o.paid?"#34c77b":T.marigold,fontFamily:"var(--mono)",fontWeight:600}}>{o.paid?"PAID ONLINE":"COD"}</span>
+          {o.status!=="Cancelled" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.customer_confirmed?"rgba(31,158,87,.15)":"rgba(229,104,90,.15)",color:o.customer_confirmed?"#34c77b":"#e5685a",fontFamily:"var(--mono)",fontWeight:600}}>{o.customer_confirmed?"✓ CONFIRMED":"⏳ AWAITING CONFIRM"}</span>}
         </div>
         <div style={{fontSize:13,color:T.inkSoft,marginTop:7,lineHeight:1.6}}>
           <strong style={{color:T.ink}}>{esc(o.name)}</strong> · 📱 {esc(o.phone)}{o.email?" · ✉ "+esc(o.email):""}<br/>
@@ -875,12 +884,30 @@ function AdminRow({o,adminKey,prods,onSaved}){
         {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
       </div>}
     </div>}
+    {(!o.paid && o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(232,130,12,.07)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <div style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>📞 Confirm COD order before shipping</div>
+        <button onClick={()=>setConfirmOpen(!confirmOpen)} style={{...S.linkBtn,fontSize:12.5,color:T.marigold}}>{confirmOpen?"▾ Hide":"▸ Show"}</button>
+      </div>
+      {confirmOpen && <div style={{marginTop:12}}>
+        <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.55}}>COD orders can be refused at the door, which costs you shipping both ways. A quick confirmation message first prevents most refusals. Copy this and send it via SMS or WhatsApp to <strong style={{color:T.inkSoft}}>{esc(o.phone)}</strong> before you ship.</p>
+        <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:14}}>
+          <pre style={{margin:0,fontFamily:"inherit",fontSize:13,color:T.ink,whiteSpace:"pre-wrap",lineHeight:1.6}}>{confirmMsg}</pre>
+          <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
+            <button onClick={()=>copy(confirmMsg,"confirm")} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 16px",fontSize:12.5}}>{copied==="confirm"?"✓ Copied":"Copy message"}</button>
+            <a href={"tel:"+esc(o.phone)} style={{...S.linkBtn,fontSize:12.5,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>📱 Call customer</a>
+          </div>
+        </div>
+        <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Tip: if they don't reply or confirm, hold the order or switch them to prepaid before shipping.</p>
+      </div>}
+    </div>}
     {(o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(124,108,255,.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         <div style={{fontSize:11,color:"#a99dff",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>📦 Fulfil this order (order from supplier)</div>
         <button onClick={()=>setFulfill(!fulfill)} style={{...S.linkBtn,fontSize:12.5,color:"#a99dff"}}>{fulfill?"▾ Hide":"▸ Show"}</button>
       </div>
       {fulfill && <div style={{marginTop:12}}>
+        {!o.customer_confirmed && <div style={{background:"rgba(229,104,90,.12)",border:"1px solid rgba(229,104,90,.3)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:12.5,color:"#e5685a",lineHeight:1.5}}>⏳ The customer hasn't confirmed this order yet. We recommend waiting for confirmation (or sending the confirm message above) before you ship.</div>}
         <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.55}}>Order each item from your supplier and enter <strong style={{color:T.inkSoft}}>this customer's address</strong> as the delivery address. Then come back and mark it Shipped with the tracking link.</p>
         <div style={{display:"grid",gap:8,marginBottom:12}}>
           {items.map((it,idx)=>{ const s=supplyFor(it); return (

@@ -71,6 +71,9 @@ async function initDb() {
     updated_at timestamptz DEFAULT now()
   )`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS supply jsonb`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_fee int DEFAULT 0`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_confirmed boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirm_token text`);
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
     id bigserial PRIMARY KEY,
     product_id text NOT NULL,
@@ -106,11 +109,11 @@ async function saveOrder(o) {
   const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price }));
   const supply = o.lineItems.map((li) => ({ id: li.id, name: li.name, qty: li.qty, cost: li.cost, supplier: li.supplier, supplierUrl: li.supplierUrl }));
   await pool.query(
-    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed',$16) ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply,cod_fee,confirm_token)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed',$16,$17,$18) ON CONFLICT (id) DO NOTHING`,
     [o.id, o.customer.name, o.customer.phone, o.customer.email, o.customer.line1, o.customer.line2,
      o.customer.city, o.customer.state, o.customer.pincode, JSON.stringify(items),
-     o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply)]
+     o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply), o.codFee || 0, o.confirmToken || null]
   );
 }
 
@@ -171,6 +174,9 @@ const PRODUCTS = [
 
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
 const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
+// Cash-on-Delivery fee (₹). COD costs more (courier COD charges + higher return rate).
+// Set to 0 to disable. Change this number to adjust the fee.
+const COD_FEE = 0; // Cash-on-Delivery fee (₹). Set to 0 = no COD fee. Change to re-enable.
 
 // In-memory product cache (trusted source for pricing). Falls back to the constant above.
 let productCache = PRODUCTS.slice();
@@ -201,7 +207,7 @@ async function refreshProductCache() {
 }
 
 // Compute an order from item ids+qty using TRUSTED server prices
-function computeOrder(items) {
+function computeOrder(items, cod) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 50) return { error: "Invalid cart" };
   const lineItems = []; let subtotal = 0, totalCost = 0;
   for (const it of items) {
@@ -215,7 +221,8 @@ function computeOrder(items) {
     lineItems.push({ id: p.id, name: p.name, price: p.price, qty, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
   }
   const shipping = shippingFor(subtotal);
-  return { lineItems, subtotal, shipping, total: subtotal + shipping, totalCost };
+  const codFee = cod === true ? COD_FEE : 0;
+  return { lineItems, subtotal, shipping, codFee, total: subtotal + shipping + codFee, totalCost };
 }
 
 function sanitizeCustomer(c) {
@@ -239,7 +246,7 @@ async function notifyOrder(order) {
   const lines = order.lineItems.map(li =>
     `- ${li.name}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
   ).join("\n");
-  const margin = (order.totalCost != null && order.totalCost > 0) ? rupee(order.total - order.shipping - order.totalCost) : "n/a";
+  const margin = (order.totalCost != null && order.totalCost > 0) ? rupee(order.total - order.shipping - (order.codFee || 0) - order.totalCost) : "n/a";
   const body = [
     `NEW ORDER ${order.id}  —  ${order.paid ? "PAID ONLINE" : "COD (collect on delivery)"}`,
     order.paymentId ? `Razorpay payment id: ${order.paymentId}` : "",
@@ -247,7 +254,7 @@ async function notifyOrder(order) {
     "ITEMS TO SOURCE & SHIP:",
     lines,
     "",
-    `Revenue ${rupee(order.total)}  |  Your cost ${order.totalCost != null ? rupee(order.totalCost) : "n/a"}  |  Margin ${margin}`,
+    `Revenue ${rupee(order.total)}${order.codFee ? " (incl. COD fee " + rupee(order.codFee) + ")" : ""}  |  Your cost ${order.totalCost != null ? rupee(order.totalCost) : "n/a"}  |  Margin ${margin}`,
     "",
     "SHIP TO:",
     c.name,
@@ -274,16 +281,20 @@ async function notifyOrder(order) {
   if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 
-// Send the BUYER a friendly confirmation + how to track (to the email they entered)
+// Send the BUYER a friendly email asking them to CONFIRM the order (click-to-confirm)
 async function notifyBuyer(order) {
   const c = order.customer;
   if (!RESEND_API_KEY || !c.email) return;
   const site = process.env.SITE_URL || "https://vector-grid.onrender.com";
+  const confirmUrl = `${site}/api/confirm?o=${encodeURIComponent(order.id)}&t=${encodeURIComponent(order.confirmToken || "")}`;
+  const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const items = order.lineItems.map(li => `- ${li.name} x${li.qty} — ${rupee(li.price * li.qty)}`).join("\n");
   const body = [
     `Hi ${c.name},`,
     "",
-    "Thank you for shopping with Vector Grid! Your order is confirmed.",
+    "Thanks for your order with Vector Grid! We've received it and just need you to confirm you're ready to receive it before we ship.",
+    "",
+    `>> CONFIRM YOUR ORDER: ${confirmUrl}`,
     "",
     `Order ID: ${order.id}`,
     `Payment: ${order.paid ? "Paid online" : "Cash on Delivery"}`,
@@ -293,22 +304,38 @@ async function notifyBuyer(order) {
     "",
     `Subtotal: ${rupee(order.subtotal)}`,
     `Shipping: ${order.shipping === 0 ? "Free" : rupee(order.shipping)}`,
-    `Total: ${rupee(order.total)}`,
+    ...(order.codFee ? [`COD fee: ${rupee(order.codFee)}`] : []),
+    `Total: ${rupee(order.total)}${order.paid ? "" : " (pay on delivery)"}`,
     "",
     "Delivering to:",
     c.line1 + (c.line2 ? ", " + c.line2 : ""),
     `${c.city}, ${c.state} - ${c.pincode}`,
     "",
-    "TRACK YOUR ORDER anytime:",
-    `1. Go to ${site}`,
-    `2. Click "Track order" at the top`,
-    `3. Enter Order ID ${order.id} and phone ${c.phone}`,
+    "Once you confirm, we'll pack and ship your order. You can track it anytime:",
+    `Go to ${site} → "Track order" → enter Order ID ${order.id} and phone ${c.phone}`,
     "",
-    "We'll update the status as your order is packed and shipped.",
     "Questions? Just reply to this email.",
     "",
     "— Team Vector Grid",
   ].join("\n");
+  const itemsHtml = order.lineItems.map(li => `<tr><td style="padding:4px 0;color:#444">${eh(li.name)} × ${li.qty}</td><td style="padding:4px 0;text-align:right;color:#111">${rupee(li.price * li.qty)}</td></tr>`).join("");
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:8px">
+    <h2 style="color:#111;margin:0 0 6px">Hi ${eh(c.name)}, please confirm your order</h2>
+    <p style="color:#555;line-height:1.5;margin:0 0 18px">Thanks for your order with <strong>Vector Grid</strong>! We've received it and just need you to confirm you're ready to receive it before we ship.</p>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${confirmUrl}" style="display:inline-block;background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:999px">✅ Yes, confirm my order</a>
+    </div>
+    <p style="color:#888;font-size:12px;text-align:center;margin:0 0 22px">If the button doesn't work, copy this link:<br>${confirmUrl}</p>
+    <div style="background:#f6f4f0;border-radius:10px;padding:16px">
+      <p style="margin:0 0 8px;color:#111;font-weight:bold">Order ${eh(order.id)} — ${order.paid ? "Paid online" : "Cash on Delivery"}</p>
+      <table style="width:100%;font-size:14px;border-collapse:collapse">${itemsHtml}
+        <tr><td style="padding-top:8px;color:#555;border-top:1px solid #ddd">Total</td><td style="padding-top:8px;text-align:right;font-weight:bold;border-top:1px solid #ddd">${rupee(order.total)}${order.paid ? "" : " (pay on delivery)"}</td></tr>
+      </table>
+      <p style="margin:12px 0 0;color:#555;font-size:13px">Delivering to: ${eh(c.line1)}${c.line2 ? ", " + eh(c.line2) : ""}, ${eh(c.city)}, ${eh(c.state)} - ${eh(c.pincode)}</p>
+    </div>
+    <p style="color:#888;font-size:13px;line-height:1.5;margin:18px 0 0">Once you confirm, we'll pack and ship your order. Track anytime at <a href="${site}" style="color:#E8820C">${site.replace(/^https?:\/\//,"")}</a> using Order ID ${eh(order.id)} and your phone number.</p>
+    <p style="color:#aaa;font-size:12px;margin:16px 0 0">— Team Vector Grid</p>
+  </div>`;
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
@@ -316,8 +343,9 @@ async function notifyBuyer(order) {
       from: ORDER_FROM,
       to: [c.email],
       reply_to: ORDER_TO,
-      subject: `Your Vector Grid order ${order.id} is confirmed 🎉`,
+      subject: `Please confirm your Vector Grid order ${order.id}`,
       text: body,
+      html: html,
     }),
   });
   if (!resp.ok) throw new Error("Resend(buyer) " + resp.status + ": " + (await resp.text()).slice(0, 200));
@@ -464,7 +492,7 @@ app.post("/api/create-order", async (req, res) => {
 app.post("/api/place-order", async (req, res) => {
   try {
     const b = req.body || {};
-    const calc = computeOrder(b.items);
+    const calc = computeOrder(b.items, b.cod === true);
     if (calc.error) return res.status(400).json({ error: calc.error });
     const customer = sanitizeCustomer(b.customer);
     if (customer.error) return res.status(400).json({ error: customer.error });
@@ -483,7 +511,7 @@ app.post("/api/place-order", async (req, res) => {
       paid = true; paymentId = razorpay_payment_id;
     }
 
-    const order = { id: "VG" + Date.now().toString().slice(-8), ...calc, customer, paid, paymentId };
+    const order = { id: "VG" + Date.now().toString().slice(-8), ...calc, customer, paid, paymentId, confirmToken: crypto.randomBytes(16).toString("hex") };
     try { await saveOrder(order); } catch (e) { console.error("save failed:", e && e.message); }
     // Respond immediately so the customer isn't kept waiting; email sends in the background.
     res.json({ ok: true, orderId: order.id, total: order.total });
@@ -503,15 +531,50 @@ app.post("/api/track", async (req, res) => {
   if (!id || phone.length !== 10) return res.status(400).json({ error: "Enter your order ID and the 10-digit phone number you ordered with." });
   try {
     const r = await pool.query(
-      "SELECT id,status,tracking_url,tracking_carrier,total,items,created_at,updated_at FROM orders WHERE id=$1 AND phone=$2",
+      "SELECT id,status,tracking_url,tracking_carrier,total,items,cod_fee,customer_confirmed,created_at,updated_at FROM orders WHERE id=$1 AND phone=$2",
       [id, phone]
     );
     if (!r.rows.length) return res.status(404).json({ error: "No order found with that ID and phone number." });
     const o = r.rows[0];
     const itemCount = (o.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
     res.json({ id: o.id, status: o.status, trackingUrl: o.tracking_url, trackingCarrier: o.tracking_carrier,
-      total: o.total, itemCount, items: o.items || [], placedAt: o.created_at, updatedAt: o.updated_at });
+      total: o.total, codFee: o.cod_fee || 0, confirmed: o.customer_confirmed === true, itemCount, items: o.items || [], placedAt: o.created_at, updatedAt: o.updated_at });
   } catch (e) { console.error("track failed:", e && e.message); res.status(500).json({ error: "Couldn't fetch your order. Please try again." }); }
+});
+
+// ---- Customer clicks the "confirm my order" button in their email ----
+function confirmPage(title, message, ok) {
+  const accent = ok ? "#1f9e57" : "#E8820C";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title>
+  <style>body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#13100D;color:#F3EFE8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .card{background:#1C1814;border:1px solid #2F2922;border-radius:18px;padding:34px 28px;max-width:420px;text-align:center}
+  .ic{font-size:48px;margin-bottom:8px}.t{font-size:22px;font-weight:700;margin:0 0 10px}.m{color:#B9B0A3;line-height:1.55;font-size:15px;margin:0 0 20px}
+  .b{display:inline-block;background:${accent};color:#fff;text-decoration:none;font-weight:700;padding:12px 26px;border-radius:999px;font-size:15px}</style></head>
+  <body><div class="card"><div class="ic">${ok ? "✅" : "ℹ️"}</div><h1 class="t">${title}</h1><p class="m">${message}</p>
+  <a class="b" href="${process.env.SITE_URL || "/"}">Continue shopping</a></div></body></html>`;
+}
+app.get("/api/confirm", async (req, res) => {
+  res.set("Content-Type", "text/html; charset=utf-8");
+  if (!pool) return res.status(503).send(confirmPage("Not available", "Order confirmation isn't set up yet. Please contact us.", false));
+  const id = String(req.query.o || "").trim().toUpperCase();
+  const token = String(req.query.t || "").trim();
+  if (!id || !token) return res.status(400).send(confirmPage("Invalid link", "This confirmation link looks incomplete. Please use the button in your order email.", false));
+  try {
+    const r = await pool.query("SELECT id,status,customer_confirmed,confirm_token FROM orders WHERE id=$1", [id]);
+    if (!r.rows.length) return res.status(404).send(confirmPage("Order not found", "We couldn't find that order. Please check your email link or contact us.", false));
+    const o = r.rows[0];
+    const a = Buffer.from(token), b = Buffer.from(String(o.confirm_token || ""));
+    const valid = o.confirm_token && a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (!valid) return res.status(403).send(confirmPage("Invalid link", "This confirmation link isn't valid. Please use the button in your order email, or contact us.", false));
+    if (o.status === "Cancelled") return res.status(200).send(confirmPage("Order cancelled", `Order ${id} has been cancelled, so it can't be confirmed. Contact us if this is a mistake.`, false));
+    if (o.customer_confirmed === true) return res.status(200).send(confirmPage("Already confirmed", `Thanks! Order ${id} is already confirmed — we're getting it ready to ship.`, true));
+    await pool.query("UPDATE orders SET customer_confirmed=true, updated_at=now() WHERE id=$1", [id]);
+    try { await sendMail(ORDER_TO, `✅ Customer CONFIRMED order ${id}`, `Order ${id} has been confirmed by the customer. It's safe to ship.`); } catch (e) { console.error("confirm notify failed:", e && e.message); }
+    return res.status(200).send(confirmPage("Order confirmed!", `Thank you! Order ${id} is confirmed. We'll pack and ship it shortly. 🎉`, true));
+  } catch (e) {
+    console.error("confirm failed:", e && e.message);
+    return res.status(500).send(confirmPage("Something went wrong", "We couldn't confirm your order right now. Please try again, or contact us.", false));
+  }
 });
 
 // ---- Customer: cancel an order (before dispatch) or request a return/refund (after) ----
@@ -587,7 +650,7 @@ app.get("/api/admin/orders", async (req, res) => {
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
     const r = await pool.query(
-      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,supply,subtotal,shipping,total,paid,payment_id,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,supply,subtotal,shipping,cod_fee,total,paid,payment_id,status,customer_confirmed,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
     );
     res.json({ orders: r.rows });
   } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }
