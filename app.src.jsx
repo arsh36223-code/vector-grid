@@ -16,6 +16,14 @@ const SEED = [
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const esc = (s) => String(s==null?"":s);
+function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
+  return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
+    {[1,2,3,4,5].map(n=>(<span key={n} style={{fontSize:sz,color:n<=Math.round(v)?"#F3A23E":"rgba(255,255,255,.22)"}}>★</span>))}
+  </span>);
+}
+function StarPicker({value,onChange}){ return (<span style={{display:"inline-flex",gap:4}}>
+  {[1,2,3,4,5].map(n=>(<button key={n} type="button" onClick={()=>onChange(n)} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:26,lineHeight:1,color:n<=value?"#F3A23E":"rgba(255,255,255,.25)"}} aria-label={n+" star"}>★</button>))}
+</span>); }
 function cardTilt(e){
   if(window.matchMedia && (window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
   const el=e.currentTarget, r=el.getBoundingClientRect();
@@ -299,6 +307,7 @@ function Store({products,onAdd,onQuick,onTrack}){
           </button>
           <div style={{padding:"14px 16px 16px",display:"flex",flexDirection:"column",flex:1}}>
             <h3 style={S.prodName}>{esc(p.name)}</h3>
+            {p.reviewCount>0 && <div style={{display:"flex",alignItems:"center",gap:6,margin:"2px 0 4px"}}><Stars value={p.rating} size={13} /><span style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)"}}>{p.rating} ({p.reviewCount})</span></div>}
             <p style={S.prodDesc}>{esc(p.desc)}</p>
             <div style={{...S.priceRow,marginTop:"auto"}}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
             <button disabled={out} onClick={()=>onAdd(p.id)} style={{...S.addBtn,...(out?S.addBtnDisabled:{})}}>{out?"Sold out":"Add to cart"}</button>
@@ -309,19 +318,63 @@ function Store({products,onAdd,onQuick,onTrack}){
   </main></>);
 }
 
-function QuickView({product,onClose,onAdd}){ const out=product.stock<=0; return (
-  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:720,padding:0,overflow:"hidden",position:"relative"}}>
+function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
+  const [reviews,setReviews]=useState(null);
+  const [name,setName]=useState(""); const [rating,setRating]=useState(0); const [comment,setComment]=useState("");
+  const [posting,setPosting]=useState(false); const [msg,setMsg]=useState(""); const [showForm,setShowForm]=useState(false);
+  const loadReviews=async()=>{ try{ const r=await fetch(API+"/api/reviews?product="+encodeURIComponent(product.id)); const j=await r.json(); setReviews(j.reviews||[]); }catch(e){ setReviews([]); } };
+  useEffect(()=>{ loadReviews(); },[]);
+  const post=async()=>{ setMsg("");
+    if(!name.trim()){ setMsg("Please add your name."); return; }
+    if(!(rating>=1&&rating<=5)){ setMsg("Please pick a star rating."); return; }
+    setPosting(true);
+    try{ const r=await fetch(API+"/api/reviews",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:product.id,name,rating,comment})});
+      const j=await r.json(); setPosting(false);
+      if(r.ok){ setMsg("Thanks for your review!"); setName(""); setRating(0); setComment(""); setShowForm(false); loadReviews(); }
+      else setMsg(j.error||"Couldn't save your review.");
+    }catch(e){ setPosting(false); setMsg("Something went wrong. Please try again."); }
+  };
+  const avg = reviews&&reviews.length ? (reviews.reduce((s,r)=>s+r.rating,0)/reviews.length).toFixed(1) : null;
+  return (
+  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:720,padding:0,overflow:"hidden",position:"relative",maxHeight:"90vh",overflowY:"auto"}}>
     <button onClick={onClose} style={S.quickClose} aria-label="Close">✕</button>
     <div className="vg-two" style={{display:"grid",gridTemplateColumns:"1fr 1fr",minHeight:320}}>
       <img src={product.img} alt={esc(product.name)} style={{width:"100%",height:"100%",objectFit:"cover"}} />
       <div style={{padding:28}}>
         <button onClick={onClose} style={S.quickBack}>← Back to products</button>
         <h2 style={{...S.prodName,fontSize:22,margin:"10px 0 8px"}}>{esc(product.name)}</h2>
+        {avg && <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><Stars value={avg} /><span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)"}}>{avg} · {reviews.length} review{reviews.length===1?"":"s"}</span></div>}
         <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(product.price)}</span>{product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:T.teal,marginTop:14}}>{out?"Out of stock":"In stock · "+product.stock+" available"}</p>
         <button disabled={out} onClick={onAdd} style={{...S.addBtn,...(out?S.addBtnDisabled:{}),marginTop:18}}>{out?"Unavailable":"Add to cart"}</button>
       </div>
+    </div>
+    <div style={{padding:"0 28px 28px",borderTop:"1px solid "+T.line,marginTop:4}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"20px 0 12px",flexWrap:"wrap",gap:8}}>
+        <h3 style={{fontFamily:"var(--display)",fontSize:18,fontWeight:700,margin:0}}>Customer reviews</h3>
+        {!showForm && <button onClick={()=>{setShowForm(true);setMsg("");}} style={{...S.addBtn,width:"auto",marginTop:0,padding:"8px 16px",fontSize:13}}>Write a review</button>}
+      </div>
+      {showForm && <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:18,marginBottom:16}}>
+        <div style={{marginBottom:10}}><div style={{fontSize:12.5,color:T.inkSoft,marginBottom:6}}>Your rating</div><StarPicker value={rating} onChange={setRating} /></div>
+        <input style={{...S.input,marginBottom:10}} value={name} onChange={e=>setName(e.target.value)} maxLength={60} placeholder="Your name" />
+        <textarea style={{...S.input,minHeight:70,resize:"vertical",fontFamily:"inherit",marginBottom:10}} value={comment} onChange={e=>setComment(e.target.value)} maxLength={600} placeholder="Share your experience (optional)" />
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={post} disabled={posting} style={{...S.primaryBtn,width:"auto",padding:"10px 20px",...(posting?S.addBtnDisabled:{})}}>{posting?"Posting…":"Submit review"}</button>
+          <button onClick={()=>{setShowForm(false);setMsg("");}} disabled={posting} style={S.linkBtn}>Cancel</button>
+        </div>
+      </div>}
+      {msg && <p style={{fontSize:13,color:msg.indexOf("Thanks")===0?T.teal:T.danger,margin:"0 0 12px"}}>{msg}</p>}
+      {reviews===null ? <p style={{color:T.muted,fontSize:13}}>Loading reviews…</p>
+        : reviews.length===0 ? <p style={{color:T.muted,fontSize:13.5}}>No reviews yet. Be the first to review this product!</p>
+        : <div style={{display:"grid",gap:12}}>{reviews.map(rv=>(<div key={rv.id} style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <strong style={{fontSize:13.5,color:T.ink}}>{esc(rv.name)}</strong>
+              <Stars value={rv.rating} size={13} />
+            </div>
+            {rv.comment && <p style={{fontSize:13,color:T.inkSoft,margin:"8px 0 0",lineHeight:1.55}}>{esc(rv.comment)}</p>}
+            <p style={{fontSize:11,color:T.muted,margin:"8px 0 0",fontFamily:"var(--mono)"}}>{new Date(rv.created_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</p>
+          </div>))}</div>}
     </div>
   </div></Overlay>); }
 
@@ -524,20 +577,44 @@ function AdminOrders({onBack}){
   const [key,setKey]=useState(""); const [authed,setAuthed]=useState(false);
   const [orders,setOrders]=useState([]); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [remember,setRemember]=useState(true); const [booting,setBooting]=useState(true);
+  const [tab,setTab]=useState("orders"); const [reviews,setReviews]=useState([]); const [revBusy,setRevBusy]=useState(false);
+  const [prods,setProds]=useState([]); const [prodBusy,setProdBusy]=useState(false); const [editing,setEditing]=useState(null);
   const load=async(k,opts)=>{ setErr(""); setBusy(true);
     try{ const r=await fetch(API+"/api/admin/orders",{headers:{"x-admin-key":k}});
       const j=await r.json(); setBusy(false);
       if(r.ok){ setOrders(j.orders||[]); setAuthed(true); setKey(k);
         if(opts&&opts.remember){ try{ localStorage.setItem("vg_admin_key",k); }catch(e){} }
+        loadReviews(k); loadProds(k);
       } else { setErr(j.error||"That key didn't work. Please check and try again."); setAuthed(false);
         try{ localStorage.removeItem("vg_admin_key"); }catch(e){} }
     }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
+  };
+  const loadReviews=async(k)=>{ setRevBusy(true);
+    try{ const r=await fetch(API+"/api/admin/reviews",{headers:{"x-admin-key":k||key}}); const j=await r.json(); setRevBusy(false); if(r.ok) setReviews(j.reviews||[]); }
+    catch(e){ setRevBusy(false); }
+  };
+  const loadProds=async(k)=>{ setProdBusy(true);
+    try{ const r=await fetch(API+"/api/admin/products",{headers:{"x-admin-key":k||key}}); const j=await r.json(); setProdBusy(false); if(r.ok) setProds(j.products||[]); }
+    catch(e){ setProdBusy(false); }
+  };
+  const delReview=async(id)=>{ if(!window.confirm("Delete this review permanently?")) return;
+    try{ const r=await fetch(API+"/api/admin/review-delete",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":key},body:JSON.stringify({id})});
+      if(r.ok) setReviews(reviews.filter(rv=>rv.id!==id)); }catch(e){}
+  };
+  const delProduct=async(id)=>{ if(!window.confirm("Delete this product permanently? This can't be undone.")) return;
+    try{ const r=await fetch(API+"/api/admin/product-delete",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":key},body:JSON.stringify({id})});
+      if(r.ok) loadProds(key); }catch(e){}
+  };
+  const toggleStock=async(p)=>{ // quick out-of-stock / restock
+    const body={...p,desc:p.descr,supplierUrl:p.supplier_url,stock:p.stock>0?0:10};
+    try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":key},body:JSON.stringify(body)});
+      if(r.ok) loadProds(key); }catch(e){}
   };
   useEffect(()=>{ let saved=""; try{ saved=localStorage.getItem("vg_admin_key")||""; }catch(e){}
     if(saved){ setKey(saved); load(saved,{remember:true}).finally(()=>setBooting(false)); }
     else setBooting(false);
   },[]);
-  const logout=()=>{ try{ localStorage.removeItem("vg_admin_key"); }catch(e){} setAuthed(false); setKey(""); setOrders([]); setErr(""); };
+  const logout=()=>{ try{ localStorage.removeItem("vg_admin_key"); }catch(e){} setAuthed(false); setKey(""); setOrders([]); setReviews([]); setErr(""); };
   const submit=()=>{ if(!key.trim()) return; load(key.trim(),{remember}); };
   return (<main style={{...S.main,maxWidth:960}}>
     <section style={{padding:"40px 0 8px"}}>
@@ -564,6 +641,12 @@ function AdminOrders({onBack}){
         </div>
       ) : (
         <div style={{marginTop:18}}>
+          <div style={{display:"flex",gap:6,marginBottom:18,borderBottom:"1px solid "+T.line,flexWrap:"wrap"}}>
+            {[["orders","Orders"],["products","Products"],["reviews","Reviews"]].map(([t,label])=>(
+              <button key={t} onClick={()=>setTab(t)} style={{background:"none",border:"none",borderBottom:"2px solid "+(tab===t?T.marigold:"transparent"),color:tab===t?T.ink:T.muted,padding:"8px 14px",fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:-1}}>{label}{t==="products"&&prods.length>0?" ("+prods.length+")":""}{t==="reviews"&&reviews.length>0?" ("+reviews.length+")":""}</button>
+            ))}
+          </div>
+          {tab==="orders" ? (<div>
           {(()=>{ const stat=(name)=>orders.filter(o=>(o.status||"Placed")===name).length;
             const revenue=orders.filter(o=>(o.status||"")!=="Cancelled").reduce((s,o)=>s+Number(o.total||0),0);
             const cards=[["Total orders",orders.length,T.ink],["New / Placed",stat("Placed"),T.marigold],["Shipped",stat("Shipped"),T.teal],["Delivered",stat("Delivered"),T.teal],["Revenue","₹"+revenue.toLocaleString("en-IN"),T.ink]];
@@ -579,26 +662,151 @@ function AdminOrders({onBack}){
             <button onClick={()=>load(key,{remember})} style={S.linkBtn}>↻ Refresh</button>
           </div>
           {orders.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>📦</div><p style={{color:T.inkSoft,margin:0}}>No orders yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>When customers buy, their orders appear here.</p></div>}
-          <div style={{display:"grid",gap:14}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key,{remember})} />)}</div>
+          <div style={{display:"grid",gap:14}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} prods={prods} onSaved={()=>load(key,{remember})} />)}</div>
+          </div>) : tab==="products" ? (<div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,gap:10,flexWrap:"wrap"}}>
+              <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{prods.length} product{prods.length===1?"":"s"}</span>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>loadProds(key)} style={S.linkBtn}>↻ Refresh</button>
+                <button onClick={()=>setEditing({_new:true,name:"",price:"",mrp:"",stock:"",category:"",img:"",descr:"",cost:"",supplier:"",supplier_url:"",active:true})} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 18px",fontSize:13.5}}>+ Add product</button>
+              </div>
+            </div>
+            {prodBusy && prods.length===0 && <p style={{color:T.muted}}>Loading products…</p>}
+            {!prodBusy && prods.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>🛍️</div><p style={{color:T.inkSoft,margin:0}}>No products yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>Click “Add product” to create your first one.</p></div>}
+            <div style={{display:"grid",gap:12}}>{prods.map(p=>{ const oos=p.stock<=0; return (
+              <div key={p.id} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:14,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
+                <div style={{width:56,height:56,borderRadius:10,overflow:"hidden",flexShrink:0,background:T.bg||"#0f0d0a"}}>{p.img && <img src={p.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} />}</div>
+                <div style={{flex:1,minWidth:160}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <strong style={{fontSize:14,color:T.ink}}>{esc(p.name)}</strong>
+                    {p.active===false && <span style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:"rgba(255,255,255,.06)",color:T.muted,fontFamily:"var(--mono)"}}>HIDDEN</span>}
+                    <span style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:oos?"rgba(232,130,12,.15)":"rgba(31,158,87,.15)",color:oos?T.marigold:"#34c77b",fontFamily:"var(--mono)",fontWeight:600}}>{oos?"OUT OF STOCK":p.stock+" in stock"}</span>
+                  </div>
+                  <div style={{fontSize:12.5,color:T.inkSoft,marginTop:4,fontFamily:"var(--mono)"}}>{rupee(p.price)}{p.mrp>p.price?" · MRP "+rupee(p.mrp):""}{p.category?" · "+esc(p.category):""}{p.cost!=null?" · cost "+rupee(p.cost):""}</div>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <button onClick={()=>toggleStock(p)} style={{...S.linkBtn,fontSize:12.5}}>{oos?"Mark in stock":"Mark out of stock"}</button>
+                  <button onClick={()=>setEditing({...p})} style={{...S.linkBtn,fontSize:12.5}}>Edit</button>
+                  <button onClick={()=>delProduct(p.id)} style={{...S.linkBtn,color:T.danger,fontSize:12.5}}>Delete</button>
+                </div>
+              </div>); })}</div>
+          </div>) : (<div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+              <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{reviews.length} review{reviews.length===1?"":"s"} · newest first</span>
+              <button onClick={()=>loadReviews(key)} style={S.linkBtn}>↻ Refresh</button>
+            </div>
+            {revBusy && reviews.length===0 && <p style={{color:T.muted}}>Loading reviews…</p>}
+            {!revBusy && reviews.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>⭐</div><p style={{color:T.inkSoft,margin:0}}>No reviews yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>Customer reviews will appear here for you to manage.</p></div>}
+            <div style={{display:"grid",gap:12}}>{reviews.map(rv=>(<div key={rv.id} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <strong style={{fontSize:14,color:T.ink}}>{esc(rv.name)}</strong>
+                    <Stars value={rv.rating} size={13} />
+                    <span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>on {esc(rv.product_id)}</span>
+                  </div>
+                  {rv.comment && <p style={{fontSize:13,color:T.inkSoft,margin:"8px 0 0",lineHeight:1.55}}>{esc(rv.comment)}</p>}
+                  <p style={{fontSize:11,color:T.muted,margin:"8px 0 0",fontFamily:"var(--mono)"}}>{new Date(rv.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</p>
+                </div>
+                <button onClick={()=>delReview(rv.id)} style={{...S.linkBtn,color:T.danger,fontSize:12.5,flexShrink:0}}>Delete</button>
+              </div>
+            </div>))}</div>
+          </div>)}
         </div>
       )}
+      {editing && <ProductEditor product={editing} adminKey={key} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);loadProds(key);}} />}
     </section>
   </main>);
 }
-function AdminRow({o,adminKey,onSaved}){
+function ProductEditor({product,adminKey,onClose,onSaved}){
+  const isNew=product._new;
+  const [f,setF]=useState({
+    id:product.id||"", name:product.name||"", price:product.price??"", mrp:product.mrp??"",
+    stock:product.stock??"", category:product.category||"", img:product.img||"",
+    desc:(product.descr!=null?product.descr:product.desc)||"",
+    cost:product.cost??"", supplier:product.supplier||"", supplierUrl:(product.supplier_url!=null?product.supplier_url:product.supplierUrl)||"",
+    active:product.active!==false,
+  });
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState("");
+  const up=(k)=>(e)=>setF({...f,[k]:e.target.value});
+  const save=async()=>{ setMsg("");
+    if(!f.name.trim()){ setMsg("Please enter a product name."); return; }
+    if(f.price===""||isNaN(Number(f.price))||Number(f.price)<0){ setMsg("Please enter a valid price."); return; }
+    setSaving(true);
+    try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({
+        id:isNew?"":f.id, name:f.name, price:Number(f.price), mrp:Number(f.mrp)||0, stock:Number(f.stock)||0,
+        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, active:f.active })});
+      const j=await r.json(); setSaving(false);
+      if(r.ok) onSaved(); else setMsg(j.error||"Couldn't save the product.");
+    }catch(e){ setSaving(false); setMsg("Something went wrong. Please try again."); }
+  };
+  const L=({label,hint,children})=>(<label style={{display:"block",marginBottom:12}}><span style={{...S.fieldLabel,display:"block"}}>{label}{hint&&<span style={{color:T.muted,fontWeight:400}}> · {hint}</span>}</span>{children}</label>);
+  return (<Overlay onClose={saving?()=>{}:onClose}><div style={{...S.modal,maxWidth:560,maxHeight:"90vh",overflowY:"auto"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <h2 style={S.modalTitle}>{isNew?"Add product":"Edit product"}</h2>
+      <button onClick={onClose} style={S.linkBtn}>✕ Close</button>
+    </div>
+    <L label="Product name"><input style={S.input} value={f.name} onChange={up("name")} maxLength={120} placeholder="e.g. Brass Wall Clock" /></L>
+    <div style={S.two}>
+      <L label="Selling price (₹)"><input style={S.input} value={f.price} onChange={up("price")} inputMode="numeric" placeholder="699" /></L>
+      <L label="MRP (₹)" hint="optional"><input style={S.input} value={f.mrp} onChange={up("mrp")} inputMode="numeric" placeholder="1299" /></L>
+    </div>
+    <div style={S.two}>
+      <L label="Stock quantity"><input style={S.input} value={f.stock} onChange={up("stock")} inputMode="numeric" placeholder="15" /></L>
+      <L label="Category" hint="e.g. Home"><input style={S.input} value={f.category} onChange={up("category")} maxLength={40} placeholder="Home" /></L>
+    </div>
+    <L label="Image URL" hint="paste a link to the product photo"><input style={S.input} value={f.img} onChange={up("img")} maxLength={500} placeholder="https://..." /></L>
+    {f.img && <div style={{width:90,height:90,borderRadius:10,overflow:"hidden",marginBottom:12,background:T.bg||"#0f0d0a"}}><img src={f.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /></div>}
+    <L label="Description" hint="short, what makes it good"><textarea style={{...S.input,minHeight:64,resize:"vertical",fontFamily:"inherit"}} value={f.desc} onChange={up("desc")} maxLength={600} placeholder="Insulated 750ml bottle. Keeps cold 24h." /></L>
+    <div style={{borderTop:"1px solid "+T.line,margin:"6px 0 14px",paddingTop:14}}>
+      <p style={{fontSize:11.5,color:T.muted,margin:"0 0 10px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Private · only you see this</p>
+      <div style={S.two}>
+        <L label="Your cost (₹)" hint="what you pay supplier"><input style={S.input} value={f.cost} onChange={up("cost")} inputMode="numeric" placeholder="380" /></L>
+        <L label="Supplier name"><input style={S.input} value={f.supplier} onChange={up("supplier")} maxLength={120} placeholder="Moradabad Metals" /></L>
+      </div>
+      <L label="Supplier link" hint="where you order it"><input style={S.input} value={f.supplierUrl} onChange={up("supplierUrl")} maxLength={300} placeholder="https://supplier..." /></L>
+    </div>
+    <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,fontSize:13.5,color:T.inkSoft,cursor:"pointer"}}>
+      <input type="checkbox" checked={f.active} onChange={e=>setF({...f,active:e.target.checked})} style={{width:16,height:16,accentColor:T.teal}} />
+      Show this product on the store {f.active?"":"(currently hidden)"}
+    </label>
+    {msg && <p style={{color:T.danger,fontSize:13,marginBottom:10}}>{msg}</p>}
+    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+      <button onClick={save} disabled={saving} style={{...S.primaryBtn,width:"auto",padding:"11px 24px",...(saving?S.addBtnDisabled:{})}}>{saving?"Saving…":(isNew?"Add product":"Save changes")}</button>
+      <button onClick={onClose} disabled={saving} style={S.linkBtn}>Cancel</button>
+    </div>
+  </div></Overlay>);
+}
+function AdminRow({o,adminKey,prods,onSaved}){
   const [status,setStatus]=useState(o.status||"Placed");
   const [carrier,setCarrier]=useState(o.tracking_carrier||"");
   const [url,setUrl]=useState(o.tracking_url||"");
   const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(""); const [open,setOpen]=useState(false);
+  const [fulfill,setFulfill]=useState(false); const [copied,setCopied]=useState("");
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
       const j=await r.json(); setSaving(false);
       if(r.ok){ setMsg("Saved ✓"); onSaved&&onSaved(); } else { setMsg(j.error||"Failed"); }
     }catch(e){ setSaving(false); setMsg("Failed"); }
   };
+  const copy=(text,label)=>{ try{ navigator.clipboard.writeText(text); setCopied(label); setTimeout(()=>setCopied(""),1800); }catch(e){
+    const t=document.createElement("textarea"); t.value=text; document.body.appendChild(t); t.select(); try{document.execCommand("copy");}catch(_){} document.body.removeChild(t); setCopied(label); setTimeout(()=>setCopied(""),1800);
+  } };
   const badge={Placed:["#fff",T.marigold],Packed:["#fff","#7c6cff"],Shipped:["#fff",T.teal],Delivered:["#fff","#1f9e57"],Cancelled:[T.muted,"transparent"]};
   const bc=badge[o.status||"Placed"]||badge.Placed;
   let items=[]; try{ items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]"); }catch(e){ items=[]; }
+  // supply info: prefer stored supply snapshot, else match current products by name
+  let supply=[]; try{ supply=Array.isArray(o.supply)?o.supply:JSON.parse(o.supply||"[]"); }catch(e){ supply=[]; }
+  const supplyFor=(it)=>{
+    let s=supply.find(x=>x.name===it.name)||{};
+    if((!s.supplier&&!s.supplierUrl)&&Array.isArray(prods)){
+      const p=prods.find(pp=>pp.name===it.name)||{};
+      s={supplier:p.supplier,supplierUrl:p.supplier_url,cost:p.cost};
+    }
+    return s;
+  };
+  const addressText=`${o.name}\n${o.line1}${o.line2?", "+o.line2:""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
+  const fullOrderText=`Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n`+items.map(i=>`- ${i.name} x${i.qty||1}`).join("\n");
   const dt=o.created_at?new Date(o.created_at):null;
   const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
   return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,overflow:"hidden"}}>
@@ -623,6 +831,33 @@ function AdminRow({o,adminKey,onSaved}){
       <button onClick={()=>setOpen(!open)} style={{...S.linkBtn,fontSize:12.5}}>{open?"▾ Hide items":"▸ "+items.reduce((n,i)=>n+(i.qty||1),0)+" item"+(items.reduce((n,i)=>n+(i.qty||1),0)===1?"":"s")}</button>
       {open && <div style={{marginTop:8,background:T.bg||"#0f0d0a",borderRadius:10,padding:"10px 12px"}}>
         {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+      </div>}
+    </div>}
+    {(o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(124,108,255,.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <div style={{fontSize:11,color:"#a99dff",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>📦 Fulfil this order (order from supplier)</div>
+        <button onClick={()=>setFulfill(!fulfill)} style={{...S.linkBtn,fontSize:12.5,color:"#a99dff"}}>{fulfill?"▾ Hide":"▸ Show"}</button>
+      </div>
+      {fulfill && <div style={{marginTop:12}}>
+        <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.55}}>Order each item from your supplier and enter <strong style={{color:T.inkSoft}}>this customer's address</strong> as the delivery address. Then come back and mark it Shipped with the tracking link.</p>
+        <div style={{display:"grid",gap:8,marginBottom:12}}>
+          {items.map((it,idx)=>{ const s=supplyFor(it); return (
+            <div key={idx} style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <div style={{fontSize:13,color:T.ink}}>{esc(it.name)} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {it.qty||1}</span>
+                <div style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)",marginTop:3}}>{s.supplier?("Supplier: "+esc(s.supplier)):"Supplier: not set"}{s.cost!=null?" · your cost "+rupee(s.cost):""}</div>
+              </div>
+              {s.supplierUrl ? <a href={s.supplierUrl} target="_blank" rel="noopener noreferrer" style={{...S.addBtn,width:"auto",marginTop:0,padding:"8px 14px",fontSize:12.5,textDecoration:"none",textAlign:"center"}}>Open supplier ↗</a>
+                : <span style={{fontSize:11.5,color:T.muted}}>No supplier link</span>}
+            </div>); })}
+        </div>
+        <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:14}}>
+          <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:8}}>Ship to (paste at supplier)</div>
+          <pre style={{margin:0,fontFamily:"inherit",fontSize:13,color:T.ink,whiteSpace:"pre-wrap",lineHeight:1.6}}>{addressText}</pre>
+          <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
+            <button onClick={()=>copy(addressText,"address")} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 16px",fontSize:12.5}}>{copied==="address"?"✓ Copied":"Copy address"}</button>
+            <button onClick={()=>copy(fullOrderText,"order")} style={{...S.linkBtn,fontSize:12.5}}>{copied==="order"?"✓ Copied":"Copy full order"}</button>
+          </div>
+        </div>
       </div>}
     </div>}
     <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(255,255,255,.015)"}}>

@@ -70,18 +70,47 @@ async function initDb() {
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
   )`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS supply jsonb`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
+    id bigserial PRIMARY KEY,
+    product_id text NOT NULL,
+    name text NOT NULL,
+    rating int NOT NULL,
+    comment text,
+    hidden boolean DEFAULT false,
+    created_at timestamptz DEFAULT now()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews(product_id)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS products (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    price int NOT NULL,
+    mrp int DEFAULT 0,
+    stock int DEFAULT 0,
+    img text,
+    descr text,
+    category text,
+    cost int,
+    supplier text,
+    supplier_url text,
+    active boolean DEFAULT true,
+    created_at timestamptz DEFAULT now()
+  )`);
+  await seedProducts();
+  await refreshProductCache();
 }
 if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => console.error("DB init failed:", e && e.message));
 
 async function saveOrder(o) {
   if (!pool) return;
   const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price }));
+  const supply = o.lineItems.map((li) => ({ id: li.id, name: li.name, qty: li.qty, cost: li.cost, supplier: li.supplier, supplierUrl: li.supplierUrl }));
   await pool.query(
-    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed') ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed',$16) ON CONFLICT (id) DO NOTHING`,
     [o.id, o.customer.name, o.customer.phone, o.customer.email, o.customer.line1, o.customer.line2,
      o.customer.city, o.customer.state, o.customer.pincode, JSON.stringify(items),
-     o.subtotal, o.shipping, o.total, o.paid, o.paymentId]
+     o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply)]
   );
 }
 
@@ -143,6 +172,34 @@ const PRODUCTS = [
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
 const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
 
+// In-memory product cache (trusted source for pricing). Falls back to the constant above.
+let productCache = PRODUCTS.slice();
+async function seedProducts() {
+  if (!pool) return;
+  try {
+    const c = await pool.query("SELECT COUNT(*)::int AS n FROM products");
+    if (c.rows[0].n === 0) {
+      for (const p of PRODUCTS) {
+        await pool.query(
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl]
+        );
+      }
+      console.log("Seeded products table with starter products.");
+    }
+  } catch (e) { console.error("seedProducts failed:", e && e.message); }
+}
+async function refreshProductCache() {
+  if (!pool) { productCache = PRODUCTS.slice(); return; }
+  try {
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active FROM products ORDER BY created_at ASC");
+    if (r.rows.length) {
+      productCache = r.rows.map(row => ({ id: row.id, name: row.name, price: row.price, mrp: row.mrp, stock: row.stock,
+        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, active: row.active }));
+    } else { productCache = PRODUCTS.slice(); }
+  } catch (e) { console.error("product cache refresh failed:", e && e.message); }
+}
+
 // Compute an order from item ids+qty using TRUSTED server prices
 function computeOrder(items) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 50) return { error: "Invalid cart" };
@@ -151,8 +208,8 @@ function computeOrder(items) {
     if (!it || typeof it.id !== "string") return { error: "Invalid item" };
     const qty = Number.isInteger(it.qty) ? it.qty : parseInt(it.qty, 10);
     if (!Number.isInteger(qty) || qty < 1 || qty > 50) return { error: "Invalid quantity" };
-    const p = PRODUCTS.find(pp => pp.id === it.id);
-    if (!p) return { error: "Unknown product" };
+    const p = productCache.find(pp => pp.id === it.id);
+    if (!p || p.active === false) return { error: "Unknown product" };
     subtotal += p.price * qty;
     if (typeof p.cost === "number") totalCost += p.cost * qty;
     lineItems.push({ id: p.id, name: p.name, price: p.price, qty, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
@@ -267,9 +324,127 @@ async function notifyBuyer(order) {
 }
 
 // Public catalogue (cost/supplier stripped out)
-app.get("/api/products", (req, res) =>
-  res.json(PRODUCTS.map(({ id, name, price, mrp, stock, img, desc, category }) => ({ id, name, price, mrp, stock, img, desc, category })))
-);
+app.get("/api/products", async (req, res) => {
+  const list = (productCache && productCache.length ? productCache : PRODUCTS).filter(p => p.active !== false);
+  const base = list.map(({ id, name, price, mrp, stock, img, desc, category }) => ({ id, name, price, mrp, stock, img, desc, category, rating: 0, reviewCount: 0 }));
+  if (pool) {
+    try {
+      const r = await pool.query("SELECT product_id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(*) AS cnt FROM reviews WHERE hidden=false GROUP BY product_id");
+      const map = {};
+      r.rows.forEach(row => { map[row.product_id] = { rating: Number(row.avg), reviewCount: Number(row.cnt) }; });
+      base.forEach(p => { if (map[p.id]) { p.rating = map[p.id].rating; p.reviewCount = map[p.id].reviewCount; } });
+    } catch (e) { console.error("ratings join failed:", e && e.message); }
+  }
+  res.json(base);
+});
+
+// ---- Reviews: list for a product ----
+app.get("/api/reviews", async (req, res) => {
+  if (!pool) return res.json({ reviews: [] });
+  const pid = String(req.query.product || "").trim().slice(0, 40);
+  if (!pid) return res.status(400).json({ error: "Missing product." });
+  try {
+    const r = await pool.query("SELECT id,name,rating,comment,created_at FROM reviews WHERE product_id=$1 AND hidden=false ORDER BY created_at DESC LIMIT 100", [pid]);
+    res.json({ reviews: r.rows });
+  } catch (e) { console.error("reviews list failed:", e && e.message); res.status(500).json({ error: "Could not load reviews." }); }
+});
+
+// ---- Reviews: submit one ----
+app.post("/api/reviews", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Reviews aren't available right now." });
+  const b = req.body || {};
+  const pid = String(b.productId || "").trim().slice(0, 40);
+  const name = String(b.name || "").trim().slice(0, 60);
+  const rating = Math.round(Number(b.rating) || 0);
+  const comment = String(b.comment || "").trim().slice(0, 600);
+  if (!(productCache.some(p => p.id === pid) || PRODUCTS.some(p => p.id === pid))) return res.status(400).json({ error: "Unknown product." });
+  if (!name) return res.status(400).json({ error: "Please add your name." });
+  if (!(rating >= 1 && rating <= 5)) return res.status(400).json({ error: "Please pick a rating from 1 to 5 stars." });
+  try {
+    await pool.query("INSERT INTO reviews (product_id,name,rating,comment) VALUES ($1,$2,$3,$4)", [pid, name, rating, comment]);
+    res.json({ ok: true, message: "Thanks for your review!" });
+  } catch (e) { console.error("review insert failed:", e && e.message); res.status(500).json({ error: "Couldn't save your review. Please try again." }); }
+});
+
+// ---- Reviews: seller list + delete (admin) ----
+app.get("/api/admin/reviews", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  try {
+    const r = await pool.query("SELECT id,product_id,name,rating,comment,hidden,created_at FROM reviews ORDER BY created_at DESC LIMIT 200");
+    res.json({ reviews: r.rows });
+  } catch (e) { console.error("admin reviews failed:", e && e.message); res.status(500).json({ error: "Could not load reviews." }); }
+});
+app.post("/api/admin/review-delete", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const rid = Math.round(Number((req.body && req.body.id) || 0));
+  if (!rid) return res.status(400).json({ error: "Missing review id." });
+  try {
+    await pool.query("DELETE FROM reviews WHERE id=$1", [rid]);
+    res.json({ ok: true });
+  } catch (e) { console.error("review delete failed:", e && e.message); res.status(500).json({ error: "Delete failed." }); }
+});
+
+// ---- Seller: product management (full fields incl. private cost/supplier) ----
+app.get("/api/admin/products", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  try {
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active,created_at FROM products ORDER BY created_at ASC");
+    res.json({ products: r.rows });
+  } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
+});
+
+app.post("/api/admin/product-save", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const b = req.body || {};
+  const name = String(b.name || "").trim().slice(0, 120);
+  const price = Math.round(Number(b.price));
+  const mrp = Math.round(Number(b.mrp) || 0);
+  const stock = Math.round(Number(b.stock) || 0);
+  const img = String(b.img || "").trim().slice(0, 500);
+  const descr = String(b.desc || "").trim().slice(0, 600);
+  const category = String(b.category || "").trim().slice(0, 40);
+  const cost = b.cost === "" || b.cost == null ? null : Math.round(Number(b.cost));
+  const supplier = String(b.supplier || "").trim().slice(0, 120);
+  const supplierUrl = String(b.supplierUrl || "").trim().slice(0, 300);
+  const active = b.active === false ? false : true;
+  if (!name) return res.status(400).json({ error: "Product name is required." });
+  if (!Number.isFinite(price) || price < 0) return res.status(400).json({ error: "Enter a valid price." });
+  if (!Number.isFinite(stock) || stock < 0) return res.status(400).json({ error: "Enter a valid stock quantity." });
+  try {
+    let id = String(b.id || "").trim();
+    if (id) {
+      const r = await pool.query(
+        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,active=$12 WHERE id=$1 RETURNING id",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, active]
+      );
+      if (!r.rows.length) return res.status(404).json({ error: "Product not found." });
+    } else {
+      id = "p" + Date.now().toString(36);
+      await pool.query(
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, active]
+      );
+    }
+    await refreshProductCache();
+    res.json({ ok: true, id });
+  } catch (e) { console.error("product save failed:", e && e.message); res.status(500).json({ error: "Couldn't save the product." }); }
+});
+
+app.post("/api/admin/product-delete", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.id) || "").trim();
+  if (!id) return res.status(400).json({ error: "Missing product id." });
+  try {
+    await pool.query("DELETE FROM products WHERE id=$1", [id]);
+    await refreshProductCache();
+    res.json({ ok: true });
+  } catch (e) { console.error("product delete failed:", e && e.message); res.status(500).json({ error: "Delete failed." }); }
+});
 
 // Create a Razorpay order (amount computed from trusted prices)
 app.post("/api/create-order", async (req, res) => {
@@ -412,7 +587,7 @@ app.get("/api/admin/orders", async (req, res) => {
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
     const r = await pool.query(
-      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,supply,subtotal,shipping,total,paid,payment_id,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
     );
     res.json({ orders: r.rows });
   } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }

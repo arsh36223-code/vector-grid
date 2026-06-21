@@ -102,6 +102,52 @@ const SEED = [{
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const esc = s => String(s == null ? "" : s);
+function Stars({
+  value,
+  size
+}) {
+  const v = Number(value) || 0;
+  const sz = size || 14;
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      gap: 1,
+      lineHeight: 1
+    },
+    "aria-label": v + " out of 5"
+  }, [1, 2, 3, 4, 5].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    style: {
+      fontSize: sz,
+      color: n <= Math.round(v) ? "#F3A23E" : "rgba(255,255,255,.22)"
+    }
+  }, "★")));
+}
+function StarPicker({
+  value,
+  onChange
+}) {
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-flex",
+      gap: 4
+    }
+  }, [1, 2, 3, 4, 5].map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    type: "button",
+    onClick: () => onChange(n),
+    style: {
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      padding: 2,
+      fontSize: 26,
+      lineHeight: 1,
+      color: n <= value ? "#F3A23E" : "rgba(255,255,255,.25)"
+    },
+    "aria-label": n + " star"
+  }, "★")));
+}
 function cardTilt(e) {
   if (window.matchMedia && (window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
   const el = e.currentTarget,
@@ -759,7 +805,23 @@ function Store({
       }
     }, /*#__PURE__*/React.createElement("h3", {
       style: S.prodName
-    }, esc(p.name)), /*#__PURE__*/React.createElement("p", {
+    }, esc(p.name)), p.reviewCount > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        margin: "2px 0 4px"
+      }
+    }, /*#__PURE__*/React.createElement(Stars, {
+      value: p.rating,
+      size: 13
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11.5,
+        color: T.muted,
+        fontFamily: "var(--mono)"
+      }
+    }, p.rating, " (", p.reviewCount, ")")), /*#__PURE__*/React.createElement("p", {
       style: S.prodDesc
     }, esc(p.desc)), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -786,6 +848,65 @@ function QuickView({
   onAdd
 }) {
   const out = product.stock <= 0;
+  const [reviews, setReviews] = useState(null);
+  const [name, setName] = useState("");
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const loadReviews = async () => {
+    try {
+      const r = await fetch(API + "/api/reviews?product=" + encodeURIComponent(product.id));
+      const j = await r.json();
+      setReviews(j.reviews || []);
+    } catch (e) {
+      setReviews([]);
+    }
+  };
+  useEffect(() => {
+    loadReviews();
+  }, []);
+  const post = async () => {
+    setMsg("");
+    if (!name.trim()) {
+      setMsg("Please add your name.");
+      return;
+    }
+    if (!(rating >= 1 && rating <= 5)) {
+      setMsg("Please pick a star rating.");
+      return;
+    }
+    setPosting(true);
+    try {
+      const r = await fetch(API + "/api/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          name,
+          rating,
+          comment
+        })
+      });
+      const j = await r.json();
+      setPosting(false);
+      if (r.ok) {
+        setMsg("Thanks for your review!");
+        setName("");
+        setRating(0);
+        setComment("");
+        setShowForm(false);
+        loadReviews();
+      } else setMsg(j.error || "Couldn't save your review.");
+    } catch (e) {
+      setPosting(false);
+      setMsg("Something went wrong. Please try again.");
+    }
+  };
+  const avg = reviews && reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : null;
   return /*#__PURE__*/React.createElement(Overlay, {
     onClose: onClose
   }, /*#__PURE__*/React.createElement("div", {
@@ -794,7 +915,9 @@ function QuickView({
       maxWidth: 720,
       padding: 0,
       overflow: "hidden",
-      position: "relative"
+      position: "relative",
+      maxHeight: "90vh",
+      overflowY: "auto"
     }
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
@@ -828,7 +951,22 @@ function QuickView({
       fontSize: 22,
       margin: "10px 0 8px"
     }
-  }, esc(product.name)), /*#__PURE__*/React.createElement("div", {
+  }, esc(product.name)), avg && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement(Stars, {
+    value: avg
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      fontFamily: "var(--mono)"
+    }
+  }, avg, " · ", reviews.length, " review", reviews.length === 1 ? "" : "s")), /*#__PURE__*/React.createElement("div", {
     style: S.priceRow
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -859,7 +997,169 @@ function QuickView({
       ...(out ? S.addBtnDisabled : {}),
       marginTop: 18
     }
-  }, out ? "Unavailable" : "Add to cart")))));
+  }, out ? "Unavailable" : "Add to cart"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 28px 28px",
+      borderTop: "1px solid " + T.line,
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      margin: "20px 0 12px",
+      flexWrap: "wrap",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 18,
+      fontWeight: 700,
+      margin: 0
+    }
+  }, "Customer reviews"), !showForm && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setShowForm(true);
+      setMsg("");
+    },
+    style: {
+      ...S.addBtn,
+      width: "auto",
+      marginTop: 0,
+      padding: "8px 16px",
+      fontSize: 13
+    }
+  }, "Write a review")), showForm && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 18,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: T.inkSoft,
+      marginBottom: 6
+    }
+  }, "Your rating"), /*#__PURE__*/React.createElement(StarPicker, {
+    value: rating,
+    onChange: setRating
+  })), /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...S.input,
+      marginBottom: 10
+    },
+    value: name,
+    onChange: e => setName(e.target.value),
+    maxLength: 60,
+    placeholder: "Your name"
+  }), /*#__PURE__*/React.createElement("textarea", {
+    style: {
+      ...S.input,
+      minHeight: 70,
+      resize: "vertical",
+      fontFamily: "inherit",
+      marginBottom: 10
+    },
+    value: comment,
+    onChange: e => setComment(e.target.value),
+    maxLength: 600,
+    placeholder: "Share your experience (optional)"
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: post,
+    disabled: posting,
+    style: {
+      ...S.primaryBtn,
+      width: "auto",
+      padding: "10px 20px",
+      ...(posting ? S.addBtnDisabled : {})
+    }
+  }, posting ? "Posting…" : "Submit review"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setShowForm(false);
+      setMsg("");
+    },
+    disabled: posting,
+    style: S.linkBtn
+  }, "Cancel"))), msg && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: msg.indexOf("Thanks") === 0 ? T.teal : T.danger,
+      margin: "0 0 12px"
+    }
+  }, msg), reviews === null ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13
+    }
+  }, "Loading reviews…") : reviews.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13.5
+    }
+  }, "No reviews yet. Be the first to review this product!") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12
+    }
+  }, reviews.map(rv => /*#__PURE__*/React.createElement("div", {
+    key: rv.id,
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 10,
+      padding: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontSize: 13.5,
+      color: T.ink
+    }
+  }, esc(rv.name)), /*#__PURE__*/React.createElement(Stars, {
+    value: rv.rating,
+    size: 13
+  })), rv.comment && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: T.inkSoft,
+      margin: "8px 0 0",
+      lineHeight: 1.55
+    }
+  }, esc(rv.comment)), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      margin: "8px 0 0",
+      fontFamily: "var(--mono)"
+    }
+  }, new Date(rv.created_at).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }))))))));
 }
 function CartDrawer({
   items,
@@ -1863,6 +2163,12 @@ function AdminOrders({
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(true);
   const [booting, setBooting] = useState(true);
+  const [tab, setTab] = useState("orders");
+  const [reviews, setReviews] = useState([]);
+  const [revBusy, setRevBusy] = useState(false);
+  const [prods, setProds] = useState([]);
+  const [prodBusy, setProdBusy] = useState(false);
+  const [editing, setEditing] = useState(null);
   const load = async (k, opts) => {
     setErr("");
     setBusy(true);
@@ -1883,6 +2189,8 @@ function AdminOrders({
             localStorage.setItem("vg_admin_key", k);
           } catch (e) {}
         }
+        loadReviews(k);
+        loadProds(k);
       } else {
         setErr(j.error || "That key didn't work. Please check and try again.");
         setAuthed(false);
@@ -1894,6 +2202,88 @@ function AdminOrders({
       setBusy(false);
       setErr("Something went wrong. Please try again.");
     }
+  };
+  const loadReviews = async k => {
+    setRevBusy(true);
+    try {
+      const r = await fetch(API + "/api/admin/reviews", {
+        headers: {
+          "x-admin-key": k || key
+        }
+      });
+      const j = await r.json();
+      setRevBusy(false);
+      if (r.ok) setReviews(j.reviews || []);
+    } catch (e) {
+      setRevBusy(false);
+    }
+  };
+  const loadProds = async k => {
+    setProdBusy(true);
+    try {
+      const r = await fetch(API + "/api/admin/products", {
+        headers: {
+          "x-admin-key": k || key
+        }
+      });
+      const j = await r.json();
+      setProdBusy(false);
+      if (r.ok) setProds(j.products || []);
+    } catch (e) {
+      setProdBusy(false);
+    }
+  };
+  const delReview = async id => {
+    if (!window.confirm("Delete this review permanently?")) return;
+    try {
+      const r = await fetch(API + "/api/admin/review-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": key
+        },
+        body: JSON.stringify({
+          id
+        })
+      });
+      if (r.ok) setReviews(reviews.filter(rv => rv.id !== id));
+    } catch (e) {}
+  };
+  const delProduct = async id => {
+    if (!window.confirm("Delete this product permanently? This can't be undone.")) return;
+    try {
+      const r = await fetch(API + "/api/admin/product-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": key
+        },
+        body: JSON.stringify({
+          id
+        })
+      });
+      if (r.ok) loadProds(key);
+    } catch (e) {}
+  };
+  const toggleStock = async p => {
+    // quick out-of-stock / restock
+    const body = {
+      ...p,
+      desc: p.descr,
+      supplierUrl: p.supplier_url,
+      stock: p.stock > 0 ? 0 : 10
+    };
+    try {
+      const r = await fetch(API + "/api/admin/product-save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": key
+        },
+        body: JSON.stringify(body)
+      });
+      if (r.ok) loadProds(key);
+    } catch (e) {}
   };
   useEffect(() => {
     let saved = "";
@@ -1914,6 +2304,7 @@ function AdminOrders({
     setAuthed(false);
     setKey("");
     setOrders([]);
+    setReviews([]);
     setErr("");
   };
   const submit = () => {
@@ -2055,7 +2446,29 @@ function AdminOrders({
     style: {
       marginTop: 18
     }
-  }, (() => {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      marginBottom: 18,
+      borderBottom: "1px solid " + T.line,
+      flexWrap: "wrap"
+    }
+  }, [["orders", "Orders"], ["products", "Products"], ["reviews", "Reviews"]].map(([t, label]) => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    onClick: () => setTab(t),
+    style: {
+      background: "none",
+      border: "none",
+      borderBottom: "2px solid " + (tab === t ? T.marigold : "transparent"),
+      color: tab === t ? T.ink : T.muted,
+      padding: "8px 14px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: "pointer",
+      marginBottom: -1
+    }
+  }, label, t === "products" && prods.length > 0 ? " (" + prods.length + ")" : "", t === "reviews" && reviews.length > 0 ? " (" + reviews.length + ")" : ""))), tab === "orders" ? /*#__PURE__*/React.createElement("div", null, (() => {
     const stat = name => orders.filter(o => (o.status || "Placed") === name).length;
     const revenue = orders.filter(o => (o.status || "") !== "Cancelled").reduce((s, o) => s + Number(o.total || 0), 0);
     const cards = [["Total orders", orders.length, T.ink], ["New / Placed", stat("Placed"), T.marigold], ["Shipped", stat("Shipped"), T.teal], ["Delivered", stat("Delivered"), T.teal], ["Revenue", "₹" + revenue.toLocaleString("en-IN"), T.ink]];
@@ -2146,14 +2559,613 @@ function AdminOrders({
     key: o.id,
     o: o,
     adminKey: key,
+    prods: prods,
     onSaved: () => load(key, {
       remember
     })
-  }))))));
+  })))) : tab === "products" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 13,
+      fontFamily: "var(--mono)"
+    }
+  }, prods.length, " product", prods.length === 1 ? "" : "s"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadProds(key),
+    style: S.linkBtn
+  }, "↻ Refresh"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditing({
+      _new: true,
+      name: "",
+      price: "",
+      mrp: "",
+      stock: "",
+      category: "",
+      img: "",
+      descr: "",
+      cost: "",
+      supplier: "",
+      supplier_url: "",
+      active: true
+    }),
+    style: {
+      ...S.addBtn,
+      width: "auto",
+      marginTop: 0,
+      padding: "9px 18px",
+      fontSize: 13.5
+    }
+  }, "+ Add product"))), prodBusy && prods.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted
+    }
+  }, "Loading products…"), !prodBusy && prods.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "48px 20px",
+      background: T.card,
+      border: "1px dashed " + T.line,
+      borderRadius: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 32,
+      marginBottom: 8
+    }
+  }, "🛍️"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      margin: 0
+    }
+  }, "No products yet."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13,
+      marginTop: 4
+    }
+  }, "Click “Add product” to create your first one.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12
+    }
+  }, prods.map(p => {
+    const oos = p.stock <= 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      style: {
+        background: T.card,
+        border: "1px solid " + T.line,
+        borderRadius: 12,
+        padding: 14,
+        display: "flex",
+        gap: 14,
+        alignItems: "center",
+        flexWrap: "wrap"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 56,
+        height: 56,
+        borderRadius: 10,
+        overflow: "hidden",
+        flexShrink: 0,
+        background: T.bg || "#0f0d0a"
+      }
+    }, p.img && /*#__PURE__*/React.createElement("img", {
+      src: p.img,
+      alt: "",
+      style: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover"
+      },
+      onError: e => {
+        e.currentTarget.style.opacity = 0.2;
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 160
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap"
+      }
+    }, /*#__PURE__*/React.createElement("strong", {
+      style: {
+        fontSize: 14,
+        color: T.ink
+      }
+    }, esc(p.name)), p.active === false && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10.5,
+        padding: "2px 8px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,.06)",
+        color: T.muted,
+        fontFamily: "var(--mono)"
+      }
+    }, "HIDDEN"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10.5,
+        padding: "2px 8px",
+        borderRadius: 999,
+        background: oos ? "rgba(232,130,12,.15)" : "rgba(31,158,87,.15)",
+        color: oos ? T.marigold : "#34c77b",
+        fontFamily: "var(--mono)",
+        fontWeight: 600
+      }
+    }, oos ? "OUT OF STOCK" : p.stock + " in stock")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12.5,
+        color: T.inkSoft,
+        marginTop: 4,
+        fontFamily: "var(--mono)"
+      }
+    }, rupee(p.price), p.mrp > p.price ? " · MRP " + rupee(p.mrp) : "", p.category ? " · " + esc(p.category) : "", p.cost != null ? " · cost " + rupee(p.cost) : "")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap"
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => toggleStock(p),
+      style: {
+        ...S.linkBtn,
+        fontSize: 12.5
+      }
+    }, oos ? "Mark in stock" : "Mark out of stock"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setEditing({
+        ...p
+      }),
+      style: {
+        ...S.linkBtn,
+        fontSize: 12.5
+      }
+    }, "Edit"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => delProduct(p.id),
+      style: {
+        ...S.linkBtn,
+        color: T.danger,
+        fontSize: 12.5
+      }
+    }, "Delete")));
+  }))) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 13,
+      fontFamily: "var(--mono)"
+    }
+  }, reviews.length, " review", reviews.length === 1 ? "" : "s", " · newest first"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadReviews(key),
+    style: S.linkBtn
+  }, "↻ Refresh")), revBusy && reviews.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted
+    }
+  }, "Loading reviews…"), !revBusy && reviews.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "48px 20px",
+      background: T.card,
+      border: "1px dashed " + T.line,
+      borderRadius: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 32,
+      marginBottom: 8
+    }
+  }, "⭐"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      margin: 0
+    }
+  }, "No reviews yet."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13,
+      marginTop: 4
+    }
+  }, "Customer reviews will appear here for you to manage.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12
+    }
+  }, reviews.map(rv => /*#__PURE__*/React.createElement("div", {
+    key: rv.id,
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontSize: 14,
+      color: T.ink
+    }
+  }, esc(rv.name)), /*#__PURE__*/React.createElement(Stars, {
+    value: rv.rating,
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      fontFamily: "var(--mono)"
+    }
+  }, "on ", esc(rv.product_id))), rv.comment && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: T.inkSoft,
+      margin: "8px 0 0",
+      lineHeight: 1.55
+    }
+  }, esc(rv.comment)), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      margin: "8px 0 0",
+      fontFamily: "var(--mono)"
+    }
+  }, new Date(rv.created_at).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => delReview(rv.id),
+    style: {
+      ...S.linkBtn,
+      color: T.danger,
+      fontSize: 12.5,
+      flexShrink: 0
+    }
+  }, "Delete"))))))), editing && /*#__PURE__*/React.createElement(ProductEditor, {
+    product: editing,
+    adminKey: key,
+    onClose: () => setEditing(null),
+    onSaved: () => {
+      setEditing(null);
+      loadProds(key);
+    }
+  })));
+}
+function ProductEditor({
+  product,
+  adminKey,
+  onClose,
+  onSaved
+}) {
+  const isNew = product._new;
+  const [f, setF] = useState({
+    id: product.id || "",
+    name: product.name || "",
+    price: product.price ?? "",
+    mrp: product.mrp ?? "",
+    stock: product.stock ?? "",
+    category: product.category || "",
+    img: product.img || "",
+    desc: (product.descr != null ? product.descr : product.desc) || "",
+    cost: product.cost ?? "",
+    supplier: product.supplier || "",
+    supplierUrl: (product.supplier_url != null ? product.supplier_url : product.supplierUrl) || "",
+    active: product.active !== false
+  });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const up = k => e => setF({
+    ...f,
+    [k]: e.target.value
+  });
+  const save = async () => {
+    setMsg("");
+    if (!f.name.trim()) {
+      setMsg("Please enter a product name.");
+      return;
+    }
+    if (f.price === "" || isNaN(Number(f.price)) || Number(f.price) < 0) {
+      setMsg("Please enter a valid price.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const r = await fetch(API + "/api/admin/product-save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey
+        },
+        body: JSON.stringify({
+          id: isNew ? "" : f.id,
+          name: f.name,
+          price: Number(f.price),
+          mrp: Number(f.mrp) || 0,
+          stock: Number(f.stock) || 0,
+          category: f.category,
+          img: f.img,
+          desc: f.desc,
+          cost: f.cost === "" ? "" : Number(f.cost),
+          supplier: f.supplier,
+          supplierUrl: f.supplierUrl,
+          active: f.active
+        })
+      });
+      const j = await r.json();
+      setSaving(false);
+      if (r.ok) onSaved();else setMsg(j.error || "Couldn't save the product.");
+    } catch (e) {
+      setSaving(false);
+      setMsg("Something went wrong. Please try again.");
+    }
+  };
+  const L = ({
+    label,
+    hint,
+    children
+  }) => /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "block",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...S.fieldLabel,
+      display: "block"
+    }
+  }, label, hint && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.muted,
+      fontWeight: 400
+    }
+  }, " · ", hint)), children);
+  return /*#__PURE__*/React.createElement(Overlay, {
+    onClose: saving ? () => {} : onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.modal,
+      maxWidth: 560,
+      maxHeight: "90vh",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: S.modalTitle
+  }, isNew ? "Add product" : "Edit product"), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    style: S.linkBtn
+  }, "✕ Close")), /*#__PURE__*/React.createElement(L, {
+    label: "Product name"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.name,
+    onChange: up("name"),
+    maxLength: 120,
+    placeholder: "e.g. Brass Wall Clock"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: S.two
+  }, /*#__PURE__*/React.createElement(L, {
+    label: "Selling price (₹)"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.price,
+    onChange: up("price"),
+    inputMode: "numeric",
+    placeholder: "699"
+  })), /*#__PURE__*/React.createElement(L, {
+    label: "MRP (₹)",
+    hint: "optional"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.mrp,
+    onChange: up("mrp"),
+    inputMode: "numeric",
+    placeholder: "1299"
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: S.two
+  }, /*#__PURE__*/React.createElement(L, {
+    label: "Stock quantity"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.stock,
+    onChange: up("stock"),
+    inputMode: "numeric",
+    placeholder: "15"
+  })), /*#__PURE__*/React.createElement(L, {
+    label: "Category",
+    hint: "e.g. Home"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.category,
+    onChange: up("category"),
+    maxLength: 40,
+    placeholder: "Home"
+  }))), /*#__PURE__*/React.createElement(L, {
+    label: "Image URL",
+    hint: "paste a link to the product photo"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.img,
+    onChange: up("img"),
+    maxLength: 500,
+    placeholder: "https://..."
+  })), f.img && /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 90,
+      height: 90,
+      borderRadius: 10,
+      overflow: "hidden",
+      marginBottom: 12,
+      background: T.bg || "#0f0d0a"
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: f.img,
+    alt: "",
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    },
+    onError: e => {
+      e.currentTarget.style.opacity = 0.2;
+    }
+  })), /*#__PURE__*/React.createElement(L, {
+    label: "Description",
+    hint: "short, what makes it good"
+  }, /*#__PURE__*/React.createElement("textarea", {
+    style: {
+      ...S.input,
+      minHeight: 64,
+      resize: "vertical",
+      fontFamily: "inherit"
+    },
+    value: f.desc,
+    onChange: up("desc"),
+    maxLength: 600,
+    placeholder: "Insulated 750ml bottle. Keeps cold 24h."
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid " + T.line,
+      margin: "6px 0 14px",
+      paddingTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11.5,
+      color: T.muted,
+      margin: "0 0 10px",
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em"
+    }
+  }, "Private · only you see this"), /*#__PURE__*/React.createElement("div", {
+    style: S.two
+  }, /*#__PURE__*/React.createElement(L, {
+    label: "Your cost (₹)",
+    hint: "what you pay supplier"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.cost,
+    onChange: up("cost"),
+    inputMode: "numeric",
+    placeholder: "380"
+  })), /*#__PURE__*/React.createElement(L, {
+    label: "Supplier name"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.supplier,
+    onChange: up("supplier"),
+    maxLength: 120,
+    placeholder: "Moradabad Metals"
+  }))), /*#__PURE__*/React.createElement(L, {
+    label: "Supplier link",
+    hint: "where you order it"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.supplierUrl,
+    onChange: up("supplierUrl"),
+    maxLength: 300,
+    placeholder: "https://supplier..."
+  }))), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 16,
+      fontSize: 13.5,
+      color: T.inkSoft,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: f.active,
+    onChange: e => setF({
+      ...f,
+      active: e.target.checked
+    }),
+    style: {
+      width: 16,
+      height: 16,
+      accentColor: T.teal
+    }
+  }), "Show this product on the store ", f.active ? "" : "(currently hidden)"), msg && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      fontSize: 13,
+      marginBottom: 10
+    }
+  }, msg), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: save,
+    disabled: saving,
+    style: {
+      ...S.primaryBtn,
+      width: "auto",
+      padding: "11px 24px",
+      ...(saving ? S.addBtnDisabled : {})
+    }
+  }, saving ? "Saving…" : isNew ? "Add product" : "Save changes"), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    disabled: saving,
+    style: S.linkBtn
+  }, "Cancel"))));
 }
 function AdminRow({
   o,
   adminKey,
+  prods,
   onSaved
 }) {
   const [status, setStatus] = useState(o.status || "Placed");
@@ -2162,6 +3174,8 @@ function AdminRow({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [open, setOpen] = useState(false);
+  const [fulfill, setFulfill] = useState(false);
+  const [copied, setCopied] = useState("");
   const save = async () => {
     setSaving(true);
     setMsg("");
@@ -2192,6 +3206,24 @@ function AdminRow({
       setMsg("Failed");
     }
   };
+  const copy = (text, label) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(""), 1800);
+    } catch (e) {
+      const t = document.createElement("textarea");
+      t.value = text;
+      document.body.appendChild(t);
+      t.select();
+      try {
+        document.execCommand("copy");
+      } catch (_) {}
+      document.body.removeChild(t);
+      setCopied(label);
+      setTimeout(() => setCopied(""), 1800);
+    }
+  };
   const badge = {
     Placed: ["#fff", T.marigold],
     Packed: ["#fff", "#7c6cff"],
@@ -2206,6 +3238,27 @@ function AdminRow({
   } catch (e) {
     items = [];
   }
+  // supply info: prefer stored supply snapshot, else match current products by name
+  let supply = [];
+  try {
+    supply = Array.isArray(o.supply) ? o.supply : JSON.parse(o.supply || "[]");
+  } catch (e) {
+    supply = [];
+  }
+  const supplyFor = it => {
+    let s = supply.find(x => x.name === it.name) || {};
+    if (!s.supplier && !s.supplierUrl && Array.isArray(prods)) {
+      const p = prods.find(pp => pp.name === it.name) || {};
+      s = {
+        supplier: p.supplier,
+        supplierUrl: p.supplier_url,
+        cost: p.cost
+      };
+    }
+    return s;
+  };
+  const addressText = `${o.name}\n${o.line1}${o.line2 ? ", " + o.line2 : ""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
+  const fullOrderText = `Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n` + items.map(i => `- ${i.name} x${i.qty || 1}`).join("\n");
   const dt = o.created_at ? new Date(o.created_at) : null;
   const dstr = dt ? dt.toLocaleString("en-IN", {
     day: "numeric",
@@ -2334,7 +3387,155 @@ function AdminRow({
     style: {
       color: T.ink
     }
-  }, rupee((i.price || 0) * (i.qty || 1))))))), /*#__PURE__*/React.createElement("div", {
+  }, rupee((i.price || 0) * (i.qty || 1))))))), o.status !== "Cancelled" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid " + T.line,
+      padding: "14px 18px",
+      background: "rgba(124,108,255,.06)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "#a99dff",
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em"
+    }
+  }, "📦 Fulfil this order (order from supplier)"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setFulfill(!fulfill),
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5,
+      color: "#a99dff"
+    }
+  }, fulfill ? "▾ Hide" : "▸ Show")), fulfill && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      margin: "0 0 12px",
+      lineHeight: 1.55
+    }
+  }, "Order each item from your supplier and enter ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.inkSoft
+    }
+  }, "this customer's address"), " as the delivery address. Then come back and mark it Shipped with the tracking link."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, items.map((it, idx) => {
+    const s = supplyFor(it);
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      style: {
+        background: T.card,
+        border: "1px solid " + T.line,
+        borderRadius: 10,
+        padding: "10px 12px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 10,
+        flexWrap: "wrap"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: T.ink
+      }
+    }, esc(it.name), " ", /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: T.muted,
+        fontFamily: "var(--mono)"
+      }
+    }, "× ", it.qty || 1), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11.5,
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        marginTop: 3
+      }
+    }, s.supplier ? "Supplier: " + esc(s.supplier) : "Supplier: not set", s.cost != null ? " · your cost " + rupee(s.cost) : "")), s.supplierUrl ? /*#__PURE__*/React.createElement("a", {
+      href: s.supplierUrl,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        ...S.addBtn,
+        width: "auto",
+        marginTop: 0,
+        padding: "8px 14px",
+        fontSize: 12.5,
+        textDecoration: "none",
+        textAlign: "center"
+      }
+    }, "Open supplier ↗") : /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11.5,
+        color: T.muted
+      }
+    }, "No supplier link"));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 10,
+      padding: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em",
+      marginBottom: 8
+    }
+  }, "Ship to (paste at supplier)"), /*#__PURE__*/React.createElement("pre", {
+    style: {
+      margin: 0,
+      fontFamily: "inherit",
+      fontSize: 13,
+      color: T.ink,
+      whiteSpace: "pre-wrap",
+      lineHeight: 1.6
+    }
+  }, addressText), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      marginTop: 12,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => copy(addressText, "address"),
+    style: {
+      ...S.addBtn,
+      width: "auto",
+      marginTop: 0,
+      padding: "9px 16px",
+      fontSize: 12.5
+    }
+  }, copied === "address" ? "✓ Copied" : "Copy address"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copy(fullOrderText, "order"),
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5
+    }
+  }, copied === "order" ? "✓ Copied" : "Copy full order"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid " + T.line,
       padding: "14px 18px",
