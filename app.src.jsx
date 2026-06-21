@@ -462,28 +462,50 @@ function TrackOrder({onBack}){
 function AdminOrders({onBack}){
   const [key,setKey]=useState(""); const [authed,setAuthed]=useState(false);
   const [orders,setOrders]=useState([]); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
-  const load=async(k)=>{ setErr(""); setBusy(true);
+  const [remember,setRemember]=useState(true); const [booting,setBooting]=useState(true);
+  const load=async(k,opts)=>{ setErr(""); setBusy(true);
     try{ const r=await fetch(API+"/api/admin/orders",{headers:{"x-admin-key":k}});
       const j=await r.json(); setBusy(false);
-      if(r.ok){ setOrders(j.orders||[]); setAuthed(true); } else { setErr(j.error||"Could not load orders."); setAuthed(false); }
+      if(r.ok){ setOrders(j.orders||[]); setAuthed(true); setKey(k);
+        if(opts&&opts.remember){ try{ localStorage.setItem("vg_admin_key",k); }catch(e){} }
+      } else { setErr(j.error||"That key didn't work. Please check and try again."); setAuthed(false);
+        try{ localStorage.removeItem("vg_admin_key"); }catch(e){} }
     }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
   };
+  useEffect(()=>{ let saved=""; try{ saved=localStorage.getItem("vg_admin_key")||""; }catch(e){}
+    if(saved){ setKey(saved); load(saved,{remember:true}).finally(()=>setBooting(false)); }
+    else setBooting(false);
+  },[]);
+  const logout=()=>{ try{ localStorage.removeItem("vg_admin_key"); }catch(e){} setAuthed(false); setKey(""); setOrders([]); setErr(""); };
+  const submit=()=>{ if(!key.trim()) return; load(key.trim(),{remember}); };
   return (<main style={{...S.main,maxWidth:840}}>
     <section style={{padding:"40px 0 8px"}}>
       <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
-      <h1 style={{fontFamily:"var(--display)",fontSize:32,fontWeight:700,letterSpacing:"-.02em",margin:"14px 0 6px"}}>Manage orders</h1>
-      {!authed ? (
-        <div style={{display:"grid",gap:12,maxWidth:360,marginTop:12}}>
-          <p style={{color:T.inkSoft,fontSize:14}}>Enter your admin key to view and update orders.</p>
-          <input style={S.input} type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="Admin key" />
-          <button onClick={()=>load(key)} disabled={busy} style={{...S.primaryBtn,...(busy?S.addBtnDisabled:{})}}>{busy?"Checking…":"Open"}</button>
-          {err && <p style={{color:T.danger,fontSize:13}}>{err}</p>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:10,margin:"14px 0 6px"}}>
+        <h1 style={{fontFamily:"var(--display)",fontSize:32,fontWeight:700,letterSpacing:"-.02em",margin:0}}>Seller dashboard</h1>
+        {authed && <button onClick={logout} style={{...S.linkBtn,color:T.danger}}>Log out</button>}
+      </div>
+      {booting ? (
+        <p style={{color:T.muted,marginTop:24}}>Loading…</p>
+      ) : !authed ? (
+        <div style={{maxWidth:380,marginTop:18,background:T.card,border:"1px solid "+T.line,borderRadius:16,padding:"26px 24px"}}>
+          <div style={{width:44,height:44,borderRadius:12,background:T.tealSoft||"rgba(39,179,163,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:14}}>🔒</div>
+          <h2 style={{fontFamily:"var(--display)",fontSize:20,fontWeight:700,margin:"0 0 4px"}}>Seller login</h2>
+          <p style={{color:T.inkSoft,fontSize:13.5,margin:"0 0 16px",lineHeight:1.5}}>Enter your admin key to view and manage orders. Only you have this key.</p>
+          <input style={S.input} type="password" value={key} onChange={e=>setKey(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")submit();}} placeholder="Admin key" autoFocus />
+          <label style={{display:"flex",alignItems:"center",gap:8,margin:"12px 0 16px",fontSize:13.5,color:T.inkSoft,cursor:"pointer",userSelect:"none"}}>
+            <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} style={{width:16,height:16,accentColor:T.teal,cursor:"pointer"}} />
+            Keep me logged in on this device
+          </label>
+          <button onClick={submit} disabled={busy} style={{...S.primaryBtn,width:"100%",...(busy?S.addBtnDisabled:{})}}>{busy?"Checking…":"Log in"}</button>
+          {err && <p style={{color:T.danger,fontSize:13,marginTop:12,marginBottom:0}}>{err}</p>}
+          <p style={{color:T.muted,fontSize:11.5,marginTop:16,marginBottom:0,lineHeight:1.5}}>Tip: only stay logged in on your own device. Use “Log out” on shared computers.</p>
         </div>
       ) : (
         <div style={{marginTop:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><span style={{color:T.inkSoft,fontSize:13}}>{orders.length} order{orders.length===1?"":"s"}</span><button onClick={()=>load(key)} style={S.linkBtn}>Refresh</button></div>
-          {orders.length===0 && <p style={{color:T.muted}}>No orders yet.</p>}
-          <div style={{display:"grid",gap:12}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key)} />)}</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><span style={{color:T.inkSoft,fontSize:13}}>{orders.length} order{orders.length===1?"":"s"}</span><button onClick={()=>load(key,{remember})} style={S.linkBtn}>Refresh</button></div>
+          {orders.length===0 && <p style={{color:T.muted}}>No orders yet. When customers buy, they'll show up here.</p>}
+          <div style={{display:"grid",gap:12}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key,{remember})} />)}</div>
         </div>
       )}
     </section>

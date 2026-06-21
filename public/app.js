@@ -1,3 +1,4 @@
+import { jsxDEV as _jsxDEV, Fragment as _Fragment } from "react/jsx-dev-runtime";
 const {
   useState,
   useEffect,
@@ -350,60 +351,61 @@ function App() {
       color: T.muted
     }
   }, "Opening the store…"));
-  return /*#__PURE__*/React.createElement("div", {
-    style: S.page
-  }, /*#__PURE__*/React.createElement(Header, {
-    storeName: storeName,
-    cartCount: cartCount,
-    onCart: () => setCartOpen(true),
-    onHome: () => go(null),
-    onTrack: () => go("track")
-  }), page === "track" ? /*#__PURE__*/React.createElement(TrackOrder, {
-    onBack: () => go(null)
-  }) : page === "admin" ? /*#__PURE__*/React.createElement(AdminOrders, {
-    onBack: () => go(null)
-  }) : page ? /*#__PURE__*/React.createElement(Policy, {
-    pageKey: page,
-    onBack: () => go(null)
-  }) : /*#__PURE__*/React.createElement(Store, {
-    products: products,
-    onAdd: addToCart,
-    onQuick: setQuick,
-    onTrack: () => go("track")
-  }), /*#__PURE__*/React.createElement(Footer, {
-    storeName: storeName,
-    onNav: go
-  }), cartOpen && !checkout && /*#__PURE__*/React.createElement(CartDrawer, {
-    items: cartItems,
-    subtotal: subtotal,
-    shipping: shipping,
-    total: total,
-    setQty: setQty,
-    onClose: () => setCartOpen(false),
-    onCheckout: () => {
-      if (cartItems.length) setCheckout(true);
-    }
-  }), checkout && /*#__PURE__*/React.createElement(Checkout, {
-    items: cartItems,
-    total: total,
-    shipping: shipping,
-    subtotal: subtotal,
-    paying: paying,
-    onBack: () => {
-      if (!paying) setCheckout(false);
-    },
-    onPlace: handlePlace
-  }), confirmed && /*#__PURE__*/React.createElement(Confirmation, {
-    order: confirmed,
-    onClose: () => setConfirmed(null)
-  }), quick && /*#__PURE__*/React.createElement(QuickView, {
-    product: quick,
-    onClose: () => setQuick(null),
-    onAdd: () => {
-      addToCart(quick.id);
-      setQuick(null);
-    }
-  }));
+  return /*#__PURE__*/_jsxDEV("div", {
+    style: S.page,
+    children: [/*#__PURE__*/_jsxDEV(Header, {
+      storeName: storeName,
+      cartCount: cartCount,
+      onCart: () => setCartOpen(true),
+      onHome: () => go(null),
+      onTrack: () => go("track")
+    }, void 0, false), page === "track" ? /*#__PURE__*/_jsxDEV(TrackOrder, {
+      onBack: () => go(null)
+    }, void 0, false) : page === "admin" ? /*#__PURE__*/_jsxDEV(AdminOrders, {
+      onBack: () => go(null)
+    }, void 0, false) : page ? /*#__PURE__*/_jsxDEV(Policy, {
+      pageKey: page,
+      onBack: () => go(null)
+    }, void 0, false) : /*#__PURE__*/_jsxDEV(Store, {
+      products: products,
+      onAdd: addToCart,
+      onQuick: setQuick,
+      onTrack: () => go("track")
+    }, void 0, false), /*#__PURE__*/_jsxDEV(Footer, {
+      storeName: storeName,
+      onNav: go
+    }, void 0, false), cartOpen && !checkout && /*#__PURE__*/_jsxDEV(CartDrawer, {
+      items: cartItems,
+      subtotal: subtotal,
+      shipping: shipping,
+      total: total,
+      setQty: setQty,
+      onClose: () => setCartOpen(false),
+      onCheckout: () => {
+        if (cartItems.length) setCheckout(true);
+      }
+    }, void 0, false), checkout && /*#__PURE__*/_jsxDEV(Checkout, {
+      items: cartItems,
+      total: total,
+      shipping: shipping,
+      subtotal: subtotal,
+      paying: paying,
+      onBack: () => {
+        if (!paying) setCheckout(false);
+      },
+      onPlace: handlePlace
+    }, void 0, false), confirmed && /*#__PURE__*/_jsxDEV(Confirmation, {
+      order: confirmed,
+      onClose: () => setConfirmed(null)
+    }, void 0, false), quick && /*#__PURE__*/_jsxDEV(QuickView, {
+      product: quick,
+      onClose: () => setQuick(null),
+      onAdd: () => {
+        addToCart(quick.id);
+        setQuick(null);
+      }
+    }, void 0, false)]
+  }, void 0, true);
 }
 function Header({
   storeName,
@@ -412,46 +414,55 @@ function Header({
   onHome,
   onTrack
 }) {
-  return /*#__PURE__*/React.createElement("header", {
-    style: S.header
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.headerInner
-  }, /*#__PURE__*/React.createElement("div", {
-    onClick: onHome,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      cursor: "pointer"
-    }
-  }, /*#__PURE__*/React.createElement("img", {
-    src: "/vectorgrid-mark.svg",
-    alt: "Vector Grid",
-    width: "34",
-    height: "34",
-    style: {
-      display: "block"
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: S.wordmark
-  }, storeName), /*#__PURE__*/React.createElement("span", {
-    style: S.tagline
-  }, "ships pan-India")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 14
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onTrack,
-    style: S.trackLink
-  }, "Track order"), /*#__PURE__*/React.createElement("button", {
-    onClick: onCart,
-    style: S.cartBtn,
-    "aria-label": "Open cart"
-  }, "Cart", cartCount > 0 && /*#__PURE__*/React.createElement("span", {
-    style: S.cartBadge
-  }, cartCount)))));
+  return /*#__PURE__*/_jsxDEV("header", {
+    style: S.header,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: S.headerInner,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        onClick: onHome,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          cursor: "pointer"
+        },
+        children: [/*#__PURE__*/_jsxDEV("img", {
+          src: "/vectorgrid-mark.svg",
+          alt: "Vector Grid",
+          width: "34",
+          height: "34",
+          style: {
+            display: "block"
+          }
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.wordmark,
+          children: storeName
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.tagline,
+          children: "ships pan-India"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 14
+        },
+        children: [/*#__PURE__*/_jsxDEV("button", {
+          onClick: onTrack,
+          style: S.trackLink,
+          children: "Track order"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: onCart,
+          style: S.cartBtn,
+          "aria-label": "Open cart",
+          children: ["Cart", cartCount > 0 && /*#__PURE__*/_jsxDEV("span", {
+            style: S.cartBadge,
+            children: cartCount
+          }, void 0, false)]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function Hero({
   onShop,
@@ -575,37 +586,47 @@ function Hero({
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
-  return /*#__PURE__*/React.createElement("section", {
-    style: S.heroWrap
-  }, /*#__PURE__*/React.createElement("canvas", {
-    ref: ref,
-    style: S.heroCanvas,
-    "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.heroOverlay
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.heroContent
-  }, /*#__PURE__*/React.createElement("p", {
-    style: S.heroEyebrow
-  }, "Curated goods \xB7 delivered across India \u2708"), /*#__PURE__*/React.createElement("h1", {
-    style: S.heroTitle
-  }, "Things worth", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-    style: S.heroAccent
-  }, "waiting"), " for."), /*#__PURE__*/React.createElement("p", {
-    style: S.heroLede
-  }, "A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap \u2014 Cash on Delivery or secure online payment."), /*#__PURE__*/React.createElement("div", {
-    style: S.heroBtns
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onShop,
-    style: S.heroPrimary
-  }, "Shop the collection"), /*#__PURE__*/React.createElement("button", {
-    onClick: onTrack,
-    style: S.heroGhost
-  }, "Track your order"))), /*#__PURE__*/React.createElement("button", {
-    onClick: onShop,
-    style: S.heroScroll,
-    "aria-label": "Scroll to products"
-  }, "\u2193"));
+  return /*#__PURE__*/_jsxDEV("section", {
+    style: S.heroWrap,
+    children: [/*#__PURE__*/_jsxDEV("canvas", {
+      ref: ref,
+      style: S.heroCanvas,
+      "aria-hidden": "true"
+    }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+      style: S.heroOverlay
+    }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+      style: S.heroContent,
+      children: [/*#__PURE__*/_jsxDEV("p", {
+        style: S.heroEyebrow,
+        children: "Curated goods · delivered across India ✈"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("h1", {
+        style: S.heroTitle,
+        children: ["Things worth", /*#__PURE__*/_jsxDEV("br", {}, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.heroAccent,
+          children: "waiting"
+        }, void 0, false), " for."]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+        style: S.heroLede,
+        children: "A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap — Cash on Delivery or secure online payment."
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        style: S.heroBtns,
+        children: [/*#__PURE__*/_jsxDEV("button", {
+          onClick: onShop,
+          style: S.heroPrimary,
+          children: "Shop the collection"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: onTrack,
+          style: S.heroGhost,
+          children: "Track your order"
+        }, void 0, false)]
+      }, void 0, true)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+      onClick: onShop,
+      style: S.heroScroll,
+      "aria-label": "Scroll to products",
+      children: "↓"
+    }, void 0, false)]
+  }, void 0, true);
 }
 function Store({
   products,
@@ -628,154 +649,188 @@ function Store({
     if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);else if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);else if (sort === "discount") list = [...list].sort((a, b) => disc(b) - disc(a));
     return list;
   }, [products, q, cat, sort]);
-  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Hero, {
-    onShop: () => {
-      const e = document.getElementById("shop");
-      if (e) e.scrollIntoView({
-        behavior: "smooth"
-      });
-    },
-    onTrack: onTrack
-  }), /*#__PURE__*/React.createElement("main", {
-    style: S.main,
-    id: "shop"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.trustBar,
-    className: "vg-trust"
-  }, [["✈️", "Ships pan-India"], ["↩", "Easy 7-day returns"], ["₹", "COD available"], ["✓", "Secure Razorpay checkout"]].map(([i, t]) => /*#__PURE__*/React.createElement("span", {
-    key: t,
-    style: S.trustItem
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true",
-    style: S.trustIcon
-  }, i), t))), /*#__PURE__*/React.createElement("div", {
-    style: S.toolbar,
-    className: "vg-toolbar"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.searchWrap
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true",
-    style: S.searchIcon
-  }, "\u2315"), /*#__PURE__*/React.createElement("input", {
-    style: S.searchInput,
-    value: q,
-    onChange: e => setQ(e.target.value),
-    placeholder: "Search products\u2026",
-    "aria-label": "Search products"
-  }), q && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setQ(""),
-    style: S.searchClear,
-    "aria-label": "Clear search"
-  }, "\u2715")), /*#__PURE__*/React.createElement("label", {
-    style: S.sortWrap
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.sortLabel
-  }, "Sort"), /*#__PURE__*/React.createElement("select", {
-    style: S.sortSelect,
-    value: sort,
-    onChange: e => setSort(e.target.value),
-    "aria-label": "Sort products"
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "featured"
-  }, "Featured"), /*#__PURE__*/React.createElement("option", {
-    value: "low"
-  }, "Price: low to high"), /*#__PURE__*/React.createElement("option", {
-    value: "high"
-  }, "Price: high to low"), /*#__PURE__*/React.createElement("option", {
-    value: "discount"
-  }, "Biggest discount")))), /*#__PURE__*/React.createElement("div", {
-    style: S.chipsRow,
-    className: "vg-chips"
-  }, cats.map(c => /*#__PURE__*/React.createElement("button", {
-    key: c,
-    onClick: () => setCat(c),
-    style: {
-      ...S.chip,
-      ...(cat === c ? S.chipOn : {})
-    }
-  }, c))), /*#__PURE__*/React.createElement("p", {
-    style: S.countText
-  }, shown.length, " ", shown.length === 1 ? "item" : "items", cat !== "All" ? " in " + cat : "", q ? ` · “${q}”` : ""), shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: S.empty
-  }, /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontFamily: "var(--display)",
-      fontSize: 22,
-      margin: 0
-    }
-  }, "Nothing matched that."), /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.inkSoft,
-      marginTop: 8
-    }
-  }, "Try a different word or category."), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setQ("");
-      setCat("All");
-    },
-    style: {
-      ...S.addBtn,
-      maxWidth: 220,
-      margin: "16px auto 0"
-    }
-  }, "Show everything")) : /*#__PURE__*/React.createElement("div", {
-    style: S.grid,
-    className: "vg-grid"
-  }, shown.map(p => {
-    const out = p.stock <= 0;
-    return /*#__PURE__*/React.createElement("article", {
-      key: p.id,
-      style: S.prodCard,
-      className: "vg-card",
-      onMouseMove: cardTilt,
-      onMouseLeave: cardReset
-    }, /*#__PURE__*/React.createElement("button", {
-      style: S.imgWrap,
-      onClick: () => onQuick(p),
-      "aria-label": "View " + esc(p.name)
-    }, /*#__PURE__*/React.createElement("img", {
-      src: p.img,
-      alt: esc(p.name),
-      style: S.img,
-      loading: "lazy",
-      onError: e => {
-        e.currentTarget.style.opacity = 0.25;
-      }
-    }), out && /*#__PURE__*/React.createElement("span", {
-      style: S.soldOut
-    }, "Sold out"), !out && p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
-      style: S.discount
-    }, Math.round(100 - p.price / p.mrp * 100), "% off"), p.category && /*#__PURE__*/React.createElement("span", {
-      style: S.catTag
-    }, p.category)), /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "14px 16px 16px",
-        display: "flex",
-        flexDirection: "column",
-        flex: 1
-      }
-    }, /*#__PURE__*/React.createElement("h3", {
-      style: S.prodName
-    }, esc(p.name)), /*#__PURE__*/React.createElement("p", {
-      style: S.prodDesc
-    }, esc(p.desc)), /*#__PURE__*/React.createElement("div", {
-      style: {
-        ...S.priceRow,
-        marginTop: "auto"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: S.price
-    }, rupee(p.price)), p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
-      style: S.mrp
-    }, rupee(p.mrp))), /*#__PURE__*/React.createElement("button", {
-      disabled: out,
-      onClick: () => onAdd(p.id),
-      style: {
-        ...S.addBtn,
-        ...(out ? S.addBtnDisabled : {})
-      }
-    }, out ? "Sold out" : "Add to cart")));
-  }))));
+  return /*#__PURE__*/_jsxDEV(_Fragment, {
+    children: [/*#__PURE__*/_jsxDEV(Hero, {
+      onShop: () => {
+        const e = document.getElementById("shop");
+        if (e) e.scrollIntoView({
+          behavior: "smooth"
+        });
+      },
+      onTrack: onTrack
+    }, void 0, false), /*#__PURE__*/_jsxDEV("main", {
+      style: S.main,
+      id: "shop",
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: S.trustBar,
+        className: "vg-trust",
+        children: [["✈️", "Ships pan-India"], ["↩", "Easy 7-day returns"], ["₹", "COD available"], ["✓", "Secure Razorpay checkout"]].map(([i, t]) => /*#__PURE__*/_jsxDEV("span", {
+          style: S.trustItem,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            "aria-hidden": "true",
+            style: S.trustIcon,
+            children: i
+          }, void 0, false), t]
+        }, t, true))
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        style: S.toolbar,
+        className: "vg-toolbar",
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: S.searchWrap,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            "aria-hidden": "true",
+            style: S.searchIcon,
+            children: "⌕"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("input", {
+            style: S.searchInput,
+            value: q,
+            onChange: e => setQ(e.target.value),
+            placeholder: "Search products…",
+            "aria-label": "Search products"
+          }, void 0, false), q && /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => setQ(""),
+            style: S.searchClear,
+            "aria-label": "Clear search",
+            children: "✕"
+          }, void 0, false)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("label", {
+          style: S.sortWrap,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: S.sortLabel,
+            children: "Sort"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("select", {
+            style: S.sortSelect,
+            value: sort,
+            onChange: e => setSort(e.target.value),
+            "aria-label": "Sort products",
+            children: [/*#__PURE__*/_jsxDEV("option", {
+              value: "featured",
+              children: "Featured"
+            }, void 0, false), /*#__PURE__*/_jsxDEV("option", {
+              value: "low",
+              children: "Price: low to high"
+            }, void 0, false), /*#__PURE__*/_jsxDEV("option", {
+              value: "high",
+              children: "Price: high to low"
+            }, void 0, false), /*#__PURE__*/_jsxDEV("option", {
+              value: "discount",
+              children: "Biggest discount"
+            }, void 0, false)]
+          }, void 0, true)]
+        }, void 0, true)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: S.chipsRow,
+        className: "vg-chips",
+        children: cats.map(c => /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => setCat(c),
+          style: {
+            ...S.chip,
+            ...(cat === c ? S.chipOn : {})
+          },
+          children: c
+        }, c, false))
+      }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+        style: S.countText,
+        children: [shown.length, " ", shown.length === 1 ? "item" : "items", cat !== "All" ? " in " + cat : "", q ? ` · “${q}”` : ""]
+      }, void 0, true), shown.length === 0 ? /*#__PURE__*/_jsxDEV("div", {
+        style: S.empty,
+        children: [/*#__PURE__*/_jsxDEV("p", {
+          style: {
+            fontFamily: "var(--display)",
+            fontSize: 22,
+            margin: 0
+          },
+          children: "Nothing matched that."
+        }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.inkSoft,
+            marginTop: 8
+          },
+          children: "Try a different word or category."
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => {
+            setQ("");
+            setCat("All");
+          },
+          style: {
+            ...S.addBtn,
+            maxWidth: 220,
+            margin: "16px auto 0"
+          },
+          children: "Show everything"
+        }, void 0, false)]
+      }, void 0, true) : /*#__PURE__*/_jsxDEV("div", {
+        style: S.grid,
+        className: "vg-grid",
+        children: shown.map(p => {
+          const out = p.stock <= 0;
+          return /*#__PURE__*/_jsxDEV("article", {
+            style: S.prodCard,
+            className: "vg-card",
+            onMouseMove: cardTilt,
+            onMouseLeave: cardReset,
+            children: [/*#__PURE__*/_jsxDEV("button", {
+              style: S.imgWrap,
+              onClick: () => onQuick(p),
+              "aria-label": "View " + esc(p.name),
+              children: [/*#__PURE__*/_jsxDEV("img", {
+                src: p.img,
+                alt: esc(p.name),
+                style: S.img,
+                loading: "lazy",
+                onError: e => {
+                  e.currentTarget.style.opacity = 0.25;
+                }
+              }, void 0, false), out && /*#__PURE__*/_jsxDEV("span", {
+                style: S.soldOut,
+                children: "Sold out"
+              }, void 0, false), !out && p.mrp > p.price && /*#__PURE__*/_jsxDEV("span", {
+                style: S.discount,
+                children: [Math.round(100 - p.price / p.mrp * 100), "% off"]
+              }, void 0, true), p.category && /*#__PURE__*/_jsxDEV("span", {
+                style: S.catTag,
+                children: p.category
+              }, void 0, false)]
+            }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+              style: {
+                padding: "14px 16px 16px",
+                display: "flex",
+                flexDirection: "column",
+                flex: 1
+              },
+              children: [/*#__PURE__*/_jsxDEV("h3", {
+                style: S.prodName,
+                children: esc(p.name)
+              }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+                style: S.prodDesc,
+                children: esc(p.desc)
+              }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+                style: {
+                  ...S.priceRow,
+                  marginTop: "auto"
+                },
+                children: [/*#__PURE__*/_jsxDEV("span", {
+                  style: S.price,
+                  children: rupee(p.price)
+                }, void 0, false), p.mrp > p.price && /*#__PURE__*/_jsxDEV("span", {
+                  style: S.mrp,
+                  children: rupee(p.mrp)
+                }, void 0, false)]
+              }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+                disabled: out,
+                onClick: () => onAdd(p.id),
+                style: {
+                  ...S.addBtn,
+                  ...(out ? S.addBtnDisabled : {})
+                },
+                children: out ? "Sold out" : "Add to cart"
+              }, void 0, false)]
+            }, void 0, true)]
+          }, p.id, true);
+        })
+      }, void 0, false)]
+    }, void 0, true)]
+  }, void 0, true);
 }
 function QuickView({
   product,
@@ -783,80 +838,93 @@ function QuickView({
   onAdd
 }) {
   const out = product.stock <= 0;
-  return /*#__PURE__*/React.createElement(Overlay, {
-    onClose: onClose
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.modal,
-      maxWidth: 720,
-      padding: 0,
-      overflow: "hidden",
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: S.quickClose,
-    "aria-label": "Close"
-  }, "\u2715"), /*#__PURE__*/React.createElement("div", {
-    className: "vg-two",
-    style: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      minHeight: 320
-    }
-  }, /*#__PURE__*/React.createElement("img", {
-    src: product.img,
-    alt: esc(product.name),
-    style: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: 28
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: S.quickBack
-  }, "\u2190 Back to products"), /*#__PURE__*/React.createElement("h2", {
-    style: {
-      ...S.prodName,
-      fontSize: 22,
-      margin: "10px 0 8px"
-    }
-  }, esc(product.name)), /*#__PURE__*/React.createElement("div", {
-    style: S.priceRow
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...S.price,
-      fontSize: 22
-    }
-  }, rupee(product.price)), product.mrp > product.price && /*#__PURE__*/React.createElement("span", {
-    style: S.mrp
-  }, rupee(product.mrp))), /*#__PURE__*/React.createElement("p", {
-    style: {
-      ...S.prodDesc,
-      marginTop: 12,
-      fontSize: 14,
-      lineHeight: 1.6
-    }
-  }, esc(product.desc)), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontFamily: "var(--mono)",
-      fontSize: 12,
-      color: out ? T.danger : T.teal,
-      marginTop: 14
-    }
-  }, out ? "Out of stock" : "In stock · " + product.stock + " available"), /*#__PURE__*/React.createElement("button", {
-    disabled: out,
-    onClick: onAdd,
-    style: {
-      ...S.addBtn,
-      ...(out ? S.addBtnDisabled : {}),
-      marginTop: 18
-    }
-  }, out ? "Unavailable" : "Add to cart")))));
+  return /*#__PURE__*/_jsxDEV(Overlay, {
+    onClose: onClose,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        ...S.modal,
+        maxWidth: 720,
+        padding: 0,
+        overflow: "hidden",
+        position: "relative"
+      },
+      children: [/*#__PURE__*/_jsxDEV("button", {
+        onClick: onClose,
+        style: S.quickClose,
+        "aria-label": "Close",
+        children: "✕"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        className: "vg-two",
+        style: {
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          minHeight: 320
+        },
+        children: [/*#__PURE__*/_jsxDEV("img", {
+          src: product.img,
+          alt: esc(product.name),
+          style: {
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+          }
+        }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+          style: {
+            padding: 28
+          },
+          children: [/*#__PURE__*/_jsxDEV("button", {
+            onClick: onClose,
+            style: S.quickBack,
+            children: "← Back to products"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+            style: {
+              ...S.prodName,
+              fontSize: 22,
+              margin: "10px 0 8px"
+            },
+            children: esc(product.name)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+            style: S.priceRow,
+            children: [/*#__PURE__*/_jsxDEV("span", {
+              style: {
+                ...S.price,
+                fontSize: 22
+              },
+              children: rupee(product.price)
+            }, void 0, false), product.mrp > product.price && /*#__PURE__*/_jsxDEV("span", {
+              style: S.mrp,
+              children: rupee(product.mrp)
+            }, void 0, false)]
+          }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+            style: {
+              ...S.prodDesc,
+              marginTop: 12,
+              fontSize: 14,
+              lineHeight: 1.6
+            },
+            children: esc(product.desc)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+            style: {
+              fontFamily: "var(--mono)",
+              fontSize: 12,
+              color: out ? T.danger : T.teal,
+              marginTop: 14
+            },
+            children: out ? "Out of stock" : "In stock · " + product.stock + " available"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+            disabled: out,
+            onClick: onAdd,
+            style: {
+              ...S.addBtn,
+              ...(out ? S.addBtnDisabled : {}),
+              marginTop: 18
+            },
+            children: out ? "Unavailable" : "Add to cart"
+          }, void 0, false)]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function CartDrawer({
   items,
@@ -867,87 +935,104 @@ function CartDrawer({
   onClose,
   onCheckout
 }) {
-  return /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/_jsxDEV("div", {
     style: S.drawerScrim,
-    onClick: onClose
-  }, /*#__PURE__*/React.createElement("aside", {
-    style: S.drawer,
-    onClick: e => e.stopPropagation()
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.drawerHead
-  }, /*#__PURE__*/React.createElement("h2", {
-    style: S.drawerTitle
-  }, "Your cart"), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
-    style: S.xBtn,
-    "aria-label": "Close"
-  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      padding: "8px 20px"
-    }
-  }, items.length === 0 && /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.muted,
-      marginTop: 24
-    }
-  }, "Your cart is empty."), items.map(i => /*#__PURE__*/React.createElement("div", {
-    key: i.id,
-    style: S.cartRow
-  }, /*#__PURE__*/React.createElement("img", {
-    src: i.img,
-    alt: "",
-    style: S.cartThumb
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("p", {
-    style: S.cartName
-  }, esc(i.name)), /*#__PURE__*/React.createElement("p", {
-    style: S.cartPrice
-  }, rupee(i.price)), /*#__PURE__*/React.createElement("div", {
-    style: S.qtyRow
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setQty(i.id, i.qty - 1),
-    style: S.qtyBtn,
-    "aria-label": "Decrease"
-  }, "\u2212"), /*#__PURE__*/React.createElement("span", {
-    style: S.qtyNum
-  }, i.qty), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setQty(i.id, i.qty + 1),
-    style: S.qtyBtn,
-    "aria-label": "Increase"
-  }, "+"))), /*#__PURE__*/React.createElement("span", {
-    style: S.cartLine
-  }, rupee(i.price * i.qty))))), /*#__PURE__*/React.createElement("div", {
-    style: S.drawerFoot
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Subtotal",
-    value: rupee(subtotal)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Shipping",
-    value: shipping === 0 ? "Free" : rupee(shipping)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Total",
-    value: rupee(total),
-    bold: true
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: onCheckout,
-    disabled: items.length === 0,
-    style: {
-      ...S.primaryBtn,
-      ...(items.length === 0 ? S.addBtnDisabled : {})
-    }
-  }, "Checkout"))));
+    children: /*#__PURE__*/_jsxDEV("aside", {
+      style: S.drawer,
+      onClick: e => e.stopPropagation(),
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: S.drawerHead,
+        children: [/*#__PURE__*/_jsxDEV("h2", {
+          style: S.drawerTitle,
+          children: "Your cart"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: onClose,
+          style: S.xBtn,
+          "aria-label": "Close",
+          children: "✕"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          flex: 1,
+          overflowY: "auto",
+          padding: "8px 20px"
+        },
+        children: [items.length === 0 && /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.muted,
+            marginTop: 24
+          },
+          children: "Your cart is empty."
+        }, void 0, false), items.map(i => /*#__PURE__*/_jsxDEV("div", {
+          style: S.cartRow,
+          children: [/*#__PURE__*/_jsxDEV("img", {
+            src: i.img,
+            alt: "",
+            style: S.cartThumb
+          }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+            style: {
+              flex: 1
+            },
+            children: [/*#__PURE__*/_jsxDEV("p", {
+              style: S.cartName,
+              children: esc(i.name)
+            }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+              style: S.cartPrice,
+              children: rupee(i.price)
+            }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+              style: S.qtyRow,
+              children: [/*#__PURE__*/_jsxDEV("button", {
+                onClick: () => setQty(i.id, i.qty - 1),
+                style: S.qtyBtn,
+                "aria-label": "Decrease",
+                children: "−"
+              }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                style: S.qtyNum,
+                children: i.qty
+              }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+                onClick: () => setQty(i.id, i.qty + 1),
+                style: S.qtyBtn,
+                "aria-label": "Increase",
+                children: "+"
+              }, void 0, false)]
+            }, void 0, true)]
+          }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+            style: S.cartLine,
+            children: rupee(i.price * i.qty)
+          }, void 0, false)]
+        }, i.id, true))]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: S.drawerFoot,
+        children: [/*#__PURE__*/_jsxDEV(Row, {
+          label: "Subtotal",
+          value: rupee(subtotal)
+        }, void 0, false), /*#__PURE__*/_jsxDEV(Row, {
+          label: "Shipping",
+          value: shipping === 0 ? "Free" : rupee(shipping)
+        }, void 0, false), /*#__PURE__*/_jsxDEV(Row, {
+          label: "Total",
+          value: rupee(total),
+          bold: true
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: onCheckout,
+          disabled: items.length === 0,
+          style: {
+            ...S.primaryBtn,
+            ...(items.length === 0 ? S.addBtnDisabled : {})
+          },
+          children: "Checkout"
+        }, void 0, false)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function Row({
   label,
   value,
   bold
 }) {
-  return /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/_jsxDEV("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -955,8 +1040,13 @@ function Row({
       fontSize: bold ? 16 : 14,
       color: bold ? T.ink : T.inkSoft,
       fontWeight: bold ? 700 : 500
-    }
-  }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("span", null, value));
+    },
+    children: [/*#__PURE__*/_jsxDEV("span", {
+      children: label
+    }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+      children: value
+    }, void 0, false)]
+  }, void 0, true);
 }
 function Checkout({
   items,
@@ -994,373 +1084,450 @@ function Checkout({
     setErr(e);
     if (Object.keys(e).length === 0) onPlace(f);
   };
-  return /*#__PURE__*/React.createElement(Overlay, {
-    onClose: paying ? () => {} : onBack
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.modal,
-      maxWidth: 760
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("h2", {
-    style: S.modalTitle
-  }, "Delivery details"), /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    style: S.linkBtn
-  }, "\u2190 Back")), /*#__PURE__*/React.createElement("div", {
-    style: S.coTrust
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.coTrustItem
-  }, "\uD83D\uDD12 Secure checkout"), /*#__PURE__*/React.createElement("span", {
-    style: S.coTrustItem
-  }, "\u21A9 7-day returns"), /*#__PURE__*/React.createElement("span", {
-    style: S.coTrustItem
-  }, "\u20B9 COD available"), /*#__PURE__*/React.createElement("span", {
-    style: S.coTrustItem
-  }, "\u2708 Ships pan-India")), /*#__PURE__*/React.createElement("div", {
-    className: "vg-two",
-    style: {
-      display: "grid",
-      gridTemplateColumns: "1.4fr 1fr",
-      gap: 28
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Field, {
-    label: "Full name",
-    err: err.name
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.name,
-    onChange: up("name"),
-    maxLength: 80
-  })), /*#__PURE__*/React.createElement("div", {
-    style: S.two
-  }, /*#__PURE__*/React.createElement(Field, {
-    label: "Mobile number",
-    err: err.phone
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.phone,
-    onChange: up("phone"),
-    maxLength: 10,
-    inputMode: "numeric",
-    placeholder: "10 digits"
-  })), /*#__PURE__*/React.createElement(Field, {
-    label: "Email (optional)",
-    err: err.email
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.email,
-    onChange: up("email"),
-    maxLength: 120
-  }))), /*#__PURE__*/React.createElement(Field, {
-    label: "Address line 1",
-    err: err.line1
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.line1,
-    onChange: up("line1"),
-    maxLength: 120,
-    placeholder: "House / flat, street"
-  })), /*#__PURE__*/React.createElement(Field, {
-    label: "Address line 2"
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.line2,
-    onChange: up("line2"),
-    maxLength: 120,
-    placeholder: "Area, landmark"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: S.two
-  }, /*#__PURE__*/React.createElement(Field, {
-    label: "City",
-    err: err.city
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.city,
-    onChange: up("city"),
-    maxLength: 60
-  })), /*#__PURE__*/React.createElement(Field, {
-    label: "Pincode",
-    err: err.pincode
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: f.pincode,
-    onChange: up("pincode"),
-    maxLength: 6,
-    inputMode: "numeric",
-    placeholder: "6 digits"
-  }))), /*#__PURE__*/React.createElement(Field, {
-    label: "State"
-  }, /*#__PURE__*/React.createElement("select", {
-    style: S.input,
-    value: f.state,
-    onChange: up("state")
-  }, INDIAN_STATES.map(s => /*#__PURE__*/React.createElement("option", {
-    key: s
-  }, s)))), /*#__PURE__*/React.createElement(Field, {
-    label: "How would you like to pay?"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "vg-pay",
-    style: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 10
-    }
-  }, [["Online", "Pay online", "UPI · Cards · Netbanking"], ["COD", "Cash on Delivery", "Pay when it arrives"]].map(([val, title, sub]) => /*#__PURE__*/React.createElement("button", {
-    key: val,
-    type: "button",
-    onClick: () => setF({
-      ...f,
-      pay: val
-    }),
-    style: {
-      ...S.payOpt,
-      ...(f.pay === val ? S.payOptOn : {})
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...S.payRadio,
-      ...(f.pay === val ? S.payRadioOn : {})
-    }
-  }, f.pay === val ? "✓" : ""), /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.payTitle
-  }, title), /*#__PURE__*/React.createElement("span", {
-    style: S.paySub
-  }, sub))))))), /*#__PURE__*/React.createElement("div", {
-    style: S.summary
-  }, /*#__PURE__*/React.createElement("h3", {
-    style: S.summaryTitle
-  }, "Order summary"), items.map(i => /*#__PURE__*/React.createElement("div", {
-    key: i.id,
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      fontSize: 13,
-      padding: "5px 0",
-      color: T.inkSoft
-    }
-  }, /*#__PURE__*/React.createElement("span", null, esc(i.name), " \xD7 ", i.qty), /*#__PURE__*/React.createElement("span", null, rupee(i.price * i.qty)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 1,
-      background: T.line,
-      margin: "10px 0"
-    }
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Subtotal",
-    value: rupee(subtotal)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Shipping",
-    value: shipping === 0 ? "Free" : rupee(shipping)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Total",
-    value: rupee(total),
-    bold: true
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: submit,
-    disabled: paying,
-    style: {
-      ...S.primaryBtn,
-      marginTop: 16,
-      ...(paying ? S.addBtnDisabled : {})
-    }
-  }, paying ? "Opening payment…" : f.pay === "COD" ? "Place order · " + rupee(total) : "Pay " + rupee(total)), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: T.muted,
-      marginTop: 10,
-      lineHeight: 1.5
-    }
-  }, "Online payments are processed securely by Razorpay. Your card details never touch this site."), /*#__PURE__*/React.createElement("div", {
-    style: S.coSecure
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.coSecureRow
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("span", null, "Payments secured by ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: T.ink
-    }
-  }, "Razorpay"), " \u2014 UPI, cards & netbanking. Your card details never touch this site.")), /*#__PURE__*/React.createElement("div", {
-    style: S.coSecureRow
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\u21A9"), /*#__PURE__*/React.createElement("span", null, "Easy ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: T.ink
-    }
-  }, "7-day returns"), " on every order.")), /*#__PURE__*/React.createElement("div", {
-    style: S.coSecureRow
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\uD83D\uDCE6"), /*#__PURE__*/React.createElement("span", null, "Dispatched in 24\u201348h \xB7 delivered in 3\u20137 days, pan-India.")))))));
+  return /*#__PURE__*/_jsxDEV(Overlay, {
+    onClose: paying ? () => {} : onBack,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        ...S.modal,
+        maxWidth: 760
+      },
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 14
+        },
+        children: [/*#__PURE__*/_jsxDEV("h2", {
+          style: S.modalTitle,
+          children: "Delivery details"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: onBack,
+          style: S.linkBtn,
+          children: "← Back"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: S.coTrust,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          style: S.coTrustItem,
+          children: "🔒 Secure checkout"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.coTrustItem,
+          children: "↩ 7-day returns"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.coTrustItem,
+          children: "₹ COD available"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: S.coTrustItem,
+          children: "✈ Ships pan-India"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        className: "vg-two",
+        style: {
+          display: "grid",
+          gridTemplateColumns: "1.4fr 1fr",
+          gap: 28
+        },
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          children: [/*#__PURE__*/_jsxDEV(Field, {
+            label: "Full name",
+            err: err.name,
+            children: /*#__PURE__*/_jsxDEV("input", {
+              style: S.input,
+              value: f.name,
+              onChange: up("name"),
+              maxLength: 80
+            }, void 0, false)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+            style: S.two,
+            children: [/*#__PURE__*/_jsxDEV(Field, {
+              label: "Mobile number",
+              err: err.phone,
+              children: /*#__PURE__*/_jsxDEV("input", {
+                style: S.input,
+                value: f.phone,
+                onChange: up("phone"),
+                maxLength: 10,
+                inputMode: "numeric",
+                placeholder: "10 digits"
+              }, void 0, false)
+            }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+              label: "Email (optional)",
+              err: err.email,
+              children: /*#__PURE__*/_jsxDEV("input", {
+                style: S.input,
+                value: f.email,
+                onChange: up("email"),
+                maxLength: 120
+              }, void 0, false)
+            }, void 0, false)]
+          }, void 0, true), /*#__PURE__*/_jsxDEV(Field, {
+            label: "Address line 1",
+            err: err.line1,
+            children: /*#__PURE__*/_jsxDEV("input", {
+              style: S.input,
+              value: f.line1,
+              onChange: up("line1"),
+              maxLength: 120,
+              placeholder: "House / flat, street"
+            }, void 0, false)
+          }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+            label: "Address line 2",
+            children: /*#__PURE__*/_jsxDEV("input", {
+              style: S.input,
+              value: f.line2,
+              onChange: up("line2"),
+              maxLength: 120,
+              placeholder: "Area, landmark"
+            }, void 0, false)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+            style: S.two,
+            children: [/*#__PURE__*/_jsxDEV(Field, {
+              label: "City",
+              err: err.city,
+              children: /*#__PURE__*/_jsxDEV("input", {
+                style: S.input,
+                value: f.city,
+                onChange: up("city"),
+                maxLength: 60
+              }, void 0, false)
+            }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+              label: "Pincode",
+              err: err.pincode,
+              children: /*#__PURE__*/_jsxDEV("input", {
+                style: S.input,
+                value: f.pincode,
+                onChange: up("pincode"),
+                maxLength: 6,
+                inputMode: "numeric",
+                placeholder: "6 digits"
+              }, void 0, false)
+            }, void 0, false)]
+          }, void 0, true), /*#__PURE__*/_jsxDEV(Field, {
+            label: "State",
+            children: /*#__PURE__*/_jsxDEV("select", {
+              style: S.input,
+              value: f.state,
+              onChange: up("state"),
+              children: INDIAN_STATES.map(s => /*#__PURE__*/_jsxDEV("option", {
+                children: s
+              }, s, false))
+            }, void 0, false)
+          }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+            label: "How would you like to pay?",
+            children: /*#__PURE__*/_jsxDEV("div", {
+              className: "vg-pay",
+              style: {
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10
+              },
+              children: [["Online", "Pay online", "UPI · Cards · Netbanking"], ["COD", "Cash on Delivery", "Pay when it arrives"]].map(([val, title, sub]) => /*#__PURE__*/_jsxDEV("button", {
+                type: "button",
+                onClick: () => setF({
+                  ...f,
+                  pay: val
+                }),
+                style: {
+                  ...S.payOpt,
+                  ...(f.pay === val ? S.payOptOn : {})
+                },
+                children: [/*#__PURE__*/_jsxDEV("span", {
+                  style: {
+                    ...S.payRadio,
+                    ...(f.pay === val ? S.payRadioOn : {})
+                  },
+                  children: f.pay === val ? "✓" : ""
+                }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                  style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start"
+                  },
+                  children: [/*#__PURE__*/_jsxDEV("span", {
+                    style: S.payTitle,
+                    children: title
+                  }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                    style: S.paySub,
+                    children: sub
+                  }, void 0, false)]
+                }, void 0, true)]
+              }, val, true))
+            }, void 0, false)
+          }, void 0, false)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+          style: S.summary,
+          children: [/*#__PURE__*/_jsxDEV("h3", {
+            style: S.summaryTitle,
+            children: "Order summary"
+          }, void 0, false), items.map(i => /*#__PURE__*/_jsxDEV("div", {
+            style: {
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 13,
+              padding: "5px 0",
+              color: T.inkSoft
+            },
+            children: [/*#__PURE__*/_jsxDEV("span", {
+              children: [esc(i.name), " × ", i.qty]
+            }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+              children: rupee(i.price * i.qty)
+            }, void 0, false)]
+          }, i.id, true)), /*#__PURE__*/_jsxDEV("div", {
+            style: {
+              height: 1,
+              background: T.line,
+              margin: "10px 0"
+            }
+          }, void 0, false), /*#__PURE__*/_jsxDEV(Row, {
+            label: "Subtotal",
+            value: rupee(subtotal)
+          }, void 0, false), /*#__PURE__*/_jsxDEV(Row, {
+            label: "Shipping",
+            value: shipping === 0 ? "Free" : rupee(shipping)
+          }, void 0, false), /*#__PURE__*/_jsxDEV(Row, {
+            label: "Total",
+            value: rupee(total),
+            bold: true
+          }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+            onClick: submit,
+            disabled: paying,
+            style: {
+              ...S.primaryBtn,
+              marginTop: 16,
+              ...(paying ? S.addBtnDisabled : {})
+            },
+            children: paying ? "Opening payment…" : f.pay === "COD" ? "Place order · " + rupee(total) : "Pay " + rupee(total)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+            style: {
+              fontSize: 11,
+              color: T.muted,
+              marginTop: 10,
+              lineHeight: 1.5
+            },
+            children: "Online payments are processed securely by Razorpay. Your card details never touch this site."
+          }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+            style: S.coSecure,
+            children: [/*#__PURE__*/_jsxDEV("div", {
+              style: S.coSecureRow,
+              children: [/*#__PURE__*/_jsxDEV("span", {
+                "aria-hidden": "true",
+                children: "🔒"
+              }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                children: ["Payments secured by ", /*#__PURE__*/_jsxDEV("strong", {
+                  style: {
+                    color: T.ink
+                  },
+                  children: "Razorpay"
+                }, void 0, false), " — UPI, cards & netbanking. Your card details never touch this site."]
+              }, void 0, true)]
+            }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+              style: S.coSecureRow,
+              children: [/*#__PURE__*/_jsxDEV("span", {
+                "aria-hidden": "true",
+                children: "↩"
+              }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                children: ["Easy ", /*#__PURE__*/_jsxDEV("strong", {
+                  style: {
+                    color: T.ink
+                  },
+                  children: "7-day returns"
+                }, void 0, false), " on every order."]
+              }, void 0, true)]
+            }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+              style: S.coSecureRow,
+              children: [/*#__PURE__*/_jsxDEV("span", {
+                "aria-hidden": "true",
+                children: "📦"
+              }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                children: "Dispatched in 24–48h · delivered in 3–7 days, pan-India."
+              }, void 0, false)]
+            }, void 0, true)]
+          }, void 0, true)]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function Field({
   label,
   err,
   children
 }) {
-  return /*#__PURE__*/React.createElement("label", {
+  return /*#__PURE__*/_jsxDEV("label", {
     style: {
       display: "block",
       marginBottom: 12
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.fieldLabel
-  }, label, err && /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: T.danger,
-      marginLeft: 6
-    }
-  }, "\xB7 ", err)), children);
+    },
+    children: [/*#__PURE__*/_jsxDEV("span", {
+      style: S.fieldLabel,
+      children: [label, err && /*#__PURE__*/_jsxDEV("span", {
+        style: {
+          color: T.danger,
+          marginLeft: 6
+        },
+        children: ["· ", err]
+      }, void 0, true)]
+    }, void 0, true), children]
+  }, void 0, true);
 }
 function Confirmation({
   order,
   onClose
 }) {
   const steps = ["Placed", "Packed", "Shipped", "Delivered"];
-  return /*#__PURE__*/React.createElement(Overlay, {
-    onClose: onClose
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.modal,
-      maxWidth: 560,
-      textAlign: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.checkCircle
-  }, "\u2713"), /*#__PURE__*/React.createElement("h2", {
-    style: {
-      ...S.modalTitle,
-      marginTop: 14
-    }
-  }, "Order placed"), /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.inkSoft,
-      marginTop: 4
-    }
-  }, "Order ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      fontFamily: "var(--mono)",
-      color: T.ink
-    }
-  }, "#", order.id), " \xB7 ", rupee(order.total), " \xB7 ", order.payment === "COD" ? "Cash on delivery" : "Paid online"), /*#__PURE__*/React.createElement("div", {
-    style: S.stepper
-  }, steps.map((s, idx) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: s
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.stepDot,
-      background: idx === 0 ? T.teal : T.line,
-      color: idx === 0 ? "#fff" : T.muted
-    }
-  }, idx + 1), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: idx === 0 ? T.ink : T.muted,
-      fontFamily: "var(--mono)"
-    }
-  }, s)), idx < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
-    style: S.stepLine
-  })))), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 13,
-      color: T.inkSoft,
-      marginTop: 16
-    }
-  }, "Shipping to ", esc(order.customer.name), ", ", esc(order.customer.city), ", ", esc(order.customer.state), " \u2014 ", esc(order.customer.pincode)), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12.5,
-      color: T.muted,
-      marginTop: 10,
-      fontFamily: "var(--mono)"
-    }
-  }, "Track anytime with order ID ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: T.ink
-    }
-  }, "#", order.id), " + your phone number, from the \u201CTrack order\u201D link up top."), /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      ...S.primaryBtn,
-      marginTop: 20
-    }
-  }, "Continue shopping")));
+  return /*#__PURE__*/_jsxDEV(Overlay, {
+    onClose: onClose,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        ...S.modal,
+        maxWidth: 560,
+        textAlign: "center"
+      },
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: S.checkCircle,
+        children: "✓"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+        style: {
+          ...S.modalTitle,
+          marginTop: 14
+        },
+        children: "Order placed"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          color: T.inkSoft,
+          marginTop: 4
+        },
+        children: ["Order ", /*#__PURE__*/_jsxDEV("strong", {
+          style: {
+            fontFamily: "var(--mono)",
+            color: T.ink
+          },
+          children: ["#", order.id]
+        }, void 0, true), " · ", rupee(order.total), " · ", order.payment === "COD" ? "Cash on delivery" : "Paid online"]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: S.stepper,
+        children: steps.map((s, idx) => /*#__PURE__*/_jsxDEV(React.Fragment, {
+          children: [/*#__PURE__*/_jsxDEV("div", {
+            style: {
+              textAlign: "center"
+            },
+            children: [/*#__PURE__*/_jsxDEV("div", {
+              style: {
+                ...S.stepDot,
+                background: idx === 0 ? T.teal : T.line,
+                color: idx === 0 ? "#fff" : T.muted
+              },
+              children: idx + 1
+            }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+              style: {
+                fontSize: 11,
+                color: idx === 0 ? T.ink : T.muted,
+                fontFamily: "var(--mono)"
+              },
+              children: s
+            }, void 0, false)]
+          }, void 0, true), idx < steps.length - 1 && /*#__PURE__*/_jsxDEV("div", {
+            style: S.stepLine
+          }, void 0, false)]
+        }, s, true))
+      }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          fontSize: 13,
+          color: T.inkSoft,
+          marginTop: 16
+        },
+        children: ["Shipping to ", esc(order.customer.name), ", ", esc(order.customer.city), ", ", esc(order.customer.state), " — ", esc(order.customer.pincode)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          fontSize: 12.5,
+          color: T.muted,
+          marginTop: 10,
+          fontFamily: "var(--mono)"
+        },
+        children: ["Track anytime with order ID ", /*#__PURE__*/_jsxDEV("strong", {
+          style: {
+            color: T.ink
+          },
+          children: ["#", order.id]
+        }, void 0, true), " + your phone number, from the “Track order” link up top."]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+        onClick: onClose,
+        style: {
+          ...S.primaryBtn,
+          marginTop: 20
+        },
+        children: "Continue shopping"
+      }, void 0, false)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function Overlay({
   children,
   onClose
 }) {
-  return /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/_jsxDEV("div", {
     style: S.overlay,
-    onClick: onClose
-  }, /*#__PURE__*/React.createElement("div", {
-    onClick: e => e.stopPropagation(),
-    style: {
-      animation: "pop .18s ease",
-      width: "100%",
-      display: "flex",
-      justifyContent: "center"
-    }
-  }, children));
+    onClick: onClose,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      onClick: e => e.stopPropagation(),
+      style: {
+        animation: "pop .18s ease",
+        width: "100%",
+        display: "flex",
+        justifyContent: "center"
+      },
+      children: children
+    }, void 0, false)
+  }, void 0, false);
 }
 function Policy({
   pageKey,
   onBack
 }) {
   const data = POLICIES[pageKey] || POLICIES.terms;
-  return /*#__PURE__*/React.createElement("main", {
+  return /*#__PURE__*/_jsxDEV("main", {
     style: {
       ...S.main,
       maxWidth: 760
-    }
-  }, /*#__PURE__*/React.createElement("section", {
-    style: {
-      padding: "48px 0 8px"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    style: S.linkBtn
-  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
-    style: {
-      fontFamily: "var(--display)",
-      fontSize: 34,
-      fontWeight: 700,
-      letterSpacing: "-.02em",
-      margin: "14px 0 18px"
-    }
-  }, data.title), data.paras.map((p, i) => /*#__PURE__*/React.createElement("p", {
-    key: i,
-    style: {
-      fontSize: 14.5,
-      color: T.inkSoft,
-      lineHeight: 1.65,
-      margin: "0 0 14px"
-    }
-  }, p)), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: T.muted,
-      marginTop: 24,
-      borderTop: "1px solid " + T.line,
-      paddingTop: 14
-    }
-  }, "Last updated on order. For questions, contact ", INFO.email, ".")));
+    },
+    children: /*#__PURE__*/_jsxDEV("section", {
+      style: {
+        padding: "48px 0 8px"
+      },
+      children: [/*#__PURE__*/_jsxDEV("button", {
+        onClick: onBack,
+        style: S.linkBtn,
+        children: "← Back to store"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("h1", {
+        style: {
+          fontFamily: "var(--display)",
+          fontSize: 34,
+          fontWeight: 700,
+          letterSpacing: "-.02em",
+          margin: "14px 0 18px"
+        },
+        children: data.title
+      }, void 0, false), data.paras.map((p, i) => /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          fontSize: 14.5,
+          color: T.inkSoft,
+          lineHeight: 1.65,
+          margin: "0 0 14px"
+        },
+        children: p
+      }, i, false)), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          fontSize: 12,
+          color: T.muted,
+          marginTop: 24,
+          borderTop: "1px solid " + T.line,
+          paddingTop: 14
+        },
+        children: ["Last updated on order. For questions, contact ", INFO.email, "."]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function TrackOrder({
   onBack
@@ -1403,137 +1570,156 @@ function TrackOrder({
     }
   };
   const idx = res ? res.status === "Cancelled" ? -1 : steps.indexOf(res.status) : -1;
-  return /*#__PURE__*/React.createElement("main", {
+  return /*#__PURE__*/_jsxDEV("main", {
     style: {
       ...S.main,
       maxWidth: 620
-    }
-  }, /*#__PURE__*/React.createElement("section", {
-    style: {
-      padding: "40px 0 8px"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    style: S.linkBtn
-  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
-    style: {
-      fontFamily: "var(--display)",
-      fontSize: 32,
-      fontWeight: 700,
-      letterSpacing: "-.02em",
-      margin: "14px 0 6px"
-    }
-  }, "Track your order"), /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.inkSoft,
-      marginBottom: 20,
-      fontSize: 14.5
-    }
-  }, "Enter your order ID and the phone number you ordered with."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gap: 12,
-      maxWidth: 420
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: id,
-    onChange: e => setId(e.target.value),
-    placeholder: "Order ID (e.g. VG12345678)"
-  }), /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: phone,
-    onChange: e => setPhone(e.target.value),
-    placeholder: "Phone number (10 digits)",
-    inputMode: "numeric",
-    maxLength: 10
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: submit,
-    disabled: busy,
-    style: {
-      ...S.primaryBtn,
-      ...(busy ? S.addBtnDisabled : {})
-    }
-  }, busy ? "Checking…" : "Track order"), err && /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.danger,
-      fontSize: 13
-    }
-  }, err)), res && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 28,
-      background: T.card,
-      border: "1px solid " + T.line,
-      borderRadius: 16,
-      padding: 24
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      fontFamily: "var(--mono)"
-    }
-  }, "#", esc(res.id)), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: T.inkSoft,
-      fontSize: 13
-    }
-  }, res.itemCount, " item", res.itemCount === 1 ? "" : "s", " \xB7 ", rupee(res.total))), res.status === "Cancelled" ? /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.danger,
-      marginTop: 16,
-      fontWeight: 600
-    }
-  }, "This order was cancelled. Contact us if you need help.") : /*#__PURE__*/React.createElement("div", {
-    style: S.stepper
-  }, steps.map((s, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: s
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.stepDot,
-      background: i <= idx ? T.teal : T.line,
-      color: i <= idx ? "#fff" : T.muted
-    }
-  }, i <= idx ? "✓" : i + 1), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: i <= idx ? T.ink : T.muted,
-      fontFamily: "var(--mono)"
-    }
-  }, s)), i < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.stepLine,
-      background: i < idx ? T.teal : T.line
-    }
-  })))), res.trackingUrl && /*#__PURE__*/React.createElement("a", {
-    href: res.trackingUrl,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    style: {
-      ...S.primaryBtn,
-      display: "inline-block",
-      textAlign: "center",
-      textDecoration: "none",
-      marginTop: 18,
-      padding: "11px 22px"
-    }
-  }, "Track shipment", res.trackingCarrier ? ` · ${esc(res.trackingCarrier)}` : ""), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: T.muted,
-      marginTop: 14,
-      fontFamily: "var(--mono)"
-    }
-  }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")))));
+    },
+    children: /*#__PURE__*/_jsxDEV("section", {
+      style: {
+        padding: "40px 0 8px"
+      },
+      children: [/*#__PURE__*/_jsxDEV("button", {
+        onClick: onBack,
+        style: S.linkBtn,
+        children: "← Back to store"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("h1", {
+        style: {
+          fontFamily: "var(--display)",
+          fontSize: 32,
+          fontWeight: 700,
+          letterSpacing: "-.02em",
+          margin: "14px 0 6px"
+        },
+        children: "Track your order"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          color: T.inkSoft,
+          marginBottom: 20,
+          fontSize: 14.5
+        },
+        children: "Enter your order ID and the phone number you ordered with."
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          display: "grid",
+          gap: 12,
+          maxWidth: 420
+        },
+        children: [/*#__PURE__*/_jsxDEV("input", {
+          style: S.input,
+          value: id,
+          onChange: e => setId(e.target.value),
+          placeholder: "Order ID (e.g. VG12345678)"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("input", {
+          style: S.input,
+          value: phone,
+          onChange: e => setPhone(e.target.value),
+          placeholder: "Phone number (10 digits)",
+          inputMode: "numeric",
+          maxLength: 10
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: submit,
+          disabled: busy,
+          style: {
+            ...S.primaryBtn,
+            ...(busy ? S.addBtnDisabled : {})
+          },
+          children: busy ? "Checking…" : "Track order"
+        }, void 0, false), err && /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.danger,
+            fontSize: 13
+          },
+          children: err
+        }, void 0, false)]
+      }, void 0, true), res && /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          marginTop: 28,
+          background: T.card,
+          border: "1px solid " + T.line,
+          borderRadius: 16,
+          padding: 24
+        },
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8
+          },
+          children: [/*#__PURE__*/_jsxDEV("strong", {
+            style: {
+              fontFamily: "var(--mono)"
+            },
+            children: ["#", esc(res.id)]
+          }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+            style: {
+              color: T.inkSoft,
+              fontSize: 13
+            },
+            children: [res.itemCount, " item", res.itemCount === 1 ? "" : "s", " · ", rupee(res.total)]
+          }, void 0, true)]
+        }, void 0, true), res.status === "Cancelled" ? /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.danger,
+            marginTop: 16,
+            fontWeight: 600
+          },
+          children: "This order was cancelled. Contact us if you need help."
+        }, void 0, false) : /*#__PURE__*/_jsxDEV("div", {
+          style: S.stepper,
+          children: steps.map((s, i) => /*#__PURE__*/_jsxDEV(React.Fragment, {
+            children: [/*#__PURE__*/_jsxDEV("div", {
+              style: {
+                textAlign: "center"
+              },
+              children: [/*#__PURE__*/_jsxDEV("div", {
+                style: {
+                  ...S.stepDot,
+                  background: i <= idx ? T.teal : T.line,
+                  color: i <= idx ? "#fff" : T.muted
+                },
+                children: i <= idx ? "✓" : i + 1
+              }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                style: {
+                  fontSize: 11,
+                  color: i <= idx ? T.ink : T.muted,
+                  fontFamily: "var(--mono)"
+                },
+                children: s
+              }, void 0, false)]
+            }, void 0, true), i < steps.length - 1 && /*#__PURE__*/_jsxDEV("div", {
+              style: {
+                ...S.stepLine,
+                background: i < idx ? T.teal : T.line
+              }
+            }, void 0, false)]
+          }, s, true))
+        }, void 0, false), res.trackingUrl && /*#__PURE__*/_jsxDEV("a", {
+          href: res.trackingUrl,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          style: {
+            ...S.primaryBtn,
+            display: "inline-block",
+            textAlign: "center",
+            textDecoration: "none",
+            marginTop: 18,
+            padding: "11px 22px"
+          },
+          children: ["Track shipment", res.trackingCarrier ? ` · ${esc(res.trackingCarrier)}` : ""]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            fontSize: 12,
+            color: T.muted,
+            marginTop: 14,
+            fontFamily: "var(--mono)"
+          },
+          children: ["Updated ", new Date(res.updatedAt).toLocaleString("en-IN")]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function AdminOrders({
   onBack
@@ -1543,7 +1729,9 @@ function AdminOrders({
   const [orders, setOrders] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const load = async k => {
+  const [remember, setRemember] = useState(true);
+  const [booting, setBooting] = useState(true);
+  const load = async (k, opts) => {
     setErr("");
     setBusy(true);
     try {
@@ -1557,99 +1745,238 @@ function AdminOrders({
       if (r.ok) {
         setOrders(j.orders || []);
         setAuthed(true);
+        setKey(k);
+        if (opts && opts.remember) {
+          try {
+            localStorage.setItem("vg_admin_key", k);
+          } catch (e) {}
+        }
       } else {
-        setErr(j.error || "Could not load orders.");
+        setErr(j.error || "That key didn't work. Please check and try again.");
         setAuthed(false);
+        try {
+          localStorage.removeItem("vg_admin_key");
+        } catch (e) {}
       }
     } catch (e) {
       setBusy(false);
       setErr("Something went wrong. Please try again.");
     }
   };
-  return /*#__PURE__*/React.createElement("main", {
+  useEffect(() => {
+    let saved = "";
+    try {
+      saved = localStorage.getItem("vg_admin_key") || "";
+    } catch (e) {}
+    if (saved) {
+      setKey(saved);
+      load(saved, {
+        remember: true
+      }).finally(() => setBooting(false));
+    } else setBooting(false);
+  }, []);
+  const logout = () => {
+    try {
+      localStorage.removeItem("vg_admin_key");
+    } catch (e) {}
+    setAuthed(false);
+    setKey("");
+    setOrders([]);
+    setErr("");
+  };
+  const submit = () => {
+    if (!key.trim()) return;
+    load(key.trim(), {
+      remember
+    });
+  };
+  return /*#__PURE__*/_jsxDEV("main", {
     style: {
       ...S.main,
       maxWidth: 840
-    }
-  }, /*#__PURE__*/React.createElement("section", {
-    style: {
-      padding: "40px 0 8px"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
-    style: S.linkBtn
-  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
-    style: {
-      fontFamily: "var(--display)",
-      fontSize: 32,
-      fontWeight: 700,
-      letterSpacing: "-.02em",
-      margin: "14px 0 6px"
-    }
-  }, "Manage orders"), !authed ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gap: 12,
-      maxWidth: 360,
-      marginTop: 12
-    }
-  }, /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.inkSoft,
-      fontSize: 14
-    }
-  }, "Enter your admin key to view and update orders."), /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    type: "password",
-    value: key,
-    onChange: e => setKey(e.target.value),
-    placeholder: "Admin key"
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => load(key),
-    disabled: busy,
-    style: {
-      ...S.primaryBtn,
-      ...(busy ? S.addBtnDisabled : {})
-    }
-  }, busy ? "Checking…" : "Open"), err && /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.danger,
-      fontSize: 13
-    }
-  }, err)) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 12
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: T.inkSoft,
-      fontSize: 13
-    }
-  }, orders.length, " order", orders.length === 1 ? "" : "s"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => load(key),
-    style: S.linkBtn
-  }, "Refresh")), orders.length === 0 && /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.muted
-    }
-  }, "No orders yet."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gap: 12
-    }
-  }, orders.map(o => /*#__PURE__*/React.createElement(AdminRow, {
-    key: o.id,
-    o: o,
-    adminKey: key,
-    onSaved: () => load(key)
-  }))))));
+    },
+    children: /*#__PURE__*/_jsxDEV("section", {
+      style: {
+        padding: "40px 0 8px"
+      },
+      children: [/*#__PURE__*/_jsxDEV("button", {
+        onClick: onBack,
+        style: S.linkBtn,
+        children: "← Back to store"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+          gap: 10,
+          margin: "14px 0 6px"
+        },
+        children: [/*#__PURE__*/_jsxDEV("h1", {
+          style: {
+            fontFamily: "var(--display)",
+            fontSize: 32,
+            fontWeight: 700,
+            letterSpacing: "-.02em",
+            margin: 0
+          },
+          children: "Seller dashboard"
+        }, void 0, false), authed && /*#__PURE__*/_jsxDEV("button", {
+          onClick: logout,
+          style: {
+            ...S.linkBtn,
+            color: T.danger
+          },
+          children: "Log out"
+        }, void 0, false)]
+      }, void 0, true), booting ? /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          color: T.muted,
+          marginTop: 24
+        },
+        children: "Loading…"
+      }, void 0, false) : !authed ? /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          maxWidth: 380,
+          marginTop: 18,
+          background: T.card,
+          border: "1px solid " + T.line,
+          borderRadius: 16,
+          padding: "26px 24px"
+        },
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: T.tealSoft || "rgba(39,179,163,.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            marginBottom: 14
+          },
+          children: "🔒"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: {
+            fontFamily: "var(--display)",
+            fontSize: 20,
+            fontWeight: 700,
+            margin: "0 0 4px"
+          },
+          children: "Seller login"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.inkSoft,
+            fontSize: 13.5,
+            margin: "0 0 16px",
+            lineHeight: 1.5
+          },
+          children: "Enter your admin key to view and manage orders. Only you have this key."
+        }, void 0, false), /*#__PURE__*/_jsxDEV("input", {
+          style: S.input,
+          type: "password",
+          value: key,
+          onChange: e => setKey(e.target.value),
+          onKeyDown: e => {
+            if (e.key === "Enter") submit();
+          },
+          placeholder: "Admin key",
+          autoFocus: true
+        }, void 0, false), /*#__PURE__*/_jsxDEV("label", {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            margin: "12px 0 16px",
+            fontSize: 13.5,
+            color: T.inkSoft,
+            cursor: "pointer",
+            userSelect: "none"
+          },
+          children: [/*#__PURE__*/_jsxDEV("input", {
+            type: "checkbox",
+            checked: remember,
+            onChange: e => setRemember(e.target.checked),
+            style: {
+              width: 16,
+              height: 16,
+              accentColor: T.teal,
+              cursor: "pointer"
+            }
+          }, void 0, false), "Keep me logged in on this device"]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+          onClick: submit,
+          disabled: busy,
+          style: {
+            ...S.primaryBtn,
+            width: "100%",
+            ...(busy ? S.addBtnDisabled : {})
+          },
+          children: busy ? "Checking…" : "Log in"
+        }, void 0, false), err && /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.danger,
+            fontSize: 13,
+            marginTop: 12,
+            marginBottom: 0
+          },
+          children: err
+        }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.muted,
+            fontSize: 11.5,
+            marginTop: 16,
+            marginBottom: 0,
+            lineHeight: 1.5
+          },
+          children: "Tip: only stay logged in on your own device. Use “Log out” on shared computers."
+        }, void 0, false)]
+      }, void 0, true) : /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          marginTop: 16
+        },
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12
+          },
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: {
+              color: T.inkSoft,
+              fontSize: 13
+            },
+            children: [orders.length, " order", orders.length === 1 ? "" : "s"]
+          }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => load(key, {
+              remember
+            }),
+            style: S.linkBtn,
+            children: "Refresh"
+          }, void 0, false)]
+        }, void 0, true), orders.length === 0 && /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: T.muted
+          },
+          children: "No orders yet. When customers buy, they'll show up here."
+        }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+          style: {
+            display: "grid",
+            gap: 12
+          },
+          children: orders.map(o => /*#__PURE__*/_jsxDEV(AdminRow, {
+            o: o,
+            adminKey: key,
+            onSaved: () => load(key, {
+              remember
+            })
+          }, o.id, false))
+        }, void 0, false)]
+      }, void 0, true)]
+    }, void 0, true)
+  }, void 0, false);
 }
 function AdminRow({
   o,
@@ -1691,109 +2018,122 @@ function AdminRow({
       setMsg("Failed");
     }
   };
-  return /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/_jsxDEV("div", {
     style: {
       background: T.card,
       border: "1px solid " + T.line,
       borderRadius: 12,
       padding: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      fontFamily: "var(--mono)",
-      fontSize: 13
-    }
-  }, "#", esc(o.id)), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 13,
-      color: T.inkSoft
-    }
-  }, esc(o.name), " \xB7 ", esc(o.city), ", ", esc(o.state), " \xB7 ", rupee(o.total), " \xB7 ", o.paid ? "Paid" : "COD")), /*#__PURE__*/React.createElement("div", {
-    className: "vg-admin",
-    style: {
-      display: "grid",
-      gridTemplateColumns: "150px 1fr 1fr auto",
-      gap: 10,
-      marginTop: 12,
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("select", {
-    style: S.input,
-    value: status,
-    onChange: e => setStatus(e.target.value)
-  }, ["Placed", "Packed", "Shipped", "Delivered", "Cancelled"].map(s => /*#__PURE__*/React.createElement("option", {
-    key: s
-  }, s))), /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: carrier,
-    onChange: e => setCarrier(e.target.value),
-    placeholder: "Carrier (e.g. Delhivery)"
-  }), /*#__PURE__*/React.createElement("input", {
-    style: S.input,
-    value: url,
-    onChange: e => setUrl(e.target.value),
-    placeholder: "Tracking link (optional)"
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: save,
-    disabled: saving,
-    style: {
-      ...S.addBtn,
-      width: "auto",
-      marginTop: 0,
-      padding: "10px 18px"
-    }
-  }, saving ? "…" : "Save")), msg && /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: msg.indexOf("Saved") === 0 ? T.teal : T.danger,
-      marginTop: 8,
-      fontFamily: "var(--mono)"
-    }
-  }, msg));
+    },
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 8
+      },
+      children: [/*#__PURE__*/_jsxDEV("strong", {
+        style: {
+          fontFamily: "var(--mono)",
+          fontSize: 13
+        },
+        children: ["#", esc(o.id)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+        style: {
+          fontSize: 13,
+          color: T.inkSoft
+        },
+        children: [esc(o.name), " · ", esc(o.city), ", ", esc(o.state), " · ", rupee(o.total), " · ", o.paid ? "Paid" : "COD"]
+      }, void 0, true)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      className: "vg-admin",
+      style: {
+        display: "grid",
+        gridTemplateColumns: "150px 1fr 1fr auto",
+        gap: 10,
+        marginTop: 12,
+        alignItems: "center"
+      },
+      children: [/*#__PURE__*/_jsxDEV("select", {
+        style: S.input,
+        value: status,
+        onChange: e => setStatus(e.target.value),
+        children: ["Placed", "Packed", "Shipped", "Delivered", "Cancelled"].map(s => /*#__PURE__*/_jsxDEV("option", {
+          children: s
+        }, s, false))
+      }, void 0, false), /*#__PURE__*/_jsxDEV("input", {
+        style: S.input,
+        value: carrier,
+        onChange: e => setCarrier(e.target.value),
+        placeholder: "Carrier (e.g. Delhivery)"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("input", {
+        style: S.input,
+        value: url,
+        onChange: e => setUrl(e.target.value),
+        placeholder: "Tracking link (optional)"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+        onClick: save,
+        disabled: saving,
+        style: {
+          ...S.addBtn,
+          width: "auto",
+          marginTop: 0,
+          padding: "10px 18px"
+        },
+        children: saving ? "…" : "Save"
+      }, void 0, false)]
+    }, void 0, true), msg && /*#__PURE__*/_jsxDEV("p", {
+      style: {
+        fontSize: 12,
+        color: msg.indexOf("Saved") === 0 ? T.teal : T.danger,
+        marginTop: 8,
+        fontFamily: "var(--mono)"
+      },
+      children: msg
+    }, void 0, false)]
+  }, void 0, true);
 }
 function Footer({
   storeName,
   onNav
 }) {
   const links = [["Track order", "track"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
-  return /*#__PURE__*/React.createElement("footer", {
-    style: S.footer
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 12,
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: 600,
-      color: T.ink
-    }
-  }, storeName), /*#__PURE__*/React.createElement("nav", {
-    style: {
-      display: "flex",
-      gap: 16,
-      flexWrap: "wrap"
-    }
-  }, links.map(([label, key]) => /*#__PURE__*/React.createElement("button", {
-    key: key,
-    onClick: () => onNav(key),
-    style: S.footLink
-  }, label)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14,
-      color: T.muted
-    }
-  }, "Delivered across India \xB7 payments secured by Razorpay"));
+  return /*#__PURE__*/_jsxDEV("footer", {
+    style: S.footer,
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 12,
+        alignItems: "center"
+      },
+      children: [/*#__PURE__*/_jsxDEV("span", {
+        style: {
+          fontWeight: 600,
+          color: T.ink
+        },
+        children: storeName
+      }, void 0, false), /*#__PURE__*/_jsxDEV("nav", {
+        style: {
+          display: "flex",
+          gap: 16,
+          flexWrap: "wrap"
+        },
+        children: links.map(([label, key]) => /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => onNav(key),
+          style: S.footLink,
+          children: label
+        }, key, false))
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        marginTop: 14,
+        color: T.muted
+      },
+      children: "Delivered across India · payments secured by Razorpay"
+    }, void 0, false)]
+  }, void 0, true);
 }
 const S = {
   page: {
@@ -2581,4 +2921,4 @@ const S = {
     lineHeight: 1.5
   }
 };
-ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/_jsxDEV(App, {}, void 0, false));

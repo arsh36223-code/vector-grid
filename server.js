@@ -217,6 +217,55 @@ async function notifyOrder(order) {
   if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 
+// Send the BUYER a friendly confirmation + how to track (to the email they entered)
+async function notifyBuyer(order) {
+  const c = order.customer;
+  if (!RESEND_API_KEY || !c.email) return;
+  const site = process.env.SITE_URL || "https://vector-grid.onrender.com";
+  const items = order.lineItems.map(li => `- ${li.name} x${li.qty} — ${rupee(li.price * li.qty)}`).join("\n");
+  const body = [
+    `Hi ${c.name},`,
+    "",
+    "Thank you for shopping with Vector Grid! Your order is confirmed.",
+    "",
+    `Order ID: ${order.id}`,
+    `Payment: ${order.paid ? "Paid online" : "Cash on Delivery"}`,
+    "",
+    "Items:",
+    items,
+    "",
+    `Subtotal: ${rupee(order.subtotal)}`,
+    `Shipping: ${order.shipping === 0 ? "Free" : rupee(order.shipping)}`,
+    `Total: ${rupee(order.total)}`,
+    "",
+    "Delivering to:",
+    c.line1 + (c.line2 ? ", " + c.line2 : ""),
+    `${c.city}, ${c.state} - ${c.pincode}`,
+    "",
+    "TRACK YOUR ORDER anytime:",
+    `1. Go to ${site}`,
+    `2. Click "Track order" at the top`,
+    `3. Enter Order ID ${order.id} and phone ${c.phone}`,
+    "",
+    "We'll update the status as your order is packed and shipped.",
+    "Questions? Just reply to this email.",
+    "",
+    "— Team Vector Grid",
+  ].join("\n");
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: ORDER_FROM,
+      to: [c.email],
+      reply_to: ORDER_TO,
+      subject: `Your Vector Grid order ${order.id} is confirmed 🎉`,
+      text: body,
+    }),
+  });
+  if (!resp.ok) throw new Error("Resend(buyer) " + resp.status + ": " + (await resp.text()).slice(0, 200));
+}
+
 // Public catalogue (cost/supplier stripped out)
 app.get("/api/products", (req, res) =>
   res.json(PRODUCTS.map(({ id, name, price, mrp, stock, img, desc, category }) => ({ id, name, price, mrp, stock, img, desc, category })))
@@ -264,6 +313,7 @@ app.post("/api/place-order", async (req, res) => {
     // Respond immediately so the customer isn't kept waiting; email sends in the background.
     res.json({ ok: true, orderId: order.id, total: order.total });
     notifyOrder(order).catch((e) => console.error("notify failed:", e && e.message));
+    notifyBuyer(order).catch((e) => console.error("buyer notify failed:", e && e.message));
   } catch (e) {
     console.error("place-order failed:", e && e.message);
     res.status(500).json({ error: "Could not place order" });
