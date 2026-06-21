@@ -474,6 +474,18 @@ app.post("/api/admin/product-delete", async (req, res) => {
   } catch (e) { console.error("product delete failed:", e && e.message); res.status(500).json({ error: "Delete failed." }); }
 });
 
+app.post("/api/admin/order-delete", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  if (!id) return res.status(400).json({ error: "Missing order id." });
+  try {
+    const r = await pool.query("DELETE FROM orders WHERE id=$1", [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Order not found." });
+    res.json({ ok: true });
+  } catch (e) { console.error("order delete failed:", e && e.message); res.status(500).json({ error: "Delete failed." }); }
+});
+
 // Create a Razorpay order (amount computed from trusted prices)
 app.post("/api/create-order", async (req, res) => {
   if (!razorpay) return res.status(503).json({ error: "Payments are not set up yet." });

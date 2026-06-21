@@ -3314,6 +3314,8 @@ function AdminRow({
   const [fulfill, setFulfill] = useState(false);
   const [copied, setCopied] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [askDel, setAskDel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const save = async () => {
     setSaving(true);
     setMsg("");
@@ -3342,6 +3344,34 @@ function AdminRow({
     } catch (e) {
       setSaving(false);
       setMsg("Failed");
+    }
+  };
+  const del = async () => {
+    setDeleting(true);
+    try {
+      const r = await fetch(API + "/api/admin/order-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey
+        },
+        body: JSON.stringify({
+          orderId: o.id
+        })
+      });
+      const j = await r.json();
+      setDeleting(false);
+      if (r.ok) {
+        onSaved && onSaved();
+      } else {
+        setDeleting(false);
+        setAskDel(false);
+        alert(j.error || "Could not delete the order.");
+      }
+    } catch (e) {
+      setDeleting(false);
+      setAskDel(false);
+      alert("Could not delete the order. Please try again.");
     }
   };
   const copy = (text, label) => {
@@ -3843,7 +3873,61 @@ function AdminRow({
       marginTop: 8,
       fontFamily: "var(--mono)"
     }
-  }, msg)));
+  }, msg), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTop: "1px solid " + T.line
+    }
+  }, !askDel ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAskDel(true),
+    style: {
+      background: "none",
+      border: "none",
+      color: T.muted,
+      fontSize: 12,
+      cursor: "pointer",
+      padding: "4px 0",
+      textDecoration: "underline"
+    }
+  }, "🗑 Delete this order") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12.5,
+      color: "#e5685a"
+    }
+  }, "Delete order ", esc(o.id), " permanently? This can't be undone."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: del,
+    disabled: deleting,
+    style: {
+      border: "none",
+      background: "#e5685a",
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: 12.5,
+      borderRadius: 8,
+      padding: "8px 16px",
+      cursor: "pointer"
+    }
+  }, deleting ? "Deleting…" : "Yes, delete"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAskDel(false),
+    disabled: deleting,
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5
+    }
+  }, "Cancel"))))));
 }
 function Footer({
   storeName,

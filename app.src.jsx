@@ -831,11 +831,18 @@ function AdminRow({o,adminKey,prods,onSaved}){
   const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(""); const [open,setOpen]=useState(false);
   const [fulfill,setFulfill]=useState(false); const [copied,setCopied]=useState("");
   const [confirmOpen,setConfirmOpen]=useState(false);
+  const [askDel,setAskDel]=useState(false); const [deleting,setDeleting]=useState(false);
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
       const j=await r.json(); setSaving(false);
       if(r.ok){ setMsg("Saved ✓"); onSaved&&onSaved(); } else { setMsg(j.error||"Failed"); }
     }catch(e){ setSaving(false); setMsg("Failed"); }
+  };
+  const del=async()=>{ setDeleting(true);
+    try{ const r=await fetch(API+"/api/admin/order-delete",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id})});
+      const j=await r.json(); setDeleting(false);
+      if(r.ok){ onSaved&&onSaved(); } else { setDeleting(false); setAskDel(false); alert(j.error||"Could not delete the order."); }
+    }catch(e){ setDeleting(false); setAskDel(false); alert("Could not delete the order. Please try again."); }
   };
   const copy=(text,label)=>{ try{ navigator.clipboard.writeText(text); setCopied(label); setTimeout(()=>setCopied(""),1800); }catch(e){
     const t=document.createElement("textarea"); t.value=text; document.body.appendChild(t); t.select(); try{document.execCommand("copy");}catch(_){} document.body.removeChild(t); setCopied(label); setTimeout(()=>setCopied(""),1800);
@@ -938,6 +945,19 @@ function AdminRow({o,adminKey,prods,onSaved}){
         <button onClick={save} disabled={saving} style={{...S.addBtn,width:"auto",marginTop:0,padding:"10px 18px"}}>{saving?"…":"Save"}</button>
       </div>
       {msg && <p style={{fontSize:12,color:msg.indexOf("Saved")===0?T.teal:T.danger,marginTop:8,fontFamily:"var(--mono)"}}>{msg}</p>}
+      <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid "+T.line}}>
+        {!askDel ? (
+          <button onClick={()=>setAskDel(true)} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",padding:"4px 0",textDecoration:"underline"}}>🗑 Delete this order</button>
+        ) : (
+          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <span style={{fontSize:12.5,color:"#e5685a"}}>Delete order {esc(o.id)} permanently? This can't be undone.</span>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={del} disabled={deleting} style={{border:"none",background:"#e5685a",color:"#fff",fontWeight:700,fontSize:12.5,borderRadius:8,padding:"8px 16px",cursor:"pointer"}}>{deleting?"Deleting…":"Yes, delete"}</button>
+              <button onClick={()=>setAskDel(false)} disabled={deleting} style={{...S.linkBtn,fontSize:12.5}}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   </div>);
 }
