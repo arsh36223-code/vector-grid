@@ -652,11 +652,11 @@ function Hero({
     style: S.heroEyebrow
   }, "✦ curated goods · delivered across india"), /*#__PURE__*/React.createElement("h1", {
     style: S.heroTitle
-  }, "stuff you'll", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+  }, "Things worth", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
     style: S.heroAccent
-  }, "actually"), " love."), /*#__PURE__*/React.createElement("p", {
+  }, "waiting"), " for."), /*#__PURE__*/React.createElement("p", {
     style: S.heroLede
-  }, "Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. No cap. 🛒"), /*#__PURE__*/React.createElement("div", {
+  }, "Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. 🛒"), /*#__PURE__*/React.createElement("div", {
     style: S.heroBtns
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onShop,

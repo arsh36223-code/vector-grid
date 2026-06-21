@@ -233,8 +233,8 @@ function Hero({onShop,onTrack}){
     <div style={S.heroOverlay} />
     <div style={S.heroContent}>
       <p style={S.heroEyebrow}>✦ curated goods · delivered across india</p>
-      <h1 style={S.heroTitle}>stuff you'll<br/><span style={S.heroAccent}>actually</span> love.</h1>
-      <p style={S.heroLede}>Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. No cap. 🛒</p>
+      <h1 style={S.heroTitle}>Things worth<br/><span style={S.heroAccent}>waiting</span> for.</h1>
+      <p style={S.heroLede}>Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. 🛒</p>
       <div style={S.heroBtns}>
         <button onClick={onShop} style={S.heroPrimary}>Shop the drop →</button>
         <button onClick={onTrack} style={S.heroGhost}>Track order</button>
