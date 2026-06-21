@@ -335,7 +335,7 @@ app.post("/api/track", async (req, res) => {
     const o = r.rows[0];
     const itemCount = (o.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
     res.json({ id: o.id, status: o.status, trackingUrl: o.tracking_url, trackingCarrier: o.tracking_carrier,
-      total: o.total, itemCount, placedAt: o.created_at, updatedAt: o.updated_at });
+      total: o.total, itemCount, items: o.items || [], placedAt: o.created_at, updatedAt: o.updated_at });
   } catch (e) { console.error("track failed:", e && e.message); res.status(500).json({ error: "Couldn't fetch your order. Please try again." }); }
 });
 
@@ -345,7 +345,7 @@ app.get("/api/admin/orders", async (req, res) => {
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
     const r = await pool.query(
-      "SELECT id,name,phone,city,state,total,paid,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
     );
     res.json({ orders: r.rows });
   } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }

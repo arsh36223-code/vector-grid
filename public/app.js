@@ -1291,7 +1291,7 @@ function Confirmation({
       fontFamily: "var(--mono)",
       color: T.ink
     }
-  }, "#", order.id), " · ", rupee(order.total), " · ", order.payment === "COD" ? "Cash on delivery" : "Paid online"), c && c.email && /*#__PURE__*/React.createElement("p", {
+  }, order.id), " · ", rupee(order.total), " · ", order.payment === "COD" ? "Cash on delivery" : "Paid online"), c && c.email && /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 12.5,
       color: T.teal,
@@ -1427,7 +1427,7 @@ function Confirmation({
     style: {
       color: T.ink
     }
-  }, "#", order.id), " + your phone number, from the \"Track order\" link up top."), /*#__PURE__*/React.createElement("button", {
+  }, order.id), " + your phone number, from the \"Track order\" link up top."), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     style: {
       ...S.primaryBtn,
@@ -1507,7 +1507,8 @@ function TrackOrder({
   const submit = async () => {
     setErr("");
     setRes(null);
-    if (!id.trim() || phone.replace(/\D/g, "").length < 10) {
+    const cleanId = id.trim().replace(/^#/, "");
+    if (!cleanId || phone.replace(/\D/g, "").length < 10) {
       setErr("Enter your order ID and 10-digit phone number.");
       return;
     }
@@ -1519,7 +1520,7 @@ function TrackOrder({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          orderId: id,
+          orderId: cleanId,
           phone
         })
       });
@@ -1592,81 +1593,158 @@ function TrackOrder({
       color: T.danger,
       fontSize: 13
     }
-  }, err)), res && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 28,
-      background: T.card,
-      border: "1px solid " + T.line,
-      borderRadius: 16,
-      padding: 24
+  }, err)), res && (() => {
+    let items = [];
+    try {
+      items = Array.isArray(res.items) ? res.items : JSON.parse(res.items || "[]");
+    } catch (e) {
+      items = [];
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      fontFamily: "var(--mono)"
-    }
-  }, "#", esc(res.id)), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: T.inkSoft,
-      fontSize: 13
-    }
-  }, res.itemCount, " item", res.itemCount === 1 ? "" : "s", " · ", rupee(res.total))), res.status === "Cancelled" ? /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: T.danger,
-      marginTop: 16,
-      fontWeight: 600
-    }
-  }, "This order was cancelled. Contact us if you need help.") : /*#__PURE__*/React.createElement("div", {
-    style: S.stepper
-  }, steps.map((s, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: s
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.stepDot,
-      background: i <= idx ? T.teal : T.line,
-      color: i <= idx ? "#fff" : T.muted
-    }
-  }, i <= idx ? "✓" : i + 1), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: i <= idx ? T.ink : T.muted,
-      fontFamily: "var(--mono)"
-    }
-  }, s)), i < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...S.stepLine,
-      background: i < idx ? T.teal : T.line
-    }
-  })))), res.trackingUrl && /*#__PURE__*/React.createElement("a", {
-    href: res.trackingUrl,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    style: {
-      ...S.primaryBtn,
-      display: "inline-block",
-      textAlign: "center",
-      textDecoration: "none",
-      marginTop: 18,
-      padding: "11px 22px"
-    }
-  }, "Track shipment", res.trackingCarrier ? ` · ${esc(res.trackingCarrier)}` : ""), /*#__PURE__*/React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: T.muted,
-      marginTop: 14,
-      fontFamily: "var(--mono)"
-    }
-  }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")))));
+    const cancelled = res.status === "Cancelled";
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 28,
+        background: T.card,
+        border: "1px solid " + T.line,
+        borderRadius: 16,
+        padding: 24
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 8,
+        alignItems: "center"
+      }
+    }, /*#__PURE__*/React.createElement("strong", {
+      style: {
+        fontFamily: "var(--mono)",
+        fontSize: 15,
+        color: T.ink
+      }
+    }, esc(res.id)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        padding: "3px 10px",
+        borderRadius: 999,
+        color: cancelled ? T.muted : "#fff",
+        background: cancelled ? "transparent" : T.teal,
+        border: cancelled ? "1px solid " + T.line : "none",
+        fontFamily: "var(--mono)",
+        textTransform: "uppercase",
+        letterSpacing: ".04em"
+      }
+    }, res.status)), /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: T.inkSoft,
+        fontSize: 13,
+        marginTop: 6
+      }
+    }, res.itemCount, " item", res.itemCount === 1 ? "" : "s", " · ", rupee(res.total)), cancelled ? /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: T.danger,
+        marginTop: 16,
+        fontWeight: 600
+      }
+    }, "This order was cancelled. Contact us if you need help.") : /*#__PURE__*/React.createElement("div", {
+      style: S.stepper
+    }, steps.map((s, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: s
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...S.stepDot,
+        background: i <= idx ? T.teal : T.line,
+        color: i <= idx ? "#fff" : T.muted
+      }
+    }, i <= idx ? "✓" : i + 1), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: i <= idx ? T.ink : T.muted,
+        fontFamily: "var(--mono)"
+      }
+    }, s)), i < steps.length - 1 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...S.stepLine,
+        background: i < idx ? T.teal : T.line
+      }
+    })))), items.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "left",
+        background: T.bg || "#0f0d0a",
+        border: "1px solid " + T.line,
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 18
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 12,
+        color: T.muted,
+        margin: "0 0 8px",
+        fontFamily: "var(--mono)",
+        textTransform: "uppercase",
+        letterSpacing: ".05em"
+      }
+    }, "Order details"), items.map((i, idx2) => /*#__PURE__*/React.createElement("div", {
+      key: idx2,
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: 13,
+        padding: "4px 0",
+        color: T.inkSoft
+      }
+    }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), " ", /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        fontSize: 11
+      }
+    }, "× ", i.qty || 1)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: T.ink
+      }
+    }, rupee((i.price || 0) * (i.qty || 1))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 1,
+        background: T.line,
+        margin: "8px 0"
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: 14,
+        fontWeight: 700,
+        color: T.ink
+      }
+    }, /*#__PURE__*/React.createElement("span", null, "Total"), /*#__PURE__*/React.createElement("span", null, rupee(res.total)))), res.trackingUrl && /*#__PURE__*/React.createElement("a", {
+      href: res.trackingUrl,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        ...S.primaryBtn,
+        display: "inline-block",
+        textAlign: "center",
+        textDecoration: "none",
+        marginTop: 18,
+        padding: "11px 22px"
+      }
+    }, "Track shipment", res.trackingCarrier ? ` · ${esc(res.trackingCarrier)}` : ""), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 12,
+        color: T.muted,
+        marginTop: 14,
+        fontFamily: "var(--mono)"
+      }
+    }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")));
+  })()));
 }
 function AdminOrders({
   onBack
@@ -1740,7 +1818,7 @@ function AdminOrders({
   return /*#__PURE__*/React.createElement("main", {
     style: {
       ...S.main,
-      maxWidth: 840
+      maxWidth: 960
     }
   }, /*#__PURE__*/React.createElement("section", {
     style: {
@@ -1868,33 +1946,94 @@ function AdminOrders({
     }
   }, "Tip: only stay logged in on your own device. Use “Log out” on shared computers.")) : /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 16
+      marginTop: 18
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, (() => {
+    const stat = name => orders.filter(o => (o.status || "Placed") === name).length;
+    const revenue = orders.filter(o => (o.status || "") !== "Cancelled").reduce((s, o) => s + Number(o.total || 0), 0);
+    const cards = [["Total orders", orders.length, T.ink], ["New / Placed", stat("Placed"), T.marigold], ["Shipped", stat("Shipped"), T.teal], ["Delivered", stat("Delivered"), T.teal], ["Revenue", "₹" + revenue.toLocaleString("en-IN"), T.ink]];
+    return /*#__PURE__*/React.createElement("div", {
+      className: "vg-stats",
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(5,1fr)",
+        gap: 10,
+        marginBottom: 18
+      }
+    }, cards.map(([label, val, col]) => /*#__PURE__*/React.createElement("div", {
+      key: label,
+      style: {
+        background: T.card,
+        border: "1px solid " + T.line,
+        borderRadius: 12,
+        padding: "12px 14px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 20,
+        fontWeight: 700,
+        color: col,
+        fontFamily: "var(--display)",
+        lineHeight: 1.1
+      }
+    }, val), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: T.muted,
+        marginTop: 3,
+        fontFamily: "var(--mono)",
+        textTransform: "uppercase",
+        letterSpacing: ".04em"
+      }
+    }, label))));
+  })(), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 12
+      marginBottom: 12,
+      gap: 10,
+      flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       color: T.inkSoft,
-      fontSize: 13
+      fontSize: 13,
+      fontFamily: "var(--mono)"
     }
-  }, orders.length, " order", orders.length === 1 ? "" : "s"), /*#__PURE__*/React.createElement("button", {
+  }, orders.length, " order", orders.length === 1 ? "" : "s", " · newest first"), /*#__PURE__*/React.createElement("button", {
     onClick: () => load(key, {
       remember
     }),
     style: S.linkBtn
-  }, "Refresh")), orders.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, "↻ Refresh")), orders.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      color: T.muted
+      textAlign: "center",
+      padding: "48px 20px",
+      background: T.card,
+      border: "1px dashed " + T.line,
+      borderRadius: 16
     }
-  }, "No orders yet. When customers buy, they'll show up here."), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 32,
+      marginBottom: 8
+    }
+  }, "📦"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      margin: 0
+    }
+  }, "No orders yet."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13,
+      marginTop: 4
+    }
+  }, "When customers buy, their orders appear here.")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gap: 12
+      gap: 14
     }
   }, orders.map(o => /*#__PURE__*/React.createElement(AdminRow, {
     key: o.id,
@@ -1915,6 +2054,7 @@ function AdminRow({
   const [url, setUrl] = useState(o.tracking_url || "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [open, setOpen] = useState(false);
   const save = async () => {
     setSaving(true);
     setMsg("");
@@ -1945,37 +2085,169 @@ function AdminRow({
       setMsg("Failed");
     }
   };
+  const badge = {
+    Placed: ["#fff", T.marigold],
+    Packed: ["#fff", "#7c6cff"],
+    Shipped: ["#fff", T.teal],
+    Delivered: ["#fff", "#1f9e57"],
+    Cancelled: [T.muted, "transparent"]
+  };
+  const bc = badge[o.status || "Placed"] || badge.Placed;
+  let items = [];
+  try {
+    items = Array.isArray(o.items) ? o.items : JSON.parse(o.items || "[]");
+  } catch (e) {
+    items = [];
+  }
+  const dt = o.created_at ? new Date(o.created_at) : null;
+  const dstr = dt ? dt.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) : "";
   return /*#__PURE__*/React.createElement("div", {
     style: {
       background: T.card,
       border: "1px solid " + T.line,
-      borderRadius: 12,
-      padding: 16
+      borderRadius: 14,
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "16px 18px",
+      display: "flex",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 10,
+      alignItems: "flex-start"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 8
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("strong", {
     style: {
       fontFamily: "var(--mono)",
-      fontSize: 13
+      fontSize: 14,
+      color: T.ink
     }
-  }, "#", esc(o.id)), /*#__PURE__*/React.createElement("span", {
+  }, esc(o.id)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      padding: "3px 10px",
+      borderRadius: 999,
+      color: bc[0],
+      background: bc[1],
+      border: bc[1] === "transparent" ? "1px solid " + T.line : "none",
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".04em"
+    }
+  }, o.status || "Placed"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11.5,
+      padding: "3px 9px",
+      borderRadius: 999,
+      background: o.paid ? "rgba(31,158,87,.15)" : "rgba(232,130,12,.15)",
+      color: o.paid ? "#34c77b" : T.marigold,
+      fontFamily: "var(--mono)",
+      fontWeight: 600
+    }
+  }, o.paid ? "PAID ONLINE" : "COD")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
-      color: T.inkSoft
+      color: T.inkSoft,
+      marginTop: 7,
+      lineHeight: 1.6
     }
-  }, esc(o.name), " · ", esc(o.city), ", ", esc(o.state), " · ", rupee(o.total), " · ", o.paid ? "Paid" : "COD")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.ink
+    }
+  }, esc(o.name)), " · 📱 ", esc(o.phone), o.email ? " · ✉ " + esc(o.email) : "", /*#__PURE__*/React.createElement("br", null), "📍 ", esc(o.line1), o.line2 ? ", " + esc(o.line2) : "", ", ", esc(o.city), ", ", esc(o.state), " — ", esc(o.pincode))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "right",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: T.ink,
+      fontFamily: "var(--display)"
+    }
+  }, rupee(o.total)), dstr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      fontFamily: "var(--mono)",
+      marginTop: 2
+    }
+  }, dstr))), items.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 18px 14px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(!open),
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5
+    }
+  }, open ? "▾ Hide items" : "▸ " + items.reduce((n, i) => n + (i.qty || 1), 0) + " item" + (items.reduce((n, i) => n + (i.qty || 1), 0) === 1 ? "" : "s")), open && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      background: T.bg || "#0f0d0a",
+      borderRadius: 10,
+      padding: "10px 12px"
+    }
+  }, items.map((i, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 12.5,
+      color: T.inkSoft,
+      padding: "3px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.muted,
+      fontFamily: "var(--mono)"
+    }
+  }, "× ", i.qty || 1)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.ink
+    }
+  }, rupee((i.price || 0) * (i.qty || 1))))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid " + T.line,
+      padding: "14px 18px",
+      background: "rgba(255,255,255,.015)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      fontFamily: "var(--mono)",
+      textTransform: "uppercase",
+      letterSpacing: ".05em",
+      marginBottom: 8
+    }
+  }, "Update status & tracking"), /*#__PURE__*/React.createElement("div", {
     className: "vg-admin",
     style: {
       display: "grid",
       gridTemplateColumns: "150px 1fr 1fr auto",
       gap: 10,
-      marginTop: 12,
       alignItems: "center"
     }
   }, /*#__PURE__*/React.createElement("select", {
@@ -2010,7 +2282,7 @@ function AdminRow({
       marginTop: 8,
       fontFamily: "var(--mono)"
     }
-  }, msg));
+  }, msg)));
 }
 function Footer({
   storeName,

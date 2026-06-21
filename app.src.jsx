@@ -405,7 +405,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
   <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:580,textAlign:"center"}}>
     <div style={S.checkCircle}>✓</div>
     <h2 style={{...S.modalTitle,marginTop:14}}>Order placed</h2>
-    <p style={{color:T.inkSoft,marginTop:4}}>Order <strong style={{fontFamily:"var(--mono)",color:T.ink}}>#{order.id}</strong> · {rupee(order.total)} · {order.payment==="COD"?"Cash on delivery":"Paid online"}</p>
+    <p style={{color:T.inkSoft,marginTop:4}}>Order <strong style={{fontFamily:"var(--mono)",color:T.ink}}>{order.id}</strong> · {rupee(order.total)} · {order.payment==="COD"?"Cash on delivery":"Paid online"}</p>
     {c&&c.email && <p style={{fontSize:12.5,color:T.teal,marginTop:8}}>📧 A confirmation with your tracking details has been sent to <strong>{esc(c.email)}</strong></p>}
     <div style={S.stepper}>{steps.map((s,idx)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:idx===0?T.teal:T.line,color:idx===0?"#fff":T.muted}}>{idx+1}</div><span style={{fontSize:11,color:idx===0?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{idx<steps.length-1 && <div style={S.stepLine} />}</React.Fragment>))}</div>
     {items.length>0 && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
@@ -420,7 +420,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
       <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Delivering to</p>
       <p style={{fontSize:13,color:T.ink,margin:0,lineHeight:1.6}}>{esc(c.name)}<br/>{esc(c.line1)}{c.line2?", "+esc(c.line2):""}<br/>{esc(c.city)}, {esc(c.state)} — {esc(c.pincode)}<br/><span style={{color:T.inkSoft}}>📱 {esc(c.phone)}{c.email?" · ✉ "+esc(c.email):""}</span></p>
     </div>}
-    <p style={{fontSize:12.5,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Track anytime with order ID <strong style={{color:T.ink}}>#{order.id}</strong> + your phone number, from the "Track order" link up top.</p>
+    <p style={{fontSize:12.5,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Track anytime with order ID <strong style={{color:T.ink}}>{order.id}</strong> + your phone number, from the "Track order" link up top.</p>
     <button onClick={onClose} style={{...S.primaryBtn,marginTop:18}}>Continue shopping</button>
   </div></Overlay>); }
 
@@ -443,9 +443,10 @@ function TrackOrder({onBack}){
   const steps=["Placed","Packed","Shipped","Delivered"];
   const submit=async()=>{
     setErr(""); setRes(null);
-    if(!id.trim()||phone.replace(/\D/g,"").length<10){ setErr("Enter your order ID and 10-digit phone number."); return; }
+    const cleanId=id.trim().replace(/^#/,"");
+    if(!cleanId||phone.replace(/\D/g,"").length<10){ setErr("Enter your order ID and 10-digit phone number."); return; }
     setBusy(true);
-    try{ const r=await fetch(API+"/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:id,phone})});
+    try{ const r=await fetch(API+"/api/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:cleanId,phone})});
       const j=await r.json(); setBusy(false);
       if(r.ok){ setRes(j); } else { setErr(j.error||"Couldn't find that order."); }
     }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
@@ -462,17 +463,26 @@ function TrackOrder({onBack}){
         <button onClick={submit} disabled={busy} style={{...S.primaryBtn,...(busy?S.addBtnDisabled:{})}}>{busy?"Checking…":"Track order"}</button>
         {err && <p style={{color:T.danger,fontSize:13}}>{err}</p>}
       </div>
-      {res && (<div style={{marginTop:28,background:T.card,border:"1px solid "+T.line,borderRadius:16,padding:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-          <strong style={{fontFamily:"var(--mono)"}}>#{esc(res.id)}</strong>
-          <span style={{color:T.inkSoft,fontSize:13}}>{res.itemCount} item{res.itemCount===1?"":"s"} · {rupee(res.total)}</span>
+      {res && (()=>{ let items=[]; try{ items=Array.isArray(res.items)?res.items:JSON.parse(res.items||"[]"); }catch(e){ items=[]; }
+        const cancelled=res.status==="Cancelled";
+        return (<div style={{marginTop:28,background:T.card,border:"1px solid "+T.line,borderRadius:16,padding:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+          <strong style={{fontFamily:"var(--mono)",fontSize:15,color:T.ink}}>{esc(res.id)}</strong>
+          <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:999,color:cancelled?T.muted:"#fff",background:cancelled?"transparent":T.teal,border:cancelled?"1px solid "+T.line:"none",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{res.status}</span>
         </div>
-        {res.status==="Cancelled"
+        <p style={{color:T.inkSoft,fontSize:13,marginTop:6}}>{res.itemCount} item{res.itemCount===1?"":"s"} · {rupee(res.total)}</p>
+        {cancelled
           ? <p style={{color:T.danger,marginTop:16,fontWeight:600}}>This order was cancelled. Contact us if you need help.</p>
           : <div style={S.stepper}>{steps.map((s,i)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:i<=idx?T.teal:T.line,color:i<=idx?"#fff":T.muted}}>{i<=idx?"✓":i+1}</div><span style={{fontSize:11,color:i<=idx?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{i<steps.length-1 && <div style={{...S.stepLine,background:i<idx?T.teal:T.line}} />}</React.Fragment>))}</div>}
+        {items.length>0 && <div style={{textAlign:"left",background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
+          <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
+          {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+          <div style={{height:1,background:T.line,margin:"8px 0"}} />
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink}}><span>Total</span><span>{rupee(res.total)}</span></div>
+        </div>}
         {res.trackingUrl && <a href={res.trackingUrl} target="_blank" rel="noopener noreferrer" style={{...S.primaryBtn,display:"inline-block",textAlign:"center",textDecoration:"none",marginTop:18,padding:"11px 22px"}}>Track shipment{res.trackingCarrier?` · ${esc(res.trackingCarrier)}`:""}</a>}
         <p style={{fontSize:12,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Updated {new Date(res.updatedAt).toLocaleString("en-IN")}</p>
-      </div>)}
+      </div>); })()}
     </section>
   </main>);
 }
@@ -496,7 +506,7 @@ function AdminOrders({onBack}){
   },[]);
   const logout=()=>{ try{ localStorage.removeItem("vg_admin_key"); }catch(e){} setAuthed(false); setKey(""); setOrders([]); setErr(""); };
   const submit=()=>{ if(!key.trim()) return; load(key.trim(),{remember}); };
-  return (<main style={{...S.main,maxWidth:840}}>
+  return (<main style={{...S.main,maxWidth:960}}>
     <section style={{padding:"40px 0 8px"}}>
       <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:10,margin:"14px 0 6px"}}>
@@ -520,10 +530,23 @@ function AdminOrders({onBack}){
           <p style={{color:T.muted,fontSize:11.5,marginTop:16,marginBottom:0,lineHeight:1.5}}>Tip: only stay logged in on your own device. Use “Log out” on shared computers.</p>
         </div>
       ) : (
-        <div style={{marginTop:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><span style={{color:T.inkSoft,fontSize:13}}>{orders.length} order{orders.length===1?"":"s"}</span><button onClick={()=>load(key,{remember})} style={S.linkBtn}>Refresh</button></div>
-          {orders.length===0 && <p style={{color:T.muted}}>No orders yet. When customers buy, they'll show up here.</p>}
-          <div style={{display:"grid",gap:12}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key,{remember})} />)}</div>
+        <div style={{marginTop:18}}>
+          {(()=>{ const stat=(name)=>orders.filter(o=>(o.status||"Placed")===name).length;
+            const revenue=orders.filter(o=>(o.status||"")!=="Cancelled").reduce((s,o)=>s+Number(o.total||0),0);
+            const cards=[["Total orders",orders.length,T.ink],["New / Placed",stat("Placed"),T.marigold],["Shipped",stat("Shipped"),T.teal],["Delivered",stat("Delivered"),T.teal],["Revenue","₹"+revenue.toLocaleString("en-IN"),T.ink]];
+            return (<div className="vg-stats" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:18}}>
+              {cards.map(([label,val,col])=>(<div key={label} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:"12px 14px"}}>
+                <div style={{fontSize:20,fontWeight:700,color:col,fontFamily:"var(--display)",lineHeight:1.1}}>{val}</div>
+                <div style={{fontSize:11,color:T.muted,marginTop:3,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{label}</div>
+              </div>))}
+            </div>);
+          })()}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+            <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{orders.length} order{orders.length===1?"":"s"} · newest first</span>
+            <button onClick={()=>load(key,{remember})} style={S.linkBtn}>↻ Refresh</button>
+          </div>
+          {orders.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>📦</div><p style={{color:T.inkSoft,margin:0}}>No orders yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>When customers buy, their orders appear here.</p></div>}
+          <div style={{display:"grid",gap:14}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} onSaved={()=>load(key,{remember})} />)}</div>
         </div>
       )}
     </section>
@@ -533,25 +556,52 @@ function AdminRow({o,adminKey,onSaved}){
   const [status,setStatus]=useState(o.status||"Placed");
   const [carrier,setCarrier]=useState(o.tracking_carrier||"");
   const [url,setUrl]=useState(o.tracking_url||"");
-  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState("");
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(""); const [open,setOpen]=useState(false);
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
       const j=await r.json(); setSaving(false);
       if(r.ok){ setMsg("Saved ✓"); onSaved&&onSaved(); } else { setMsg(j.error||"Failed"); }
     }catch(e){ setSaving(false); setMsg("Failed"); }
   };
-  return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16}}>
-    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-      <strong style={{fontFamily:"var(--mono)",fontSize:13}}>#{esc(o.id)}</strong>
-      <span style={{fontSize:13,color:T.inkSoft}}>{esc(o.name)} · {esc(o.city)}, {esc(o.state)} · {rupee(o.total)} · {o.paid?"Paid":"COD"}</span>
+  const badge={Placed:["#fff",T.marigold],Packed:["#fff","#7c6cff"],Shipped:["#fff",T.teal],Delivered:["#fff","#1f9e57"],Cancelled:[T.muted,"transparent"]};
+  const bc=badge[o.status||"Placed"]||badge.Placed;
+  let items=[]; try{ items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]"); }catch(e){ items=[]; }
+  const dt=o.created_at?new Date(o.created_at):null;
+  const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+  return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,overflow:"hidden"}}>
+    <div style={{padding:"16px 18px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:10,alignItems:"flex-start"}}>
+      <div style={{minWidth:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(o.id)}</strong>
+          <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:999,color:bc[0],background:bc[1],border:bc[1]==="transparent"?"1px solid "+T.line:"none",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{o.status||"Placed"}</span>
+          <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.paid?"rgba(31,158,87,.15)":"rgba(232,130,12,.15)",color:o.paid?"#34c77b":T.marigold,fontFamily:"var(--mono)",fontWeight:600}}>{o.paid?"PAID ONLINE":"COD"}</span>
+        </div>
+        <div style={{fontSize:13,color:T.inkSoft,marginTop:7,lineHeight:1.6}}>
+          <strong style={{color:T.ink}}>{esc(o.name)}</strong> · 📱 {esc(o.phone)}{o.email?" · ✉ "+esc(o.email):""}<br/>
+          📍 {esc(o.line1)}{o.line2?", "+esc(o.line2):""}, {esc(o.city)}, {esc(o.state)} — {esc(o.pincode)}
+        </div>
+      </div>
+      <div style={{textAlign:"right",flexShrink:0}}>
+        <div style={{fontSize:18,fontWeight:700,color:T.ink,fontFamily:"var(--display)"}}>{rupee(o.total)}</div>
+        {dstr && <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",marginTop:2}}>{dstr}</div>}
+      </div>
     </div>
-    <div className="vg-admin" style={{display:"grid",gridTemplateColumns:"150px 1fr 1fr auto",gap:10,marginTop:12,alignItems:"center"}}>
-      <select style={S.input} value={status} onChange={e=>setStatus(e.target.value)}>{["Placed","Packed","Shipped","Delivered","Cancelled"].map(s=><option key={s}>{s}</option>)}</select>
-      <input style={S.input} value={carrier} onChange={e=>setCarrier(e.target.value)} placeholder="Carrier (e.g. Delhivery)" />
-      <input style={S.input} value={url} onChange={e=>setUrl(e.target.value)} placeholder="Tracking link (optional)" />
-      <button onClick={save} disabled={saving} style={{...S.addBtn,width:"auto",marginTop:0,padding:"10px 18px"}}>{saving?"…":"Save"}</button>
+    {items.length>0 && <div style={{padding:"0 18px 14px"}}>
+      <button onClick={()=>setOpen(!open)} style={{...S.linkBtn,fontSize:12.5}}>{open?"▾ Hide items":"▸ "+items.reduce((n,i)=>n+(i.qty||1),0)+" item"+(items.reduce((n,i)=>n+(i.qty||1),0)===1?"":"s")}</button>
+      {open && <div style={{marginTop:8,background:T.bg||"#0f0d0a",borderRadius:10,padding:"10px 12px"}}>
+        {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+      </div>}
+    </div>}
+    <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(255,255,255,.015)"}}>
+      <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:8}}>Update status & tracking</div>
+      <div className="vg-admin" style={{display:"grid",gridTemplateColumns:"150px 1fr 1fr auto",gap:10,alignItems:"center"}}>
+        <select style={S.input} value={status} onChange={e=>setStatus(e.target.value)}>{["Placed","Packed","Shipped","Delivered","Cancelled"].map(s=><option key={s}>{s}</option>)}</select>
+        <input style={S.input} value={carrier} onChange={e=>setCarrier(e.target.value)} placeholder="Carrier (e.g. Delhivery)" />
+        <input style={S.input} value={url} onChange={e=>setUrl(e.target.value)} placeholder="Tracking link (optional)" />
+        <button onClick={save} disabled={saving} style={{...S.addBtn,width:"auto",marginTop:0,padding:"10px 18px"}}>{saving?"…":"Save"}</button>
+      </div>
+      {msg && <p style={{fontSize:12,color:msg.indexOf("Saved")===0?T.teal:T.danger,marginTop:8,fontFamily:"var(--mono)"}}>{msg}</p>}
     </div>
-    {msg && <p style={{fontSize:12,color:msg.indexOf("Saved")===0?T.teal:T.danger,marginTop:8,fontFamily:"var(--mono)"}}>{msg}</p>}
   </div>);
 }
 
