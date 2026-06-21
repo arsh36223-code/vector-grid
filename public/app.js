@@ -1503,10 +1503,16 @@ function TrackOrder({
   const [res, setRes] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [reason, setReason] = useState("");
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelMsg, setCancelMsg] = useState("");
   const steps = ["Placed", "Packed", "Shipped", "Delivered"];
   const submit = async () => {
     setErr("");
     setRes(null);
+    setShowCancel(false);
+    setCancelMsg("");
     const cleanId = id.trim().replace(/^#/, "");
     if (!cleanId || phone.replace(/\D/g, "").length < 10) {
       setErr("Enter your order ID and 10-digit phone number.");
@@ -1534,6 +1540,38 @@ function TrackOrder({
     } catch (e) {
       setBusy(false);
       setErr("Something went wrong. Please try again.");
+    }
+  };
+  const doCancel = async () => {
+    setCancelBusy(true);
+    setCancelMsg("");
+    try {
+      const r = await fetch(API + "/api/cancel-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: res.id,
+          phone,
+          reason
+        })
+      });
+      const j = await r.json();
+      setCancelBusy(false);
+      if (r.ok) {
+        setCancelMsg(j.message || "Done.");
+        setShowCancel(false);
+        if (j.cancelled) setRes({
+          ...res,
+          status: "Cancelled"
+        });
+      } else {
+        setCancelMsg(j.error || "Couldn't process your request.");
+      }
+    } catch (e) {
+      setCancelBusy(false);
+      setCancelMsg("Something went wrong. Please try again.");
     }
   };
   const idx = res ? res.status === "Cancelled" ? -1 : steps.indexOf(res.status) : -1;
@@ -1743,7 +1781,76 @@ function TrackOrder({
         marginTop: 14,
         fontFamily: "var(--mono)"
       }
-    }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")));
+    }, "Updated ", new Date(res.updatedAt).toLocaleString("en-IN")), cancelMsg && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 14,
+        background: "rgba(39,179,163,.1)",
+        border: "1px solid " + T.teal,
+        borderRadius: 10,
+        padding: "12px 14px",
+        fontSize: 13,
+        color: T.ink,
+        lineHeight: 1.5
+      }
+    }, cancelMsg), !cancelled && !cancelMsg && (() => {
+      const beforeShip = res.status === "Placed" || res.status === "Packed";
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          marginTop: 18,
+          borderTop: "1px solid " + T.line,
+          paddingTop: 16
+        }
+      }, !showCancel ? /*#__PURE__*/React.createElement("button", {
+        onClick: () => setShowCancel(true),
+        style: {
+          ...S.linkBtn,
+          color: T.danger,
+          fontSize: 13
+        }
+      }, beforeShip ? "Cancel this order" : "Request a return / refund") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+        style: {
+          fontSize: 13,
+          color: T.inkSoft,
+          margin: "0 0 10px",
+          lineHeight: 1.55
+        }
+      }, beforeShip ? "Your order hasn't shipped yet, so you can cancel it now. If you paid online, your refund will be processed to your original payment method." : "This order has already been dispatched. You can request a return/refund and our team will review it as per our 7-day return policy."), /*#__PURE__*/React.createElement("textarea", {
+        value: reason,
+        onChange: e => setReason(e.target.value),
+        maxLength: 300,
+        placeholder: "Reason (optional) — e.g. ordered by mistake, wrong item, changed my mind",
+        style: {
+          ...S.input,
+          minHeight: 64,
+          resize: "vertical",
+          fontFamily: "inherit"
+        }
+      }), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          gap: 10,
+          marginTop: 10,
+          flexWrap: "wrap"
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: doCancel,
+        disabled: cancelBusy,
+        style: {
+          ...S.primaryBtn,
+          background: T.danger,
+          width: "auto",
+          padding: "10px 20px",
+          ...(cancelBusy ? S.addBtnDisabled : {})
+        }
+      }, cancelBusy ? "Submitting…" : beforeShip ? "Confirm cancellation" : "Submit request"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setShowCancel(false);
+          setReason("");
+        },
+        disabled: cancelBusy,
+        style: S.linkBtn
+      }, "Keep my order"))));
+    })());
   })()));
 }
 function AdminOrders({

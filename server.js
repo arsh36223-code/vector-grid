@@ -339,6 +339,73 @@ app.post("/api/track", async (req, res) => {
   } catch (e) { console.error("track failed:", e && e.message); res.status(500).json({ error: "Couldn't fetch your order. Please try again." }); }
 });
 
+// ---- Customer: cancel an order (before dispatch) or request a return/refund (after) ----
+async function sendMail(to, subject, text, replyTo) {
+  if (!RESEND_API_KEY || !to) return;
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: ORDER_FROM, to: [to], reply_to: replyTo, subject, text }),
+  });
+  if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 160));
+}
+
+app.post("/api/cancel-request", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Not available right now. Please contact us." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase().replace(/^#/, "");
+  const phone = String((req.body && req.body.phone) || "").replace(/\D/g, "").slice(-10);
+  const reason = String((req.body && req.body.reason) || "").trim().slice(0, 300);
+  if (!id || phone.length !== 10) return res.status(400).json({ error: "Enter your order ID and the 10-digit phone number you ordered with." });
+  try {
+    const r = await pool.query("SELECT id,name,email,phone,total,paid,payment_id,status FROM orders WHERE id=$1 AND phone=$2", [id, phone]);
+    if (!r.rows.length) return res.status(404).json({ error: "No order found with that ID and phone number." });
+    const o = r.rows[0];
+    const st = o.status || "Placed";
+    if (st === "Cancelled") return res.status(400).json({ error: "This order is already cancelled." });
+
+    // Before dispatch -> allow self-cancel. After dispatch -> record a return/refund request.
+    const canSelfCancel = (st === "Placed" || st === "Packed");
+    if (canSelfCancel) {
+      await pool.query("UPDATE orders SET status='Cancelled', updated_at=now() WHERE id=$1", [id]);
+    }
+
+    const action = canSelfCancel ? "ORDER CANCELLED BY CUSTOMER" : "RETURN / REFUND REQUEST";
+    const sellerBody = [
+      `${action}`,
+      `Order: ${o.id}`,
+      `Customer: ${o.name} | ${o.phone}${o.email ? " | " + o.email : ""}`,
+      `Amount: ₹${o.total}  |  ${o.paid ? "PAID ONLINE" : "COD"}`,
+      o.paid && o.payment_id ? `Razorpay payment id: ${o.payment_id}` : "",
+      reason ? `Reason: ${reason}` : "Reason: (not provided)",
+      "",
+      canSelfCancel
+        ? (o.paid
+            ? "ACTION NEEDED: Order is now marked Cancelled. Since it was PAID ONLINE, please process the refund from your Razorpay dashboard (Transactions → find this payment → Refund)."
+            : "Order is now marked Cancelled. It was COD, so no refund is needed.")
+        : "ACTION NEEDED: This order was already dispatched/delivered. Review the return request per your policy, then refund via Razorpay if approved.",
+    ].filter(Boolean).join("\n");
+
+    try { await sendMail(ORDER_TO, `${canSelfCancel ? "Cancelled" : "Refund request"} — order ${o.id}`, sellerBody, o.email || undefined); } catch (e) { console.error("cancel notify(seller) failed:", e && e.message); }
+
+    if (o.email) {
+      const buyerBody = canSelfCancel
+        ? [`Hi ${o.name},`, "", `Your order ${o.id} has been cancelled as requested.`,
+            o.paid ? `Since you paid online, your refund of ₹${o.total} will be processed to your original payment method. Refunds usually take 5–7 business days.` : "As this was a Cash-on-Delivery order, no payment was taken, so nothing needs to be refunded.",
+            "", "If this wasn't you, please contact us right away.", "", "— Team Vector Grid"].join("\n")
+        : [`Hi ${o.name},`, "", `We've received your return/refund request for order ${o.id}.`,
+            "Our team will review it and get back to you shortly. If approved, refunds are processed to your original payment method within 5–7 business days.",
+            "", "— Team Vector Grid"].join("\n");
+      try { await sendMail(o.email, canSelfCancel ? `Your order ${o.id} is cancelled` : `Refund request received — ${o.id}`, buyerBody, ORDER_TO); } catch (e) { console.error("cancel notify(buyer) failed:", e && e.message); }
+    }
+
+    console.log(`==== ${action} ${o.id} ====\n${sellerBody}\n=========`);
+    res.json({ ok: true, cancelled: canSelfCancel, paid: !!o.paid,
+      message: canSelfCancel
+        ? (o.paid ? "Your order has been cancelled. Your refund will be processed to your original payment method within 5–7 business days." : "Your order has been cancelled. No payment was taken (Cash on Delivery).")
+        : "Your return/refund request has been received. Our team will review it and contact you shortly." });
+  } catch (e) { console.error("cancel-request failed:", e && e.message); res.status(500).json({ error: "Couldn't process your request. Please try again or contact us." }); }
+});
+
 // ---- Seller: list orders ----
 app.get("/api/admin/orders", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });

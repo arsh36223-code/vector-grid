@@ -440,9 +440,11 @@ function Policy({pageKey,onBack}){
 function TrackOrder({onBack}){
   const [id,setId]=useState(""); const [phone,setPhone]=useState("");
   const [res,setRes]=useState(null); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [showCancel,setShowCancel]=useState(false); const [reason,setReason]=useState("");
+  const [cancelBusy,setCancelBusy]=useState(false); const [cancelMsg,setCancelMsg]=useState("");
   const steps=["Placed","Packed","Shipped","Delivered"];
   const submit=async()=>{
-    setErr(""); setRes(null);
+    setErr(""); setRes(null); setShowCancel(false); setCancelMsg("");
     const cleanId=id.trim().replace(/^#/,"");
     if(!cleanId||phone.replace(/\D/g,"").length<10){ setErr("Enter your order ID and 10-digit phone number."); return; }
     setBusy(true);
@@ -450,6 +452,15 @@ function TrackOrder({onBack}){
       const j=await r.json(); setBusy(false);
       if(r.ok){ setRes(j); } else { setErr(j.error||"Couldn't find that order."); }
     }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
+  };
+  const doCancel=async()=>{
+    setCancelBusy(true); setCancelMsg("");
+    try{ const r=await fetch(API+"/api/cancel-request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:res.id,phone,reason})});
+      const j=await r.json(); setCancelBusy(false);
+      if(r.ok){ setCancelMsg(j.message||"Done."); setShowCancel(false);
+        if(j.cancelled) setRes({...res,status:"Cancelled"});
+      } else { setCancelMsg(j.error||"Couldn't process your request."); }
+    }catch(e){ setCancelBusy(false); setCancelMsg("Something went wrong. Please try again."); }
   };
   const idx = res ? (res.status==="Cancelled"?-1:steps.indexOf(res.status)) : -1;
   return (<main style={{...S.main,maxWidth:620}}>
@@ -482,6 +493,28 @@ function TrackOrder({onBack}){
         </div>}
         {res.trackingUrl && <a href={res.trackingUrl} target="_blank" rel="noopener noreferrer" style={{...S.primaryBtn,display:"inline-block",textAlign:"center",textDecoration:"none",marginTop:18,padding:"11px 22px"}}>Track shipment{res.trackingCarrier?` · ${esc(res.trackingCarrier)}`:""}</a>}
         <p style={{fontSize:12,color:T.muted,marginTop:14,fontFamily:"var(--mono)"}}>Updated {new Date(res.updatedAt).toLocaleString("en-IN")}</p>
+        {cancelMsg && <div style={{marginTop:14,background:"rgba(39,179,163,.1)",border:"1px solid "+T.teal,borderRadius:10,padding:"12px 14px",fontSize:13,color:T.ink,lineHeight:1.5}}>{cancelMsg}</div>}
+        {!cancelled && !cancelMsg && (()=>{
+          const beforeShip=(res.status==="Placed"||res.status==="Packed");
+          return (<div style={{marginTop:18,borderTop:"1px solid "+T.line,paddingTop:16}}>
+            {!showCancel ? (
+              <button onClick={()=>setShowCancel(true)} style={{...S.linkBtn,color:T.danger,fontSize:13}}>{beforeShip?"Cancel this order":"Request a return / refund"}</button>
+            ) : (
+              <div>
+                <p style={{fontSize:13,color:T.inkSoft,margin:"0 0 10px",lineHeight:1.55}}>
+                  {beforeShip
+                    ? "Your order hasn't shipped yet, so you can cancel it now. If you paid online, your refund will be processed to your original payment method."
+                    : "This order has already been dispatched. You can request a return/refund and our team will review it as per our 7-day return policy."}
+                </p>
+                <textarea value={reason} onChange={e=>setReason(e.target.value)} maxLength={300} placeholder="Reason (optional) — e.g. ordered by mistake, wrong item, changed my mind" style={{...S.input,minHeight:64,resize:"vertical",fontFamily:"inherit"}} />
+                <div style={{display:"flex",gap:10,marginTop:10,flexWrap:"wrap"}}>
+                  <button onClick={doCancel} disabled={cancelBusy} style={{...S.primaryBtn,background:T.danger,width:"auto",padding:"10px 20px",...(cancelBusy?S.addBtnDisabled:{})}}>{cancelBusy?"Submitting…":(beforeShip?"Confirm cancellation":"Submit request")}</button>
+                  <button onClick={()=>{setShowCancel(false);setReason("");}} disabled={cancelBusy} style={S.linkBtn}>Keep my order</button>
+                </div>
+              </div>
+            )}
+          </div>);
+        })()}
       </div>); })()}
     </section>
   </main>);
