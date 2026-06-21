@@ -171,8 +171,6 @@ const INFO = {
   // your seller / registered name
   email: "vectorgridsupport@gmail.com",
   // your contact email
-  phone: "+91 8439585938",
-  // your contact number
   address: "P/3 Mayapur, Haridwar, Uttarakhand, India",
   // your business address
   jurisdiction: "Bhopal, Madhya Pradesh",
@@ -202,7 +200,11 @@ const POLICIES = {
   },
   contact: {
     title: "Contact Us",
-    paras: [`${INFO.legalName}`, `Email: ${INFO.email}`, `Phone: ${INFO.phone}`, `Address: ${INFO.address}`, "We aim to respond to all queries within 1–2 business days."]
+    paras: [`${INFO.legalName}`, `Email: ${INFO.email}`, `Address: ${INFO.address}`, "We aim to respond to all queries within 1–2 business days."]
+  },
+  about: {
+    title: "About Vector Grid",
+    paras: [`${INFO.legalName} is an independent online store on a simple mission: bring you genuinely good things, at fair prices, delivered to your doorstep anywhere in India.`, "We're not a giant marketplace stuffed with endless listings. Instead, every product is handpicked — we look for pieces that are well-made, useful, and worth owning, then make them easy to buy in just a few taps.", "From the moment you order to the moment it arrives, we keep things transparent: clear pricing, honest delivery estimates, Cash on Delivery if you prefer it, and order tracking so you always know where your package is.", `We're based in ${INFO.address}, and we ship to every pincode across the country. Whether it's home decor, daily essentials, or a little treat for yourself, we want Vector Grid to feel like a store that actually has your back.`, `Got a question or just want to say hi? Reach us anytime at ${INFO.email} — a real person will get back to you.`]
   }
 };
 function App() {
@@ -461,6 +463,17 @@ function Header({
   onHome,
   onTrack
 }) {
+  const [bounce, setBounce] = useState(false);
+  const prev = React.useRef(cartCount);
+  useEffect(() => {
+    if (cartCount > prev.current) {
+      setBounce(true);
+      const t = setTimeout(() => setBounce(false), 520);
+      prev.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prev.current = cartCount;
+  }, [cartCount]);
   return /*#__PURE__*/React.createElement("header", {
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
@@ -497,6 +510,7 @@ function Header({
   }, "Track order"), /*#__PURE__*/React.createElement("button", {
     onClick: onCart,
     style: S.cartBtn,
+    className: bounce ? "vg-cart-bounce" : "",
     "aria-label": "Open cart"
   }, "Cart", cartCount > 0 && /*#__PURE__*/React.createElement("span", {
     style: S.cartBadge
@@ -636,25 +650,59 @@ function Hero({
     style: S.heroContent
   }, /*#__PURE__*/React.createElement("p", {
     style: S.heroEyebrow
-  }, "Curated goods · delivered across India ✈"), /*#__PURE__*/React.createElement("h1", {
+  }, "✦ curated goods · delivered across india"), /*#__PURE__*/React.createElement("h1", {
     style: S.heroTitle
-  }, "Things worth", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+  }, "stuff you'll", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
     style: S.heroAccent
-  }, "waiting"), " for."), /*#__PURE__*/React.createElement("p", {
+  }, "actually"), " love."), /*#__PURE__*/React.createElement("p", {
     style: S.heroLede
-  }, "A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap — Cash on Delivery or secure online payment."), /*#__PURE__*/React.createElement("div", {
+  }, "Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. No cap. 🛒"), /*#__PURE__*/React.createElement("div", {
     style: S.heroBtns
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onShop,
     style: S.heroPrimary
-  }, "Shop the collection"), /*#__PURE__*/React.createElement("button", {
+  }, "Shop the drop →"), /*#__PURE__*/React.createElement("button", {
     onClick: onTrack,
     style: S.heroGhost
-  }, "Track your order"))), /*#__PURE__*/React.createElement("button", {
+  }, "Track order")), /*#__PURE__*/React.createElement("p", {
+    style: S.heroProof
+  }, "⭐️⭐️⭐️⭐️⭐️ \xA0loved by shoppers across India")), /*#__PURE__*/React.createElement("button", {
     onClick: onShop,
     style: S.heroScroll,
     "aria-label": "Scroll to products"
   }, "↓"));
+}
+function AddButton({
+  onAdd,
+  out,
+  full,
+  label
+}) {
+  const [done, setDone] = useState(false);
+  const click = () => {
+    if (out || done) return;
+    onAdd();
+    setDone(true);
+    setTimeout(() => setDone(false), 1100);
+  };
+  const base = full ? {
+    ...S.addBtn,
+    marginTop: 18
+  } : S.addBtn;
+  return /*#__PURE__*/React.createElement("button", {
+    disabled: out,
+    onClick: click,
+    className: done ? "vg-added" : "",
+    style: {
+      ...base,
+      ...(out ? S.addBtnDisabled : {}),
+      ...(done ? {
+        background: "linear-gradient(95deg,#1f9e57,#27B3A3)",
+        color: "#fff",
+        borderColor: "transparent"
+      } : {})
+    }
+  }, out ? label && label.out || "Sold out" : done ? "Added ✓" : label && label.add || "Add to cart");
 }
 function Store({
   products,
@@ -685,19 +733,57 @@ function Store({
       });
     },
     onTrack: onTrack
-  }), /*#__PURE__*/React.createElement("main", {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: S.marquee,
+    className: "vg-marquee",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.marqueeTrack,
+    className: "vg-marquee-track"
+  }, Array.from({
+    length: 2
+  }).map((_, k) => /*#__PURE__*/React.createElement("span", {
+    key: k,
+    style: {
+      display: "inline-flex"
+    }
+  }, ["FREE SHIPPING OVER ₹999", "✦", "CASH ON DELIVERY", "✦", "7-DAY EASY RETURNS", "✦", "SHIPS TO EVERY PINCODE", "✦", "SECURE RAZORPAY CHECKOUT", "✦", "HANDPICKED GOODS", "✦"].map((t, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    style: {
+      padding: "0 18px",
+      fontFamily: "var(--mono)",
+      fontWeight: 700,
+      fontSize: 13,
+      letterSpacing: ".08em",
+      color: t === "✦" ? "#13100D" : "#13100D"
+    }
+  }, t)))))), /*#__PURE__*/React.createElement("main", {
     style: S.main,
     id: "shop"
   }, /*#__PURE__*/React.createElement("div", {
-    style: S.trustBar,
-    className: "vg-trust"
-  }, [["✈️", "Ships pan-India"], ["↩", "Easy 7-day returns"], ["₹", "COD available"], ["✓", "Secure Razorpay checkout"]].map(([i, t]) => /*#__PURE__*/React.createElement("span", {
+    style: S.featRow,
+    className: "vg-feat"
+  }, [["🚚", "Fast pan-India", "Dispatched in 24–48h"], ["💸", "COD available", "Pay when it lands"], ["↩️", "7-day returns", "No-stress shopping"], ["🔒", "100% secure", "Razorpay protected"]].map(([i, t, s]) => /*#__PURE__*/React.createElement("div", {
     key: t,
-    style: S.trustItem
+    style: S.featCard,
+    className: "vg-feat-card"
   }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true",
-    style: S.trustIcon
-  }, i), t))), /*#__PURE__*/React.createElement("div", {
+    style: S.featIcon
+  }, i), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: S.featTitle
+  }, t), /*#__PURE__*/React.createElement("div", {
+    style: S.featSub
+  }, s))))), /*#__PURE__*/React.createElement("div", {
+    style: S.shopHead
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: S.shopHeadTitle
+  }, "Shop the drop ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontStyle: "normal"
+    }
+  }, "🛍️")), /*#__PURE__*/React.createElement("p", {
+    style: S.shopHeadSub
+  }, "Curated picks, fresh finds — tap any item to peek.")), /*#__PURE__*/React.createElement("div", {
     style: S.toolbar,
     className: "vg-toolbar"
   }, /*#__PURE__*/React.createElement("div", {
@@ -832,15 +918,46 @@ function Store({
       style: S.price
     }, rupee(p.price)), p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
       style: S.mrp
-    }, rupee(p.mrp))), /*#__PURE__*/React.createElement("button", {
-      disabled: out,
-      onClick: () => onAdd(p.id),
-      style: {
-        ...S.addBtn,
-        ...(out ? S.addBtnDisabled : {})
-      }
-    }, out ? "Sold out" : "Add to cart")));
-  }))));
+    }, rupee(p.mrp))), /*#__PURE__*/React.createElement(AddButton, {
+      onAdd: () => onAdd(p.id),
+      out: out
+    })));
+  })), /*#__PURE__*/React.createElement("section", {
+    style: S.aboutBand
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.aboutInner
+  }, /*#__PURE__*/React.createElement("p", {
+    style: S.aboutEyebrow
+  }, "✦ why vector grid"), /*#__PURE__*/React.createElement("h2", {
+    style: S.aboutTitle
+  }, "Good stuff, fair prices,", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: S.heroAccent
+  }, "delivered to your door.")), /*#__PURE__*/React.createElement("p", {
+    style: S.aboutText
+  }, "We're a small, independent store — not a giant marketplace. Every product is handpicked to be well-made, useful, and worth owning. Clear pricing, honest delivery estimates, Cash on Delivery if you like, and order tracking so you always know where your package is."), /*#__PURE__*/React.createElement("div", {
+    style: S.aboutStats,
+    className: "vg-about-stats"
+  }, [["📦", "Every pincode", "We ship across all of India"], ["🤝", "Real humans", "A person replies to every query"], ["🔄", "Easy returns", "7-day no-stress return window"]].map(([i, t, s]) => /*#__PURE__*/React.createElement("div", {
+    key: t,
+    style: S.aboutStat
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 26
+    }
+  }, i), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      color: T.ink,
+      marginTop: 8,
+      fontSize: 15
+    }
+  }, t), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      color: T.inkSoft,
+      marginTop: 3
+    }
+  }, s))))))));
 }
 function QuickView({
   product,
@@ -989,15 +1106,15 @@ function QuickView({
       color: out ? T.danger : T.teal,
       marginTop: 14
     }
-  }, out ? "Out of stock" : "In stock · " + product.stock + " available"), /*#__PURE__*/React.createElement("button", {
-    disabled: out,
-    onClick: onAdd,
-    style: {
-      ...S.addBtn,
-      ...(out ? S.addBtnDisabled : {}),
-      marginTop: 18
+  }, out ? "Out of stock" : "In stock · " + product.stock + " available"), /*#__PURE__*/React.createElement(AddButton, {
+    onAdd: onAdd,
+    out: out,
+    full: true,
+    label: {
+      add: "Add to cart",
+      out: "Unavailable"
     }
-  }, out ? "Unavailable" : "Add to cart"))), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "0 28px 28px",
       borderTop: "1px solid " + T.line,
@@ -3596,7 +3713,7 @@ function Footer({
   storeName,
   onNav
 }) {
-  const links = [["Track order", "track"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
+  const links = [["Track order", "track"], ["About", "about"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
   return /*#__PURE__*/React.createElement("footer", {
     style: S.footer
   }, /*#__PURE__*/React.createElement("div", {
@@ -3825,6 +3942,13 @@ const S = {
     maxWidth: 520,
     margin: "22px 0 30px"
   },
+  heroProof: {
+    marginTop: 22,
+    fontFamily: "var(--mono)",
+    fontSize: 12.5,
+    color: "rgba(251,250,246,.6)",
+    letterSpacing: ".02em"
+  },
   heroBtns: {
     display: "flex",
     gap: 12,
@@ -3832,13 +3956,14 @@ const S = {
   },
   heroPrimary: {
     border: "none",
-    background: "#E8820C",
+    background: "linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 800,
     fontSize: 15,
     borderRadius: 999,
-    padding: "13px 26px",
-    boxShadow: "0 10px 30px rgba(232,130,12,.35)"
+    padding: "14px 28px",
+    boxShadow: "0 12px 34px rgba(232,130,12,.45)",
+    letterSpacing: ".01em"
   },
   heroGhost: {
     border: "1.5px solid rgba(251,250,246,.3)",
@@ -3873,6 +3998,108 @@ const S = {
     border: "1px solid " + T.line,
     borderRadius: 12,
     marginBottom: 22
+  },
+  marquee: {
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    background: "linear-gradient(90deg,#F3A23E,#E8820C 50%,#27B3A3)",
+    padding: "11px 0"
+  },
+  marqueeTrack: {
+    display: "inline-flex",
+    whiteSpace: "nowrap"
+  },
+  featRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4,1fr)",
+    gap: 12,
+    margin: "26px 0 8px"
+  },
+  featCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "linear-gradient(180deg,#221C16,#191510)",
+    border: "1px solid rgba(255,255,255,.08)",
+    borderRadius: 16,
+    padding: "14px 16px"
+  },
+  featIcon: {
+    fontSize: 24,
+    flexShrink: 0
+  },
+  featTitle: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: T.ink
+  },
+  featSub: {
+    fontSize: 11.5,
+    color: T.muted,
+    marginTop: 2,
+    fontFamily: "var(--mono)"
+  },
+  shopHead: {
+    margin: "30px 0 14px"
+  },
+  shopHeadTitle: {
+    fontFamily: "var(--display)",
+    fontSize: "clamp(26px,4vw,38px)",
+    fontWeight: 700,
+    letterSpacing: "-.02em",
+    margin: 0,
+    color: T.ink
+  },
+  shopHeadSub: {
+    fontSize: 14,
+    color: T.inkSoft,
+    marginTop: 6
+  },
+  aboutBand: {
+    marginTop: 56,
+    padding: "clamp(32px,5vw,56px)",
+    borderRadius: 24,
+    background: "radial-gradient(120% 140% at 15% 10%, rgba(232,130,12,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#221C16,#191510)",
+    border: "1px solid rgba(255,255,255,.08)"
+  },
+  aboutInner: {
+    maxWidth: 680
+  },
+  aboutEyebrow: {
+    fontFamily: "var(--mono)",
+    fontSize: 12,
+    letterSpacing: ".12em",
+    textTransform: "uppercase",
+    color: "#F3A23E",
+    margin: "0 0 14px"
+  },
+  aboutTitle: {
+    fontFamily: "var(--display)",
+    fontSize: "clamp(26px,4.4vw,42px)",
+    fontWeight: 700,
+    letterSpacing: "-.02em",
+    lineHeight: 1.08,
+    margin: 0,
+    color: T.ink
+  },
+  aboutText: {
+    fontSize: "clamp(14px,1.5vw,16px)",
+    color: T.inkSoft,
+    lineHeight: 1.65,
+    margin: "18px 0 0",
+    maxWidth: 600
+  },
+  aboutStats: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3,1fr)",
+    gap: 16,
+    marginTop: 28
+  },
+  aboutStat: {
+    background: "rgba(0,0,0,.18)",
+    border: "1px solid rgba(255,255,255,.06)",
+    borderRadius: 14,
+    padding: "18px 16px"
   },
   trustItem: {
     display: "inline-flex",
@@ -3974,9 +4201,9 @@ const S = {
     whiteSpace: "nowrap"
   },
   chipOn: {
-    borderColor: T.marigold,
-    background: T.marigold,
-    color: "#1a1309"
+    borderColor: "transparent",
+    background: "linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",
+    color: "#fff"
   },
   countText: {
     fontFamily: "var(--mono)",
@@ -4050,13 +4277,14 @@ const S = {
     position: "absolute",
     top: 10,
     left: 10,
-    background: T.teal,
+    background: "linear-gradient(95deg,#27B3A3,#1f9e8c)",
     color: "#fff",
-    fontSize: 11,
-    fontWeight: 700,
-    padding: "4px 9px",
+    fontSize: 12,
+    fontWeight: 800,
+    padding: "5px 11px",
     borderRadius: 999,
-    fontFamily: "var(--mono)"
+    fontFamily: "var(--mono)",
+    boxShadow: "0 4px 14px rgba(39,179,163,.4)"
   },
   prodName: {
     fontFamily: "var(--display)",

@@ -38,7 +38,6 @@ function cardReset(e){ const el=e.currentTarget; el.style.transition=""; el.styl
 const INFO = {
   legalName: "Vector Grid",                 // your seller / registered name
   email: "vectorgridsupport@gmail.com",     // your contact email
-  phone: "+91 8439585938",                  // your contact number
   address: "P/3 Mayapur, Haridwar, Uttarakhand, India",  // your business address
   jurisdiction: "Bhopal, Madhya Pradesh",   // city/state for legal jurisdiction
   deliveryDays: "3–7 business days",        // typical delivery time
@@ -79,9 +78,15 @@ const POLICIES = {
   contact: { title: "Contact Us", paras: [
     `${INFO.legalName}`,
     `Email: ${INFO.email}`,
-    `Phone: ${INFO.phone}`,
     `Address: ${INFO.address}`,
     "We aim to respond to all queries within 1–2 business days.",
+  ]},
+  about: { title: "About Vector Grid", paras: [
+    `${INFO.legalName} is an independent online store on a simple mission: bring you genuinely good things, at fair prices, delivered to your doorstep anywhere in India.`,
+    "We're not a giant marketplace stuffed with endless listings. Instead, every product is handpicked — we look for pieces that are well-made, useful, and worth owning, then make them easy to buy in just a few taps.",
+    "From the moment you order to the moment it arrives, we keep things transparent: clear pricing, honest delivery estimates, Cash on Delivery if you prefer it, and order tracking so you always know where your package is.",
+    `We're based in ${INFO.address}, and we ship to every pincode across the country. Whether it's home decor, daily essentials, or a little treat for yourself, we want Vector Grid to feel like a store that actually has your back.`,
+    `Got a question or just want to say hi? Reach us anytime at ${INFO.email} — a real person will get back to you.`,
   ]},
 };
 
@@ -180,11 +185,13 @@ function App(){
 }
 
 function Header({storeName,cartCount,onCart,onHome,onTrack}){
+  const [bounce,setBounce]=useState(false); const prev=React.useRef(cartCount);
+  useEffect(()=>{ if(cartCount>prev.current){ setBounce(true); const t=setTimeout(()=>setBounce(false),520); prev.current=cartCount; return ()=>clearTimeout(t); } prev.current=cartCount; },[cartCount]);
   return (<header style={S.header}><div style={S.headerInner}>
     <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-mark.svg" alt="Vector Grid" width="34" height="34" style={{display:"block"}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
     <div style={{display:"flex",alignItems:"center",gap:14}}>
       <button onClick={onTrack} style={S.trackLink}>Track order</button>
-      <button onClick={onCart} style={S.cartBtn} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
+      <button onClick={onCart} style={S.cartBtn} className={bounce?"vg-cart-bounce":""} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
     </div>
   </div></header>);
 }
@@ -225,18 +232,28 @@ function Hero({onShop,onTrack}){
     <canvas ref={ref} style={S.heroCanvas} aria-hidden="true" />
     <div style={S.heroOverlay} />
     <div style={S.heroContent}>
-      <p style={S.heroEyebrow}>Curated goods · delivered across India ✈</p>
-      <h1 style={S.heroTitle}>Things worth<br/><span style={S.heroAccent}>waiting</span> for.</h1>
-      <p style={S.heroLede}>A handpicked collection, shipped to every pincode. Search, browse, and check out in a tap — Cash on Delivery or secure online payment.</p>
+      <p style={S.heroEyebrow}>✦ curated goods · delivered across india</p>
+      <h1 style={S.heroTitle}>stuff you'll<br/><span style={S.heroAccent}>actually</span> love.</h1>
+      <p style={S.heroLede}>Handpicked drops shipped to every pincode. Browse, tap, done — Cash on Delivery or secure online pay. No cap. 🛒</p>
       <div style={S.heroBtns}>
-        <button onClick={onShop} style={S.heroPrimary}>Shop the collection</button>
-        <button onClick={onTrack} style={S.heroGhost}>Track your order</button>
+        <button onClick={onShop} style={S.heroPrimary}>Shop the drop →</button>
+        <button onClick={onTrack} style={S.heroGhost}>Track order</button>
       </div>
+      <p style={S.heroProof}>⭐️⭐️⭐️⭐️⭐️ &nbsp;loved by shoppers across India</p>
     </div>
     <button onClick={onShop} style={S.heroScroll} aria-label="Scroll to products">↓</button>
   </section>);
 }
 
+function AddButton({onAdd,out,full,label}){
+  const [done,setDone]=useState(false);
+  const click=()=>{ if(out||done) return; onAdd(); setDone(true); setTimeout(()=>setDone(false),1100); };
+  const base=full?{...S.addBtn,marginTop:18}:S.addBtn;
+  return (<button disabled={out} onClick={click} className={done?"vg-added":""}
+    style={{...base,...(out?S.addBtnDisabled:{}),...(done?{background:"linear-gradient(95deg,#1f9e57,#27B3A3)",color:"#fff",borderColor:"transparent"}:{})}}>
+    {out?(label&&label.out||"Sold out"):done?"Added ✓":(label&&label.add||"Add to cart")}
+  </button>);
+}
 function Store({products,onAdd,onQuick,onTrack}){
   const [q,setQ]=useState("");
   const [cat,setCat]=useState("All");
@@ -258,11 +275,23 @@ function Store({products,onAdd,onQuick,onTrack}){
 
   return (<>
     <Hero onShop={()=>{const e=document.getElementById("shop"); if(e) e.scrollIntoView({behavior:"smooth"});}} onTrack={onTrack} />
+    <div style={S.marquee} className="vg-marquee" aria-hidden="true">
+      <div style={S.marqueeTrack} className="vg-marquee-track">
+        {Array.from({length:2}).map((_,k)=>(<span key={k} style={{display:"inline-flex"}}>
+          {["FREE SHIPPING OVER ₹999","✦","CASH ON DELIVERY","✦","7-DAY EASY RETURNS","✦","SHIPS TO EVERY PINCODE","✦","SECURE RAZORPAY CHECKOUT","✦","HANDPICKED GOODS","✦"].map((t,i)=>(<span key={i} style={{padding:"0 18px",fontFamily:"var(--mono)",fontWeight:700,fontSize:13,letterSpacing:".08em",color:t==="✦"?"#13100D":"#13100D"}}>{t}</span>))}
+        </span>))}
+      </div>
+    </div>
     <main style={S.main} id="shop">
-    <div style={S.trustBar} className="vg-trust">
-      {[["✈️","Ships pan-India"],["↩","Easy 7-day returns"],["₹","COD available"],["✓","Secure Razorpay checkout"]].map(([i,t])=>(
-        <span key={t} style={S.trustItem}><span aria-hidden="true" style={S.trustIcon}>{i}</span>{t}</span>
+    <div style={S.featRow} className="vg-feat">
+      {[["🚚","Fast pan-India","Dispatched in 24–48h"],["💸","COD available","Pay when it lands"],["↩️","7-day returns","No-stress shopping"],["🔒","100% secure","Razorpay protected"]].map(([i,t,s])=>(
+        <div key={t} style={S.featCard} className="vg-feat-card"><span style={S.featIcon}>{i}</span><div><div style={S.featTitle}>{t}</div><div style={S.featSub}>{s}</div></div></div>
       ))}
+    </div>
+
+    <div style={S.shopHead}>
+      <h2 style={S.shopHeadTitle}>Shop the drop <span style={{fontStyle:"normal"}}>🛍️</span></h2>
+      <p style={S.shopHeadSub}>Curated picks, fresh finds — tap any item to peek.</p>
     </div>
 
     <div style={S.toolbar} className="vg-toolbar">
@@ -310,11 +339,24 @@ function Store({products,onAdd,onQuick,onTrack}){
             {p.reviewCount>0 && <div style={{display:"flex",alignItems:"center",gap:6,margin:"2px 0 4px"}}><Stars value={p.rating} size={13} /><span style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)"}}>{p.rating} ({p.reviewCount})</span></div>}
             <p style={S.prodDesc}>{esc(p.desc)}</p>
             <div style={{...S.priceRow,marginTop:"auto"}}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
-            <button disabled={out} onClick={()=>onAdd(p.id)} style={{...S.addBtn,...(out?S.addBtnDisabled:{})}}>{out?"Sold out":"Add to cart"}</button>
+            <AddButton onAdd={()=>onAdd(p.id)} out={out} />
           </div>
         </article>); })}
     </div>
     )}
+
+    <section style={S.aboutBand}>
+      <div style={S.aboutInner}>
+        <p style={S.aboutEyebrow}>✦ why vector grid</p>
+        <h2 style={S.aboutTitle}>Good stuff, fair prices,<br/><span style={S.heroAccent}>delivered to your door.</span></h2>
+        <p style={S.aboutText}>We're a small, independent store — not a giant marketplace. Every product is handpicked to be well-made, useful, and worth owning. Clear pricing, honest delivery estimates, Cash on Delivery if you like, and order tracking so you always know where your package is.</p>
+        <div style={S.aboutStats} className="vg-about-stats">
+          {[["📦","Every pincode","We ship across all of India"],["🤝","Real humans","A person replies to every query"],["🔄","Easy returns","7-day no-stress return window"]].map(([i,t,s])=>(
+            <div key={t} style={S.aboutStat}><span style={{fontSize:26}}>{i}</span><div style={{fontWeight:700,color:T.ink,marginTop:8,fontSize:15}}>{t}</div><div style={{fontSize:12.5,color:T.inkSoft,marginTop:3}}>{s}</div></div>
+          ))}
+        </div>
+      </div>
+    </section>
   </main></>);
 }
 
@@ -347,7 +389,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(product.price)}</span>{product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:T.teal,marginTop:14}}>{out?"Out of stock":"In stock · "+product.stock+" available"}</p>
-        <button disabled={out} onClick={onAdd} style={{...S.addBtn,...(out?S.addBtnDisabled:{}),marginTop:18}}>{out?"Unavailable":"Add to cart"}</button>
+        <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />
       </div>
     </div>
     <div style={{padding:"0 28px 28px",borderTop:"1px solid "+T.line,marginTop:4}}>
@@ -874,7 +916,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
 }
 
 function Footer({storeName,onNav}){
-  const links=[["Track order","track"],["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"],["Seller","admin"]];
+  const links=[["Track order","track"],["About","about"],["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"],["Seller","admin"]];
   return (<footer style={S.footer}>
     <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12,alignItems:"center"}}>
       <span style={{fontWeight:600,color:T.ink}}>{storeName}</span>
@@ -903,17 +945,34 @@ const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var
   heroTitle:{fontFamily:"var(--display)",fontWeight:700,fontSize:"clamp(40px,8vw,82px)",lineHeight:.98,letterSpacing:"-.025em",color:"#FBFAF6",margin:0,textShadow:"0 2px 40px rgba(0,0,0,.45)"},
   heroAccent:{background:"linear-gradient(90deg,#F3A23E,#E8820C 55%,#27B3A3)",WebkitBackgroundClip:"text",backgroundClip:"text",color:"transparent",fontStyle:"italic"},
   heroLede:{color:"rgba(251,250,246,.74)",fontSize:"clamp(15px,1.6vw,18px)",lineHeight:1.55,maxWidth:520,margin:"22px 0 30px"},
+  heroProof:{marginTop:22,fontFamily:"var(--mono)",fontSize:12.5,color:"rgba(251,250,246,.6)",letterSpacing:".02em"},
   heroBtns:{display:"flex",gap:12,flexWrap:"wrap"},
-  heroPrimary:{border:"none",background:"#E8820C",color:"#fff",fontWeight:700,fontSize:15,borderRadius:999,padding:"13px 26px",boxShadow:"0 10px 30px rgba(232,130,12,.35)"},
+  heroPrimary:{border:"none",background:"linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",color:"#fff",fontWeight:800,fontSize:15,borderRadius:999,padding:"14px 28px",boxShadow:"0 12px 34px rgba(232,130,12,.45)",letterSpacing:".01em"},
   heroGhost:{border:"1.5px solid rgba(251,250,246,.3)",background:"rgba(251,250,246,.04)",color:"#FBFAF6",fontWeight:600,fontSize:15,borderRadius:999,padding:"13px 24px"},
   heroScroll:{position:"absolute",bottom:18,left:"50%",transform:"translateX(-50%)",zIndex:2,border:"1px solid rgba(251,250,246,.25)",background:"rgba(251,250,246,.06)",color:"#FBFAF6",borderRadius:999,width:38,height:38,fontSize:16},
   trustBar:{display:"flex",flexWrap:"wrap",gap:"8px 18px",alignItems:"center",padding:"12px 16px",background:T.tint,border:"1px solid "+T.line,borderRadius:12,marginBottom:22},
+  marquee:{overflow:"hidden",whiteSpace:"nowrap",background:"linear-gradient(90deg,#F3A23E,#E8820C 50%,#27B3A3)",padding:"11px 0"},
+  marqueeTrack:{display:"inline-flex",whiteSpace:"nowrap"},
+  featRow:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,margin:"26px 0 8px"},
+  featCard:{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,padding:"14px 16px"},
+  featIcon:{fontSize:24,flexShrink:0},
+  featTitle:{fontSize:14,fontWeight:700,color:T.ink}, featSub:{fontSize:11.5,color:T.muted,marginTop:2,fontFamily:"var(--mono)"},
+  shopHead:{margin:"30px 0 14px"},
+  shopHeadTitle:{fontFamily:"var(--display)",fontSize:"clamp(26px,4vw,38px)",fontWeight:700,letterSpacing:"-.02em",margin:0,color:T.ink},
+  shopHeadSub:{fontSize:14,color:T.inkSoft,marginTop:6},
+  aboutBand:{marginTop:56,padding:"clamp(32px,5vw,56px)",borderRadius:24,background:"radial-gradient(120% 140% at 15% 10%, rgba(232,130,12,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.08)"},
+  aboutInner:{maxWidth:680},
+  aboutEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#F3A23E",margin:"0 0 14px"},
+  aboutTitle:{fontFamily:"var(--display)",fontSize:"clamp(26px,4.4vw,42px)",fontWeight:700,letterSpacing:"-.02em",lineHeight:1.08,margin:0,color:T.ink},
+  aboutText:{fontSize:"clamp(14px,1.5vw,16px)",color:T.inkSoft,lineHeight:1.65,margin:"18px 0 0",maxWidth:600},
+  aboutStats:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginTop:28},
+  aboutStat:{background:"rgba(0,0,0,.18)",border:"1px solid rgba(255,255,255,.06)",borderRadius:14,padding:"18px 16px"},
   trustItem:{display:"inline-flex",alignItems:"center",gap:7,fontFamily:"var(--mono)",fontSize:12,color:T.inkSoft}, trustIcon:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:20,height:20,borderRadius:6,background:T.card,color:T.marigold,fontSize:11.5,fontWeight:700},
   toolbar:{display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap"}, searchWrap:{position:"relative",flex:"1 1 260px",display:"flex",alignItems:"center"}, searchIcon:{position:"absolute",left:14,fontSize:18,color:T.muted,pointerEvents:"none"}, searchInput:{width:"100%",border:"1px solid "+T.line,borderRadius:999,padding:"11px 38px",fontSize:14.5,background:T.card,color:T.ink,fontFamily:"var(--body)"}, searchClear:{position:"absolute",right:12,border:"none",background:"transparent",color:T.muted,fontSize:13},
   sortWrap:{display:"inline-flex",alignItems:"center",gap:8}, sortLabel:{fontFamily:"var(--mono)",fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".06em"}, sortSelect:{border:"1px solid "+T.line,borderRadius:999,padding:"9px 14px",fontSize:13.5,background:T.card,color:T.ink,fontFamily:"var(--body)",fontWeight:600},
-  chipsRow:{display:"flex",gap:9,marginBottom:14,overflowX:"auto",paddingBottom:4}, chip:{flex:"0 0 auto",border:"1.5px solid "+T.line,background:T.card,color:T.inkSoft,borderRadius:999,padding:"8px 16px",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}, chipOn:{borderColor:T.marigold,background:T.marigold,color:"#1a1309"},
+  chipsRow:{display:"flex",gap:9,marginBottom:14,overflowX:"auto",paddingBottom:4}, chip:{flex:"0 0 auto",border:"1.5px solid "+T.line,background:T.card,color:T.inkSoft,borderRadius:999,padding:"8px 16px",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}, chipOn:{borderColor:"transparent",background:"linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",color:"#fff"},
   countText:{fontFamily:"var(--mono)",fontSize:12,color:T.muted,margin:"0 0 16px"}, empty:{textAlign:"center",padding:"60px 20px",border:"1px dashed "+T.line,borderRadius:16,background:T.card}, catTag:{position:"absolute",bottom:10,left:10,background:"rgba(15,12,9,.82)",backdropFilter:"blur(4px)",color:T.inkSoft,fontSize:10.5,fontWeight:700,padding:"3px 8px",borderRadius:999,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"},
-  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:20}, prodCard:{background:"linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.07)",borderRadius:18,overflow:"hidden",display:"flex",flexDirection:"column"}, imgWrap:{border:"none",padding:0,background:"#14110D",position:"relative",aspectRatio:"4/3",overflow:"hidden",display:"block"}, img:{width:"100%",height:"100%",objectFit:"cover",display:"block"}, soldOut:{position:"absolute",inset:0,background:"rgba(25,21,16,.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontFamily:"var(--mono)",fontSize:13}, discount:{position:"absolute",top:10,left:10,background:T.teal,color:"#fff",fontSize:11,fontWeight:700,padding:"4px 9px",borderRadius:999,fontFamily:"var(--mono)"},
+  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:20}, prodCard:{background:"linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.07)",borderRadius:18,overflow:"hidden",display:"flex",flexDirection:"column"}, imgWrap:{border:"none",padding:0,background:"#14110D",position:"relative",aspectRatio:"4/3",overflow:"hidden",display:"block"}, img:{width:"100%",height:"100%",objectFit:"cover",display:"block"}, soldOut:{position:"absolute",inset:0,background:"rgba(25,21,16,.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontFamily:"var(--mono)",fontSize:13}, discount:{position:"absolute",top:10,left:10,background:"linear-gradient(95deg,#27B3A3,#1f9e8c)",color:"#fff",fontSize:12,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(39,179,163,.4)"},
   prodName:{fontFamily:"var(--display)",fontSize:17,fontWeight:600,margin:0,lineHeight:1.2}, prodDesc:{fontSize:12.5,color:T.inkSoft,marginTop:6,lineHeight:1.45,minHeight:36}, priceRow:{display:"flex",alignItems:"baseline",gap:8,marginTop:10}, price:{fontSize:18,fontWeight:800,color:T.ink}, mrp:{fontSize:13,color:T.muted,textDecoration:"line-through"},
   addBtn:{width:"100%",marginTop:12,border:"1.5px solid "+T.ink,background:T.ink,color:T.paper,borderRadius:10,padding:"10px",fontWeight:700,fontSize:13.5}, addBtnDisabled:{background:"transparent",color:T.muted,borderColor:T.line,cursor:"not-allowed"},
   drawerScrim:{position:"fixed",inset:0,background:"rgba(6,5,3,.55)",zIndex:50,display:"flex",justifyContent:"flex-end"}, drawer:{width:"min(420px,100%)",background:T.paper,height:"100%",display:"flex",flexDirection:"column",boxShadow:"-20px 0 60px rgba(0,0,0,.18)"}, drawerHead:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",borderBottom:"1px solid "+T.line}, drawerTitle:{fontFamily:"var(--display)",fontSize:20,margin:0}, xBtn:{border:"none",background:"transparent",fontSize:18,color:T.inkSoft},
