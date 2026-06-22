@@ -44,3 +44,37 @@ input:focus,select:focus,textarea:focus,button:focus-visible{ outline:2px solid 
 .vg-cart-bounce { animation: vg-cart-bounce .5s ease; }
 @media (prefers-reduced-motion: reduce){ .vg-added{ animation:none !important; } }
 @media (max-width:560px){ .vg-about-stats{ grid-template-columns:1fr !important; } }
+
+/* Mobile checkout: stack paired fields so email/phone get full width */
+@media (max-width:600px){
+  .vg-pair{ grid-template-columns:1fr !important; gap:14px !important; }
+  .vg-pair input, .vg-pair select{ font-size:16px !important; padding:12px 13px !important; }
+}
+
+/* ===== Cross-device responsive polish ===== */
+/* Never allow sideways scrolling; images never overflow their box */
+html,body{ overflow-x:hidden; max-width:100%; }
+img{ max-width:100%; height:auto; }
+
+/* Phones: 16px inputs everywhere stops iOS auto-zoom (feels smoother) */
+@media (max-width:600px){
+  input, select, textarea{ font-size:16px !important; }
+  /* roomier modals on small screens, anchored near top so long forms aren't awkwardly centered */
+  .vg-overlay{ align-items:flex-start !important; padding:10px !important; }
+  .vg-modal{ padding:18px !important; border-radius:14px !important; }
+}
+
+/* Small phones: hide the header tagline so the logo + buttons fit on one line */
+@media (max-width:480px){
+  .vg-tagline{ display:none !important; }
+}
+
+/* Tablet: comfortable 2–3 product columns */
+@media (min-width:761px) and (max-width:1024px){
+  .vg-grid{ grid-template-columns:repeat(3,1fr) !important; }
+}
+
+/* Large desktops: a touch more breathing room, cap line lengths */
+@media (min-width:1500px){
+  .vg-grid{ grid-template-columns:repeat(4,1fr) !important; }
+}

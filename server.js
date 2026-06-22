@@ -32,6 +32,8 @@ app.use(helmet({
   }},
   crossOriginEmbedderPolicy: false,
 }));
+// Product save can carry an uploaded (base64) image, so it needs a bigger body limit than the rest.
+app.use("/api/admin/product-save", express.json({ limit: "4mb" }));
 app.use(express.json({ limit: "10kb" }));
 app.use("/api/", rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -74,6 +76,7 @@ async function initDb() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_fee int DEFAULT 0`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_confirmed boolean DEFAULT false`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirm_token text`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_id_uniq ON orders(payment_id) WHERE payment_id IS NOT NULL`);
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
     id bigserial PRIMARY KEY,
     product_id text NOT NULL,
@@ -84,6 +87,13 @@ async function initDb() {
     created_at timestamptz DEFAULT now()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews(product_id)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS stock_notify (
+    id serial PRIMARY KEY,
+    product_id text,
+    email text,
+    created_at timestamptz DEFAULT now()
+  )`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS stock_notify_uniq ON stock_notify(product_id,email)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS products (
     id text PRIMARY KEY,
     name text NOT NULL,
@@ -216,6 +226,8 @@ function computeOrder(items, cod) {
     if (!Number.isInteger(qty) || qty < 1 || qty > 50) return { error: "Invalid quantity" };
     const p = productCache.find(pp => pp.id === it.id);
     if (!p || p.active === false) return { error: "Unknown product" };
+    if (typeof p.stock === "number" && p.stock <= 0) return { error: `"${p.name}" is out of stock.` };
+    if (typeof p.stock === "number" && qty > p.stock) return { error: `Only ${p.stock} of "${p.name}" left in stock.` };
     subtotal += p.price * qty;
     if (typeof p.cost === "number") totalCost += p.cost * qty;
     lineItems.push({ id: p.id, name: p.name, price: p.price, qty, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
@@ -296,6 +308,23 @@ function emailFooter() {
 }
 function emailShell(innerHtml) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;padding:16px;background:#ffffff">${emailHeader()}${innerHtml}${emailFooter()}</div>`;
+}
+// Email everyone waiting for a product that just came back in stock, then clear the list.
+async function notifyRestock(productId, productName) {
+  if (!pool || !RESEND_API_KEY) return;
+  const site = process.env.SITE_URL || "https://shopvectorgrid.com";
+  const r = await pool.query("SELECT email FROM stock_notify WHERE product_id=$1", [productId]);
+  if (!r.rows.length) return;
+  const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  for (const row of r.rows) {
+    const html = emailShell(`<h2 style="color:#111;margin:0 0 10px">Good news — it's back! 🎉</h2>
+      <p style="color:#555;line-height:1.6;margin:0 0 18px"><strong>${eh(productName)}</strong> is back in stock at Vector Grid. Grab it before it sells out again!</p>
+      <div style="text-align:center;margin:20px 0"><a href="${site}" style="display:inline-block;background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:13px 28px;border-radius:999px">Shop now</a></div>`);
+    try {
+      await sendMail(row.email, `${productName} is back in stock!`, `Good news! ${productName} is back in stock at Vector Grid. Shop now: ${site}`, ORDER_TO, html);
+    } catch (e) { console.error("restock mail failed:", e && e.message); }
+  }
+  await pool.query("DELETE FROM stock_notify WHERE product_id=$1", [productId]);
 }
 
 // Send the BUYER a friendly email asking them to CONFIRM the order (click-to-confirm)
@@ -439,6 +468,19 @@ app.get("/api/admin/products", async (req, res) => {
   } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
 });
 
+app.post("/api/notify-restock", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Not available right now." });
+  const b = req.body || {};
+  const pid = String(b.productId || "").trim().slice(0, 40);
+  const email = String(b.email || "").trim().toLowerCase().slice(0, 120);
+  if (!(productCache.some(p => p.id === pid) || PRODUCTS.some(p => p.id === pid))) return res.status(400).json({ error: "Unknown product." });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: "Please enter a valid email." });
+  try {
+    await pool.query("INSERT INTO stock_notify (product_id,email) VALUES ($1,$2) ON CONFLICT (product_id,email) DO NOTHING", [pid, email]);
+    res.json({ ok: true, message: "We'll email you when it's back in stock!" });
+  } catch (e) { console.error("notify-restock failed:", e && e.message); res.status(500).json({ error: "Couldn't save that. Please try again." }); }
+});
+
 app.post("/api/admin/product-save", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
@@ -447,7 +489,8 @@ app.post("/api/admin/product-save", async (req, res) => {
   const price = Math.round(Number(b.price));
   const mrp = Math.round(Number(b.mrp) || 0);
   const stock = Math.round(Number(b.stock) || 0);
-  const img = String(b.img || "").trim().slice(0, 500);
+  const imgRaw = String(b.img || "").trim();
+  const img = imgRaw.startsWith("data:image/") ? imgRaw.slice(0, 3600000) : imgRaw.slice(0, 500);
   const descr = String(b.desc || "").trim().slice(0, 600);
   const category = String(b.category || "").trim().slice(0, 40);
   const cost = b.cost === "" || b.cost == null ? null : Math.round(Number(b.cost));
@@ -459,7 +502,10 @@ app.post("/api/admin/product-save", async (req, res) => {
   if (!Number.isFinite(stock) || stock < 0) return res.status(400).json({ error: "Enter a valid stock quantity." });
   try {
     let id = String(b.id || "").trim();
+    let wasOutOfStock = false;
     if (id) {
+      const prev = await pool.query("SELECT stock FROM products WHERE id=$1", [id]);
+      wasOutOfStock = prev.rows.length && Number(prev.rows[0].stock) <= 0;
       const r = await pool.query(
         "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,active=$12 WHERE id=$1 RETURNING id",
         [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, active]
@@ -473,6 +519,8 @@ app.post("/api/admin/product-save", async (req, res) => {
       );
     }
     await refreshProductCache();
+    // If this product just came back in stock, email everyone waiting (then clear the list).
+    if (wasOutOfStock && stock > 0 && active) { notifyRestock(id, name).catch(e => console.error("restock notify failed:", e && e.message)); }
     res.json({ ok: true, id });
   } catch (e) { console.error("product save failed:", e && e.message); res.status(500).json({ error: "Couldn't save the product." }); }
 });
@@ -535,7 +583,25 @@ app.post("/api/place-order", async (req, res) => {
       const a = Buffer.from(expected), bb = Buffer.from(String(razorpay_signature));
       const ok = a.length === bb.length && crypto.timingSafeEqual(a, bb);
       if (!ok) return res.status(400).json({ error: "Payment verification failed" });
+      // CRITICAL: confirm the amount actually paid matches this cart — stops a cart-swap after payment.
+      try {
+        const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+        if (!rzpOrder || Number(rzpOrder.amount) !== Math.round(calc.total * 100)) {
+          console.error("amount mismatch:", rzpOrder && rzpOrder.amount, "vs", Math.round(calc.total * 100));
+          return res.status(400).json({ error: "Payment amount didn't match your order. If money was deducted it will be refunded automatically — please contact us." });
+        }
+      } catch (e) {
+        console.error("amount verify failed:", e && e.message);
+        return res.status(400).json({ error: "We couldn't verify your payment. If money was deducted it will be refunded — please contact us." });
+      }
       paid = true; paymentId = razorpay_payment_id;
+      // Idempotency: if this payment already created an order, return it instead of duplicating (stops double-ship on retry).
+      if (pool) {
+        try {
+          const dup = await pool.query("SELECT id, total FROM orders WHERE payment_id=$1 LIMIT 1", [paymentId]);
+          if (dup.rows.length) return res.json({ ok: true, orderId: dup.rows[0].id, total: dup.rows[0].total, duplicate: true });
+        } catch (e) { console.error("dup check failed:", e && e.message); }
+      }
     }
 
     const order = { id: "VG" + Date.now().toString().slice(-8), ...calc, customer, paid, paymentId, confirmToken: crypto.randomBytes(16).toString("hex") };

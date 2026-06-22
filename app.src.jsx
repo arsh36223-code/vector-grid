@@ -110,7 +110,7 @@ function App(){
     setProducts(cat); setLoading(false);
   })(); },[]);
 
-  const addToCart=(id)=>{ setCart(c=>({...c,[id]:(c[id]||0)+1})); setCartOpen(true); };
+  const addToCart=(id)=>{ const p=products.find(x=>x.id===id); const max=(p&&p.stock!=null&&p.stock>0)?Math.min(50,p.stock):(p&&p.stock===0?0:50); if(max<=0) return; setCart(c=>({...c,[id]:Math.min(max,(c[id]||0)+1)})); setCartOpen(true); };
   const setQty=(id,q)=>setCart(c=>{ const n={...c}; if(q<=0) delete n[id]; else n[id]=Math.min(50,q); return n; });
   const cartItems=useMemo(()=>Object.entries(cart).map(([id,qty])=>({...products.find(p=>p.id===id),qty})).filter(x=>x.id),[cart,products]);
   const cartCount=cartItems.reduce((s,i)=>s+i.qty,0);
@@ -189,7 +189,7 @@ function Header({storeName,cartCount,onCart,onHome,onTrack}){
   const [bounce,setBounce]=useState(false); const prev=React.useRef(cartCount);
   useEffect(()=>{ if(cartCount>prev.current){ setBounce(true); const t=setTimeout(()=>setBounce(false),520); prev.current=cartCount; return ()=>clearTimeout(t); } prev.current=cartCount; },[cartCount]);
   return (<header style={S.header}><div style={S.headerInner}>
-    <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-mark.svg" alt="Vector Grid" width="34" height="34" style={{display:"block"}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline}>ships pan-India</span></div>
+    <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}><img src="/vectorgrid-mark.svg" alt="Vector Grid" width="34" height="34" style={{display:"block"}} /><span style={S.wordmark}>{storeName}</span><span style={S.tagline} className="vg-tagline">ships pan-India</span></div>
     <div style={{display:"flex",alignItems:"center",gap:14}}>
       <button onClick={onTrack} style={S.trackLink}>Track order</button>
       <button onClick={onCart} style={S.cartBtn} className={bounce?"vg-cart-bounce":""} aria-label="Open cart">Cart{cartCount>0 && <span style={S.cartBadge}>{cartCount}</span>}</button>
@@ -203,10 +203,11 @@ function Hero({onShop,onTrack}){
     const cv=ref.current; if(!cv) return;
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx=cv.getContext("2d"); let w=0,h=0,dpr=Math.min(window.devicePixelRatio||1,2),raf=0,t=0;
+    const isMobile = (window.matchMedia && window.matchMedia("(max-width:760px)").matches) || (window.matchMedia && window.matchMedia("(hover: none)").matches);
     const COLORS=["#E8820C","#F3A23E","#27B3A3"];
     let pts=[];
     function size(){ const r=cv.getBoundingClientRect(); w=r.width; h=r.height; cv.width=w*dpr; cv.height=h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-      const n=Math.max(28,Math.min(70,Math.round(w/16)));
+      const n=isMobile ? Math.max(14,Math.min(24,Math.round(w/22))) : Math.max(28,Math.min(70,Math.round(w/16)));
       pts=Array.from({length:n},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.8+.6,c:COLORS[(Math.random()*COLORS.length)|0]}));
     }
     function orb(cx,cy,rad,col,a){ const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,col+a); g.addColorStop(1,"#00000000"); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
@@ -216,7 +217,7 @@ function Hero({onShop,onTrack}){
       orb(w*(0.30+Math.sin(t)*0.05), h*(0.42+Math.cos(t*0.8)*0.06), Math.max(w,h)*0.45, "#E8820C","2e");
       orb(w*(0.74+Math.cos(t*0.7)*0.05), h*(0.62+Math.sin(t)*0.05), Math.max(w,h)*0.40, "#27B3A3","26");
       for(const p of pts){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1; }
-      for(let i=0;i<pts.length;i++){ for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j]; const dx=a.x-b.x,dy=a.y-b.y; const d=dx*dx+dy*dy; if(d<11000){ ctx.strokeStyle="rgba(243,162,62,"+(0.10*(1-d/11000))+")"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } }
+      if(!isMobile){ for(let i=0;i<pts.length;i++){ for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j]; const dx=a.x-b.x,dy=a.y-b.y; const d=dx*dx+dy*dy; if(d<11000){ ctx.strokeStyle="rgba(243,162,62,"+(0.10*(1-d/11000))+")"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } } }
       for(const p of pts){ ctx.fillStyle=p.c; ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
       ctx.globalAlpha=1;
       raf=requestAnimationFrame(frame);
@@ -365,6 +366,15 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const [reviews,setReviews]=useState(null);
   const [name,setName]=useState(""); const [rating,setRating]=useState(0); const [comment,setComment]=useState("");
   const [posting,setPosting]=useState(false); const [msg,setMsg]=useState(""); const [showForm,setShowForm]=useState(false);
+  const [notifyEmail,setNotifyEmail]=useState(""); const [notifyMsg,setNotifyMsg]=useState(""); const [notifying,setNotifying]=useState(false);
+  const notifyMe=async()=>{ setNotifyMsg("");
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(notifyEmail.trim())){ setNotifyMsg("Please enter a valid email."); return; }
+    setNotifying(true);
+    try{ const r=await fetch(API+"/api/notify-restock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:product.id,email:notifyEmail.trim()})});
+      const j=await r.json(); setNotifying(false);
+      if(r.ok){ setNotifyMsg("✓ "+(j.message||"We'll email you when it's back!")); setNotifyEmail(""); } else setNotifyMsg(j.error||"Couldn't save that.");
+    }catch(e){ setNotifying(false); setNotifyMsg("Something went wrong. Please try again."); }
+  };
   const loadReviews=async()=>{ try{ const r=await fetch(API+"/api/reviews?product="+encodeURIComponent(product.id)); const j=await r.json(); setReviews(j.reviews||[]); }catch(e){ setReviews([]); } };
   useEffect(()=>{ loadReviews(); },[]);
   const post=async()=>{ setMsg("");
@@ -391,6 +401,14 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:T.teal,marginTop:14}}>{out?"Out of stock":"In stock · "+product.stock+" available"}</p>
         <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />
+        {out && <div style={{marginTop:14,background:T.tint,border:"1px solid "+T.line,borderRadius:12,padding:14}}>
+          <p style={{fontSize:13,color:T.inkSoft,margin:"0 0 10px",lineHeight:1.5}}>📬 Out of stock — get an email the moment it's back:</p>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <input style={{...S.input,flex:1,minWidth:160}} type="email" value={notifyEmail} onChange={e=>setNotifyEmail(e.target.value)} placeholder="you@example.com" />
+            <button onClick={notifyMe} disabled={notifying} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 16px",fontSize:13}}>{notifying?"…":"Notify me"}</button>
+          </div>
+          {notifyMsg && <p style={{fontSize:12,margin:"8px 0 0",color:notifyMsg[0]==="✓"?T.teal:T.danger,fontFamily:"var(--mono)"}}>{notifyMsg}</p>}
+        </div>}
       </div>
     </div>
     <div style={{padding:"0 28px 28px",borderTop:"1px solid "+T.line,marginTop:4}}>
@@ -426,12 +444,13 @@ function CartDrawer({items,subtotal,shipping,total,setQty,onClose,onCheckout}){ 
     <div style={S.drawerHead}><h2 style={S.drawerTitle}>Your cart</h2><button onClick={onClose} style={S.xBtn} aria-label="Close">✕</button></div>
     <div style={{flex:1,overflowY:"auto",padding:"8px 20px"}}>
       {items.length===0 && <p style={{color:T.muted,marginTop:24}}>Your cart is empty.</p>}
-      {items.map(i=>(<div key={i.id} style={S.cartRow}>
+      {items.map(i=>{ const max=(i.stock!=null&&i.stock>0)?Math.min(50,i.stock):50; const atMax=i.qty>=max; return (<div key={i.id} style={S.cartRow}>
         <img src={i.img} alt="" style={S.cartThumb} />
         <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p><p style={S.cartPrice}>{rupee(i.price)}</p>
-          <div style={S.qtyRow}><button onClick={()=>setQty(i.id,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>setQty(i.id,i.qty+1)} style={S.qtyBtn} aria-label="Increase">+</button></div>
+          <div style={S.qtyRow}><button onClick={()=>setQty(i.id,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>{ if(!atMax) setQty(i.id,i.qty+1); }} disabled={atMax} style={{...S.qtyBtn,...(atMax?{opacity:.4,cursor:"not-allowed"}:{})}} aria-label="Increase">+</button></div>
+          {atMax && i.stock!=null && i.stock>0 && i.stock<50 && <p style={{fontSize:11,color:T.muted,margin:"4px 0 0",fontFamily:"var(--mono)"}}>Only {i.stock} in stock</p>}
         </div><span style={S.cartLine}>{rupee(i.price*i.qty)}</span>
-      </div>))}
+      </div>); })}
     </div>
     <div style={S.drawerFoot}>
       <Row label="Subtotal" value={rupee(subtotal)} /><Row label="Shipping" value={shipping===0?"Free":rupee(shipping)} /><Row label="Total" value={rupee(total)} bold />
@@ -454,7 +473,7 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
     if(!/^\d{6}$/.test(f.pincode)) e.pincode="6-digit pincode";
     setErr(e); if(Object.keys(e).length===0) onPlace(f);
   };
-  return (<Overlay onClose={paying?()=>{}:onBack}><div style={{...S.modal,maxWidth:760}}>
+  return (<Overlay onClose={paying?()=>{}:onBack}><div style={{...S.modal,maxWidth:760}} className="vg-modal">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
       <h2 style={S.modalTitle}>Delivery details</h2><button onClick={onBack} style={S.linkBtn}>← Back</button>
     </div>
@@ -467,11 +486,11 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
     <div className="vg-two" style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:28}}>
       <div>
         <Field label="Full name" err={err.name}><input style={S.input} value={f.name} onChange={up("name")} maxLength={80} /></Field>
-        <div style={S.two}><Field label="Mobile number" err={err.phone}><input style={S.input} value={f.phone} onChange={up("phone")} maxLength={10} inputMode="numeric" placeholder="10 digits" /></Field><Field label="Email" err={err.email}><input style={S.input} type="email" value={f.email} onChange={up("email")} maxLength={120} placeholder="you@example.com" /></Field></div>
+        <div style={S.two} className="vg-pair"><Field label="Mobile number" err={err.phone}><input style={S.input} value={f.phone} onChange={up("phone")} maxLength={10} inputMode="numeric" placeholder="10 digits" /></Field><Field label="Email" err={err.email}><input style={S.input} type="email" value={f.email} onChange={up("email")} maxLength={120} placeholder="you@example.com" /></Field></div>
         <p style={{fontSize:11.5,color:T.muted,margin:"-6px 0 12px",lineHeight:1.5}}>📧 We'll email your order ID and tracking link here, so please enter it correctly.</p>
         <Field label="Address line 1" err={err.line1}><input style={S.input} value={f.line1} onChange={up("line1")} maxLength={120} placeholder="House / flat, street" /></Field>
         <Field label="Address line 2"><input style={S.input} value={f.line2} onChange={up("line2")} maxLength={120} placeholder="Area, landmark" /></Field>
-        <div style={S.two}><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
+        <div style={S.two} className="vg-pair"><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
         <Field label="State"><select style={S.input} value={f.state} onChange={up("state")}>{INDIAN_STATES.map(s=><option key={s}>{s}</option>)}</select></Field>
         <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery","Pay when it arrives"]].map(([val,title,sub])=>(<button key={val} type="button" onClick={()=>setF({...f,pay:val})} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>))}</div></Field>
       </div>
@@ -501,7 +520,7 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
 function Field({label,err,children}){ return <label style={{display:"block",marginBottom:12}}><span style={S.fieldLabel}>{label}{err && <span style={{color:T.danger,marginLeft:6}}>· {err}</span>}</span>{children}</label>; }
 
 function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped","Delivered"]; const c=order.customer; const items=order.items||[]; return (
-  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:580,textAlign:"center"}}>
+  <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:580,textAlign:"center"}} className="vg-modal">
     <div style={S.checkCircle}>✓</div>
     <h2 style={{...S.modalTitle,marginTop:14}}>Order placed</h2>
     <p style={{color:T.inkSoft,marginTop:4}}>Order <strong style={{fontFamily:"var(--mono)",color:T.ink}}>{order.id}</strong> · {rupee(order.total)} · {order.payment==="COD"?"Cash on delivery":"Paid online"}</p>
@@ -524,7 +543,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
     <button onClick={onClose} style={{...S.primaryBtn,marginTop:18}}>Continue shopping</button>
   </div></Overlay>); }
 
-function Overlay({children,onClose}){ return <div style={S.overlay} onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{animation:"pop .18s ease",width:"100%",display:"flex",justifyContent:"center"}}>{children}</div></div>; }
+function Overlay({children,onClose}){ return <div style={S.overlay} className="vg-overlay" onClick={onClose}><div onClick={e=>e.stopPropagation()} style={{animation:"pop .18s ease",width:"100%",display:"flex",justifyContent:"center"}}>{children}</div></div>; }
 function Policy({pageKey,onBack}){
   const data = POLICIES[pageKey] || POLICIES.terms;
   return (<main style={{...S.main,maxWidth:760}}>
@@ -695,13 +714,73 @@ function AdminOrders({onBack}){
           </div>
           {tab==="orders" ? (<div>
           {(()=>{ const stat=(name)=>orders.filter(o=>(o.status||"Placed")===name).length;
-            const revenue=orders.filter(o=>(o.status||"")!=="Cancelled").reduce((s,o)=>s+Number(o.total||0),0);
+            const active=orders.filter(o=>(o.status||"")!=="Cancelled");
+            const revenue=active.reduce((s,o)=>s+Number(o.total||0),0);
+            // product (supplier) cost per order — from stored supply, fallback to current product catalogue
+            const orderCost=(o)=>{
+              let supply=[]; try{ supply=Array.isArray(o.supply)?o.supply:JSON.parse(o.supply||"[]"); }catch(e){ supply=[]; }
+              let items=[]; try{ items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]"); }catch(e){ items=[]; }
+              const src=supply.length?supply:items; let cost=0, known=src.length>0;
+              for(const it of src){ let c=(it.cost!=null)?it.cost:null;
+                if(c==null){ const p=(prods||[]).find(pp=>pp.name===it.name); c=(p&&p.cost!=null)?p.cost:null; }
+                if(c==null){ known=false; } else { cost+=c*(it.qty||1); } }
+              return {cost,known};
+            };
+            let productCost=0, allKnown=true;
+            active.forEach(o=>{ const c=orderCost(o); productCost+=c.cost; if(!c.known) allKnown=false; });
+            const profit=revenue-productCost;
             const cards=[["Total orders",orders.length,T.ink],["New / Placed",stat("Placed"),T.marigold],["Shipped",stat("Shipped"),T.teal],["Delivered",stat("Delivered"),T.teal],["Revenue","₹"+revenue.toLocaleString("en-IN"),T.ink]];
-            return (<div className="vg-stats" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:18}}>
-              {cards.map(([label,val,col])=>(<div key={label} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:"12px 14px"}}>
-                <div style={{fontSize:20,fontWeight:700,color:col,fontFamily:"var(--display)",lineHeight:1.1}}>{val}</div>
-                <div style={{fontSize:11,color:T.muted,marginTop:3,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{label}</div>
-              </div>))}
+            return (<div style={{marginBottom:18}}>
+              <div className="vg-stats" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:10}}>
+                {cards.map(([label,val,col])=>(<div key={label} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:"12px 14px"}}>
+                  <div style={{fontSize:20,fontWeight:700,color:col,fontFamily:"var(--display)",lineHeight:1.1}}>{val}</div>
+                  <div style={{fontSize:11,color:T.muted,marginTop:3,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{label}</div>
+                </div>))}
+              </div>
+              <div style={{background:profit>=0?"rgba(31,158,87,.10)":"rgba(229,104,90,.10)",border:"1px solid "+(profit>=0?"rgba(31,158,87,.35)":"rgba(229,104,90,.35)"),borderRadius:14,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+                <div>
+                  <div style={{fontSize:11,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",color:profit>=0?"#34c77b":"#e5685a",marginBottom:4}}>{profit>=0?"📈 Estimated profit":"📉 Estimated loss"}</div>
+                  <div style={{fontSize:28,fontWeight:800,fontFamily:"var(--display)",color:profit>=0?"#34c77b":"#e5685a",lineHeight:1}}>{profit<0?"−":""}₹{Math.abs(profit).toLocaleString("en-IN")}</div>
+                </div>
+                <div style={{fontSize:12.5,color:T.inkSoft,fontFamily:"var(--mono)",lineHeight:1.7,textAlign:"right"}}>
+                  Revenue ₹{revenue.toLocaleString("en-IN")}<br/>– Product cost ₹{productCost.toLocaleString("en-IN")}
+                </div>
+              </div>
+              <p style={{fontSize:11,color:T.muted,margin:"8px 2px 0",lineHeight:1.5}}>Gross figure from your supplier costs. <strong style={{color:T.inkSoft}}>Before</strong> your courier/shipping, Razorpay fees, and any RTO/return losses. Cancelled orders excluded.{!allKnown && " Some orders are missing supplier cost, so actual cost may be higher."}</p>
+            </div>);
+          })()}
+          {orders.length>0 && (()=>{ 
+            const active=orders.filter(o=>(o.status||"")!=="Cancelled");
+            // best sellers by qty
+            const tally={};
+            active.forEach(o=>{ let items=[]; try{ items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]"); }catch(e){ items=[]; } items.forEach(it=>{ const k=it.name||"Item"; tally[k]=(tally[k]||0)+(Number(it.qty)||1); }); });
+            const top=Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,5);
+            const maxQty=top.length?top[0][1]:1;
+            // orders over last 7 days
+            const days=[]; const now=new Date();
+            for(let i=6;i>=0;i--){ const d=new Date(now); d.setDate(now.getDate()-i); days.push({key:d.toLocaleDateString("en-IN",{day:"numeric",month:"short"}),ds:d.toDateString(),n:0}); }
+            active.forEach(o=>{ if(!o.created_at) return; const ds=new Date(o.created_at).toDateString(); const slot=days.find(x=>x.ds===ds); if(slot) slot.n++; });
+            const maxDay=Math.max(1,...days.map(d=>d.n));
+            return (<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18}} className="vg-two">
+              <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:"16px 18px"}}>
+                <div style={{fontSize:11,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",color:T.muted,marginBottom:12}}>🏆 Best sellers</div>
+                {top.length===0 ? <p style={{fontSize:13,color:T.muted,margin:0}}>No sales yet.</p> : top.map(([name,qty])=>(
+                  <div key={name} style={{marginBottom:9}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,marginBottom:3}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%"}}>{esc(name)}</span><span style={{color:T.ink,fontWeight:600}}>{qty}</span></div>
+                    <div style={{height:6,background:T.tint,borderRadius:999,overflow:"hidden"}}><div style={{height:"100%",width:Math.round(qty/maxQty*100)+"%",background:"linear-gradient(90deg,#F3A23E,#27B3A3)"}} /></div>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:"16px 18px"}}>
+                <div style={{fontSize:11,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",color:T.muted,marginBottom:12}}>📅 Orders · last 7 days</div>
+                <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90}}>
+                  {days.map((d,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                    <div style={{fontSize:11,color:T.ink,fontWeight:600,fontFamily:"var(--mono)"}}>{d.n||""}</div>
+                    <div style={{width:"100%",height:Math.round((d.n/maxDay)*60)+"px",minHeight:d.n?4:2,background:d.n?"linear-gradient(180deg,#F3A23E,#E8820C)":T.tint,borderRadius:"4px 4px 0 0"}} />
+                    <div style={{fontSize:9.5,color:T.muted,fontFamily:"var(--mono)",whiteSpace:"nowrap",transform:"scale(.85)"}}>{d.key.split(" ")[0]}</div>
+                  </div>))}
+                </div>
+              </div>
             </div>);
           })()}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10,flexWrap:"wrap"}}>
@@ -776,6 +855,23 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
   });
   const [saving,setSaving]=useState(false); const [msg,setMsg]=useState("");
   const up=(k)=>(e)=>setF({...f,[k]:e.target.value});
+  const onPickImg=(e)=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    if(!file.type.startsWith("image/")){ setMsg("Please choose an image file."); return; }
+    const reader=new FileReader();
+    reader.onload=()=>{ const im=new Image();
+      im.onload=()=>{ const max=800; let w=im.width,h=im.height;
+        if(w>h&&w>max){ h=Math.round(h*max/w); w=max; } else if(h>=w&&h>max){ w=Math.round(w*max/h); h=max; }
+        const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+        cv.getContext("2d").drawImage(im,0,0,w,h);
+        setF(prev=>({...prev,img:cv.toDataURL("image/jpeg",0.78)})); setMsg("");
+      };
+      im.onerror=()=>setMsg("Couldn't read that image. Try another photo.");
+      im.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value="";
+  };
   const save=async()=>{ setMsg("");
     if(!f.name.trim()){ setMsg("Please enter a product name."); return; }
     if(f.price===""||isNaN(Number(f.price))||Number(f.price)<0){ setMsg("Please enter a valid price."); return; }
@@ -788,7 +884,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     }catch(e){ setSaving(false); setMsg("Something went wrong. Please try again."); }
   };
   const L=({label,hint,children})=>(<label style={{display:"block",marginBottom:12}}><span style={{...S.fieldLabel,display:"block"}}>{label}{hint&&<span style={{color:T.muted,fontWeight:400}}> · {hint}</span>}</span>{children}</label>);
-  return (<Overlay onClose={saving?()=>{}:onClose}><div style={{...S.modal,maxWidth:560,maxHeight:"90vh",overflowY:"auto"}}>
+  return (<Overlay onClose={saving?()=>{}:onClose}><div style={{...S.modal,maxWidth:560,maxHeight:"90vh",overflowY:"auto"}} className="vg-modal">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
       <h2 style={S.modalTitle}>{isNew?"Add product":"Edit product"}</h2>
       <button onClick={onClose} style={S.linkBtn}>✕ Close</button>
@@ -802,7 +898,17 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
       <L label="Stock quantity"><input style={S.input} value={f.stock} onChange={up("stock")} inputMode="numeric" placeholder="15" /></L>
       <L label="Category" hint="e.g. Home"><input style={S.input} value={f.category} onChange={up("category")} maxLength={40} placeholder="Home" /></L>
     </div>
-    <L label="Image URL" hint="paste a link to the product photo"><input style={S.input} value={f.img} onChange={up("img")} maxLength={500} placeholder="https://..." /></L>
+    <L label="Image URL" hint="paste a link, or upload below"><input style={S.input} value={f.img.startsWith("data:")?"":f.img} onChange={up("img")} maxLength={500} placeholder={f.img.startsWith("data:")?"✓ Photo uploaded below":"https://..."} /></L>
+    <div style={{marginBottom:12}}>
+      <span style={{...S.fieldLabel,display:"block",marginBottom:6}}>Or upload a photo <span style={{color:T.muted,fontWeight:400}}>· from your phone or computer</span></span>
+      <input type="file" accept="image/*" id={"imgup-"+(f.id||"new")} onChange={onPickImg} style={{display:"none"}} />
+      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <label htmlFor={"imgup-"+(f.id||"new")} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 16px",fontSize:12.5,cursor:"pointer",display:"inline-block"}}>📷 Choose photo</label>
+        {f.img && <img src={f.img} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid "+T.line}} onError={(e)=>{e.currentTarget.style.opacity=.3;}} />}
+        {f.img && <button type="button" onClick={()=>setF({...f,img:""})} style={{...S.linkBtn,fontSize:12}}>Remove</button>}
+      </div>
+      <p style={{fontSize:11,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>Photos are auto-shrunk so your store loads fast.</p>
+    </div>
     {f.img && <div style={{width:90,height:90,borderRadius:10,overflow:"hidden",marginBottom:12,background:T.bg||"#0f0d0a"}}><img src={f.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /></div>}
     <L label="Description" hint="short, what makes it good"><textarea style={{...S.input,minHeight:64,resize:"vertical",fontFamily:"inherit"}} value={f.desc} onChange={up("desc")} maxLength={600} placeholder="Insulated 750ml bottle. Keeps cold 24h." /></L>
     <div style={{borderTop:"1px solid "+T.line,margin:"6px 0 14px",paddingTop:14}}>
@@ -866,6 +972,10 @@ function AdminRow({o,adminKey,prods,onSaved}){
   const confirmMsg=`Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2?", "+o.line2:""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
   const dt=o.created_at?new Date(o.created_at):null;
   const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+  // per-order product cost + gross profit (before shipping/fees)
+  let oCost=0, costKnown=(supply.length||items.length)>0;
+  (supply.length?supply:items).forEach(it=>{ let c=(it.cost!=null)?it.cost:null; if(c==null){ const s=supplyFor(it); c=(s&&s.cost!=null)?s.cost:null; } if(c==null){ costKnown=false; } else { oCost+=c*(it.qty||1); } });
+  const oProfit=Number(o.total||0)-oCost;
   return (<div style={{background:T.card,border:"1px solid "+T.line,borderRadius:14,overflow:"hidden"}}>
     <div style={{padding:"16px 18px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:10,alignItems:"flex-start"}}>
       <div style={{minWidth:0}}>
@@ -882,6 +992,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
       </div>
       <div style={{textAlign:"right",flexShrink:0}}>
         <div style={{fontSize:18,fontWeight:700,color:T.ink,fontFamily:"var(--display)"}}>{rupee(o.total)}</div>
+        {o.status!=="Cancelled" && costKnown && <div style={{fontSize:11.5,fontFamily:"var(--mono)",marginTop:3,color:oProfit>=0?"#34c77b":"#e5685a"}}>{oProfit>=0?"profit ":"loss "}{oProfit<0?"−":""}{rupee(Math.abs(oProfit))}</div>}
         {dstr && <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",marginTop:2}}>{dstr}</div>}
       </div>
     </div>
