@@ -105,11 +105,18 @@ function App(){
   const [page,setPage]=useState(null);
   const go=(p)=>{ setPage(p); window.scrollTo(0,0); };
 
-  useEffect(()=>{ (async()=>{
-    let cat=SEED;
-    try{ const r=await fetch(API+"/api/products"); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length) cat=j; } }catch(e){}
-    setProducts(cat); setLoading(false);
-  })(); },[]);
+  useEffect(()=>{
+    const pid=(()=>{ try{ return new URLSearchParams(window.location.search).get("p"); }catch(e){ return null; } })();
+    (async()=>{
+      let cat=SEED;
+      try{ const r=await fetch(API+"/api/products"); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length) cat=j; } }catch(e){}
+      setProducts(cat); setLoading(false);
+      if(pid){ const found=cat.find(x=>String(x.id)===String(pid)); if(found) setQuick(found); }
+    })();
+  },[]);
+
+  // keep the address bar in sync with the open product, so the link can be shared / opened directly
+  useEffect(()=>{ try{ const u=new URL(window.location.href); if(quick) u.searchParams.set("p",quick.id); else u.searchParams.delete("p"); window.history.replaceState({},"",u); }catch(e){} },[quick]);
 
   const addToCart=(id)=>{ const p=products.find(x=>x.id===id); const max=(p&&p.stock!=null&&p.stock>0)?Math.min(50,p.stock):(p&&p.stock===0?0:50); if(max<=0) return; setCart(c=>({...c,[id]:Math.min(max,(c[id]||0)+1)})); setCartOpen(true); };
   const setQty=(id,q)=>setCart(c=>{ const n={...c}; if(q<=0) delete n[id]; else n[id]=Math.min(50,q); return n; });
@@ -369,6 +376,15 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const [name,setName]=useState(""); const [rating,setRating]=useState(0); const [comment,setComment]=useState("");
   const [posting,setPosting]=useState(false); const [msg,setMsg]=useState(""); const [showForm,setShowForm]=useState(false);
   const [notifyEmail,setNotifyEmail]=useState(""); const [notifyMsg,setNotifyMsg]=useState(""); const [notifying,setNotifying]=useState(false);
+  const [shared,setShared]=useState("");
+  const shareUrl=(typeof window!=="undefined"?window.location.origin:"https://shopvectorgrid.com")+"/?p="+encodeURIComponent(product.id);
+  const doShare=async()=>{
+    const data={ title:product.name, text:"Check out "+product.name+" on Vector Grid", url:shareUrl };
+    if(navigator.share){ try{ await navigator.share(data); return; }catch(e){ if(e&&e.name==="AbortError") return; } }
+    try{ await navigator.clipboard.writeText(shareUrl); }
+    catch(e){ const t=document.createElement("textarea"); t.value=shareUrl; document.body.appendChild(t); t.select(); try{document.execCommand("copy");}catch(_){} document.body.removeChild(t); }
+    setShared("Link copied!"); setTimeout(()=>setShared(""),1800);
+  };
   const notifyMe=async()=>{ setNotifyMsg("");
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(notifyEmail.trim())){ setNotifyMsg("Please enter a valid email."); return; }
     setNotifying(true);
@@ -403,6 +419,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:(product.stock<10?T.marigold:T.teal),marginTop:14,fontWeight:product.stock>0&&product.stock<10?700:400}}>{out?"Out of stock":product.stock<10?("🔥 Only "+product.stock+" left — order soon!"):("In stock · "+product.stock+" available")}</p>
         <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />
+        <button onClick={doShare} style={{width:"100%",marginTop:10,padding:"11px 16px",fontSize:14,fontWeight:600,color:T.inkSoft,background:"transparent",border:"1px solid "+T.line,borderRadius:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>{shared?("✓ "+shared):"🔗 Share this product"}</button>
         {out && <div style={{marginTop:14,background:T.tint,border:"1px solid "+T.line,borderRadius:12,padding:14}}>
           <p style={{fontSize:13,color:T.inkSoft,margin:"0 0 10px",lineHeight:1.5}}>📬 Out of stock — get an email the moment it's back:</p>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -733,6 +750,7 @@ function AdminOrders({onBack}){
             };
             let productCost=0, allKnown=true;
             active.forEach(o=>{ const c=orderCost(o); productCost+=c.cost; if(!c.known) allKnown=false; });
+            const delivery=active.reduce((s,o)=>s+Number(o.shipping||0),0);
             const profit=revenue-productCost;
             const cards=[["Total orders",orders.length,T.ink],["New / Placed",stat("Placed"),T.marigold],["Shipped",stat("Shipped"),T.teal],["Delivered",stat("Delivered"),T.teal],["Revenue","₹"+revenue.toLocaleString("en-IN"),T.ink]];
             return (<div style={{marginBottom:18}}>
@@ -748,7 +766,7 @@ function AdminOrders({onBack}){
                   <div style={{fontSize:28,fontWeight:800,fontFamily:"var(--display)",color:profit>=0?"#34c77b":"#e5685a",lineHeight:1}}>{profit<0?"−":""}₹{Math.abs(profit).toLocaleString("en-IN")}</div>
                 </div>
                 <div style={{fontSize:12.5,color:T.inkSoft,fontFamily:"var(--mono)",lineHeight:1.7,textAlign:"right"}}>
-                  Revenue ₹{revenue.toLocaleString("en-IN")}<br/>– Product cost ₹{productCost.toLocaleString("en-IN")}
+                  Revenue ₹{revenue.toLocaleString("en-IN")} <span style={{color:T.muted}}>(incl. ₹{delivery.toLocaleString("en-IN")} delivery)</span><br/>– Product cost ₹{productCost.toLocaleString("en-IN")}
                 </div>
               </div>
               <p style={{fontSize:11,color:T.muted,margin:"8px 2px 0",lineHeight:1.5}}>Gross figure from your supplier costs. <strong style={{color:T.inkSoft}}>Before</strong> your courier/shipping, Razorpay fees, and any RTO/return losses. Cancelled orders excluded.{!allKnown && " Some orders are missing supplier cost, so actual cost may be higher."}</p>
