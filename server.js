@@ -281,6 +281,23 @@ async function notifyOrder(order) {
   if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 
+// Branded HTML wrapper for customer emails (logo header + footer)
+function emailHeader() {
+  const site = process.env.SITE_URL || "https://shopvectorgrid.com";
+  return `<div style="text-align:center;padding:6px 0 18px">
+    <a href="${site}"><img src="${site}/email-logo.png" alt="Vector Grid" width="180" style="display:inline-block;width:180px;max-width:60%;height:auto;border:0" /></a>
+  </div>`;
+}
+function emailFooter() {
+  const site = process.env.SITE_URL || "https://shopvectorgrid.com";
+  return `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e6e2da">
+    <p style="color:#aaa;font-size:12px;margin:0;line-height:1.6">Vector Grid · Ships pan-India<br/><a href="${site}" style="color:#E8820C;text-decoration:none">${site.replace(/^https?:\/\//,"")}</a></p>
+  </div>`;
+}
+function emailShell(innerHtml) {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;padding:16px;background:#ffffff">${emailHeader()}${innerHtml}${emailFooter()}</div>`;
+}
+
 // Send the BUYER a friendly email asking them to CONFIRM the order (click-to-confirm)
 async function notifyBuyer(order) {
   const c = order.customer;
@@ -319,7 +336,7 @@ async function notifyBuyer(order) {
     "— Team Vector Grid",
   ].join("\n");
   const itemsHtml = order.lineItems.map(li => `<tr><td style="padding:4px 0;color:#444">${eh(li.name)} × ${li.qty}</td><td style="padding:4px 0;text-align:right;color:#111">${rupee(li.price * li.qty)}</td></tr>`).join("");
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:8px">
+  const html = emailShell(`
     <h2 style="color:#111;margin:0 0 6px">Hi ${eh(c.name)}, please confirm your order</h2>
     <p style="color:#555;line-height:1.5;margin:0 0 18px">Thanks for your order with <strong>Vector Grid</strong>! We've received it and just need you to confirm you're ready to receive it before we ship.</p>
     <div style="text-align:center;margin:22px 0">
@@ -333,9 +350,7 @@ async function notifyBuyer(order) {
       </table>
       <p style="margin:12px 0 0;color:#555;font-size:13px">Delivering to: ${eh(c.line1)}${c.line2 ? ", " + eh(c.line2) : ""}, ${eh(c.city)}, ${eh(c.state)} - ${eh(c.pincode)}</p>
     </div>
-    <p style="color:#888;font-size:13px;line-height:1.5;margin:18px 0 0">Once you confirm, we'll pack and ship your order. Track anytime at <a href="${site}" style="color:#E8820C">${site.replace(/^https?:\/\//,"")}</a> using Order ID ${eh(order.id)} and your phone number.</p>
-    <p style="color:#aaa;font-size:12px;margin:16px 0 0">— Team Vector Grid</p>
-  </div>`;
+    <p style="color:#888;font-size:13px;line-height:1.5;margin:18px 0 0">Once you confirm, we'll pack and ship your order. Track anytime at <a href="${site}" style="color:#E8820C">${site.replace(/^https?:\/\//,"")}</a> using Order ID ${eh(order.id)} and your phone number.</p>`);
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
@@ -590,12 +605,14 @@ app.get("/api/confirm", async (req, res) => {
 });
 
 // ---- Customer: cancel an order (before dispatch) or request a return/refund (after) ----
-async function sendMail(to, subject, text, replyTo) {
+async function sendMail(to, subject, text, replyTo, html) {
   if (!RESEND_API_KEY || !to) return;
+  const payload = { from: ORDER_FROM, to: [to], reply_to: replyTo, subject, text };
+  if (html) payload.html = html;
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: ORDER_FROM, to: [to], reply_to: replyTo, subject, text }),
+    body: JSON.stringify(payload),
   });
   if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 160));
 }
@@ -638,6 +655,7 @@ app.post("/api/cancel-request", async (req, res) => {
     try { await sendMail(ORDER_TO, `${canSelfCancel ? "Cancelled" : "Refund request"} — order ${o.id}`, sellerBody, o.email || undefined); } catch (e) { console.error("cancel notify(seller) failed:", e && e.message); }
 
     if (o.email) {
+      const eh2 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const buyerBody = canSelfCancel
         ? [`Hi ${o.name},`, "", `Your order ${o.id} has been cancelled as requested.`,
             o.paid ? `Since you paid online, your refund of ₹${o.total} will be processed to your original payment method. Refunds usually take 5–7 business days.` : "As this was a Cash-on-Delivery order, no payment was taken, so nothing needs to be refunded.",
@@ -645,7 +663,15 @@ app.post("/api/cancel-request", async (req, res) => {
         : [`Hi ${o.name},`, "", `We've received your return/refund request for order ${o.id}.`,
             "Our team will review it and get back to you shortly. If approved, refunds are processed to your original payment method within 5–7 business days.",
             "", "— Team Vector Grid"].join("\n");
-      try { await sendMail(o.email, canSelfCancel ? `Your order ${o.id} is cancelled` : `Refund request received — ${o.id}`, buyerBody, ORDER_TO); } catch (e) { console.error("cancel notify(buyer) failed:", e && e.message); }
+      const buyerInner = canSelfCancel
+        ? `<h2 style="color:#111;margin:0 0 10px">Hi ${eh2(o.name)}, your order is cancelled</h2>
+           <p style="color:#555;line-height:1.6;margin:0 0 12px">Your order <strong>${eh2(o.id)}</strong> has been cancelled as requested.</p>
+           <p style="color:#555;line-height:1.6;margin:0 0 12px">${o.paid ? `Since you paid online, your refund of ₹${o.total} will be processed to your original payment method. Refunds usually take 5–7 business days.` : "As this was a Cash-on-Delivery order, no payment was taken, so nothing needs to be refunded."}</p>
+           <p style="color:#888;font-size:13px;line-height:1.6;margin:0">If this wasn't you, please contact us right away.</p>`
+        : `<h2 style="color:#111;margin:0 0 10px">Hi ${eh2(o.name)}, we got your request</h2>
+           <p style="color:#555;line-height:1.6;margin:0 0 12px">We've received your return/refund request for order <strong>${eh2(o.id)}</strong>.</p>
+           <p style="color:#555;line-height:1.6;margin:0">Our team will review it and get back to you shortly. If approved, refunds are processed to your original payment method within 5–7 business days.</p>`;
+      try { await sendMail(o.email, canSelfCancel ? `Your order ${o.id} is cancelled` : `Refund request received — ${o.id}`, buyerBody, ORDER_TO, emailShell(buyerInner)); } catch (e) { console.error("cancel notify(buyer) failed:", e && e.message); }
     }
 
     console.log(`==== ${action} ${o.id} ====\n${sellerBody}\n=========`);
