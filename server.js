@@ -187,6 +187,7 @@ const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
 // Cash-on-Delivery fee (₹). COD costs more (courier COD charges + higher return rate).
 // Set to 0 to disable. Change this number to adjust the fee.
 const COD_FEE = 0; // Cash-on-Delivery fee (₹). Set to 0 = no COD fee. Change to re-enable.
+const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match client.
 
 // In-memory product cache (trusted source for pricing). Falls back to the constant above.
 let productCache = PRODUCTS.slice();
@@ -574,6 +575,7 @@ app.post("/api/place-order", async (req, res) => {
 
     let paid = false, paymentId = null;
     if (b.cod === true) {
+      if (calc.total > COD_MAX) return res.status(400).json({ error: `Cash on Delivery isn't available for orders above ₹${COD_MAX.toLocaleString("en-IN")}. Please pay online.` });
       paid = false;
     } else {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = b;

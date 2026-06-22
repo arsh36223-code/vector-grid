@@ -102,6 +102,7 @@ const SEED = [{
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
+const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match server.
 const esc = s => String(s == null ? "" : s);
 function Stars({
   value,
@@ -927,7 +928,16 @@ function Store({
       style: S.price
     }, rupee(p.price)), p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
       style: S.mrp
-    }, rupee(p.mrp))), /*#__PURE__*/React.createElement(AddButton, {
+    }, rupee(p.mrp))), !out && p.stock > 0 && p.stock < 10 && /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11.5,
+        color: T.marigold,
+        fontFamily: "var(--mono)",
+        fontWeight: 700,
+        margin: "6px 0 0",
+        letterSpacing: ".02em"
+      }
+    }, "🔥 Only ", p.stock, " left!"), /*#__PURE__*/React.createElement(AddButton, {
       onAdd: () => onAdd(p.id),
       out: out
     })));
@@ -1144,10 +1154,11 @@ function QuickView({
     style: {
       fontFamily: "var(--mono)",
       fontSize: 12,
-      color: out ? T.danger : T.teal,
-      marginTop: 14
+      color: out ? T.danger : product.stock < 10 ? T.marigold : T.teal,
+      marginTop: 14,
+      fontWeight: product.stock > 0 && product.stock < 10 ? 700 : 400
     }
-  }, out ? "Out of stock" : "In stock · " + product.stock + " available"), /*#__PURE__*/React.createElement(AddButton, {
+  }, out ? "Out of stock" : product.stock < 10 ? "🔥 Only " + product.stock + " left — order soon!" : "In stock · " + product.stock + " available"), /*#__PURE__*/React.createElement(AddButton, {
     onAdd: onAdd,
     out: out,
     full: true,
@@ -1512,6 +1523,13 @@ function Checkout({
     ...f,
     [k]: e.target.value
   });
+  const codAllowed = total <= COD_MAX;
+  useEffect(() => {
+    if (!codAllowed && f.pay === "COD") setF(prev => ({
+      ...prev,
+      pay: "Online"
+    }));
+  }, [codAllowed]);
   const submit = () => {
     const e = {};
     if (!f.name.trim()) e.name = "Required";
@@ -1653,33 +1671,50 @@ function Checkout({
       gridTemplateColumns: "1fr 1fr",
       gap: 10
     }
-  }, [["Online", "Pay online", "UPI · Cards · Netbanking"], ["COD", "Cash on Delivery", "Pay when it arrives"]].map(([val, title, sub]) => /*#__PURE__*/React.createElement("button", {
-    key: val,
-    type: "button",
-    onClick: () => setF({
-      ...f,
-      pay: val
-    }),
+  }, [["Online", "Pay online", "UPI · Cards · Netbanking"], ["COD", "Cash on Delivery", codAllowed ? "Pay when it arrives" : "Not available over " + rupee(COD_MAX)]].map(([val, title, sub]) => {
+    const disabled = val === "COD" && !codAllowed;
+    return /*#__PURE__*/React.createElement("button", {
+      key: val,
+      type: "button",
+      disabled: disabled,
+      onClick: () => {
+        if (!disabled) setF({
+          ...f,
+          pay: val
+        });
+      },
+      style: {
+        ...S.payOpt,
+        ...(f.pay === val ? S.payOptOn : {}),
+        ...(disabled ? {
+          opacity: .5,
+          cursor: "not-allowed"
+        } : {})
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.payRadio,
+        ...(f.pay === val ? S.payRadioOn : {})
+      }
+    }, f.pay === val ? "✓" : ""), /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: S.payTitle
+    }, title), /*#__PURE__*/React.createElement("span", {
+      style: S.paySub
+    }, sub)));
+  }))), !codAllowed && /*#__PURE__*/React.createElement("p", {
     style: {
-      ...S.payOpt,
-      ...(f.pay === val ? S.payOptOn : {})
+      fontSize: 11.5,
+      color: T.muted,
+      margin: "6px 0 0",
+      lineHeight: 1.5
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      ...S.payRadio,
-      ...(f.pay === val ? S.payRadioOn : {})
-    }
-  }, f.pay === val ? "✓" : ""), /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: S.payTitle
-  }, title), /*#__PURE__*/React.createElement("span", {
-    style: S.paySub
-  }, sub))))))), /*#__PURE__*/React.createElement("div", {
+  }, "💳 Orders above ", rupee(COD_MAX), " are prepaid only (secure online payment). This keeps prices low for everyone.")), /*#__PURE__*/React.createElement("div", {
     style: S.summary
   }, /*#__PURE__*/React.createElement("h3", {
     style: S.summaryTitle

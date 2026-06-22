@@ -16,6 +16,7 @@ const SEED = [
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
+const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match server.
 const esc = (s) => String(s==null?"":s);
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
   return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
@@ -341,6 +342,7 @@ function Store({products,onAdd,onQuick,onTrack}){
             {p.reviewCount>0 && <div style={{display:"flex",alignItems:"center",gap:6,margin:"2px 0 4px"}}><Stars value={p.rating} size={13} /><span style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)"}}>{p.rating} ({p.reviewCount})</span></div>}
             <p style={S.prodDesc}>{esc(p.desc)}</p>
             <div style={{...S.priceRow,marginTop:"auto"}}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
+            {!out && p.stock>0 && p.stock<10 && <p style={{fontSize:11.5,color:T.marigold,fontFamily:"var(--mono)",fontWeight:700,margin:"6px 0 0",letterSpacing:".02em"}}>🔥 Only {p.stock} left!</p>}
             <AddButton onAdd={()=>onAdd(p.id)} out={out} />
           </div>
         </article>); })}
@@ -399,7 +401,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         {avg && <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><Stars value={avg} /><span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)"}}>{avg} · {reviews.length} review{reviews.length===1?"":"s"}</span></div>}
         <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(product.price)}</span>{product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
-        <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:T.teal,marginTop:14}}>{out?"Out of stock":"In stock · "+product.stock+" available"}</p>
+        <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:(product.stock<10?T.marigold:T.teal),marginTop:14,fontWeight:product.stock>0&&product.stock<10?700:400}}>{out?"Out of stock":product.stock<10?("🔥 Only "+product.stock+" left — order soon!"):("In stock · "+product.stock+" available")}</p>
         <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />
         {out && <div style={{marginTop:14,background:T.tint,border:"1px solid "+T.line,borderRadius:12,padding:14}}>
           <p style={{fontSize:13,color:T.inkSoft,margin:"0 0 10px",lineHeight:1.5}}>📬 Out of stock — get an email the moment it's back:</p>
@@ -463,6 +465,8 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
   const [f,setF]=useState({name:"",phone:"",email:"",line1:"",line2:"",city:"",state:"Maharashtra",pincode:"",pay:"Online"});
   const [err,setErr]=useState({});
   const up=(k)=>(e)=>setF({...f,[k]:e.target.value});
+  const codAllowed = total <= COD_MAX;
+  useEffect(()=>{ if(!codAllowed && f.pay==="COD") setF(prev=>({...prev,pay:"Online"})); },[codAllowed]);
   const submit=()=>{ const e={};
     if(!f.name.trim()) e.name="Required";
     if(!/^[6-9]\d{9}$/.test(f.phone)) e.phone="Valid 10-digit mobile";
@@ -492,7 +496,8 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         <Field label="Address line 2"><input style={S.input} value={f.line2} onChange={up("line2")} maxLength={120} placeholder="Area, landmark" /></Field>
         <div style={S.two} className="vg-pair"><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
         <Field label="State"><select style={S.input} value={f.state} onChange={up("state")}>{INDIAN_STATES.map(s=><option key={s}>{s}</option>)}</select></Field>
-        <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery","Pay when it arrives"]].map(([val,title,sub])=>(<button key={val} type="button" onClick={()=>setF({...f,pay:val})} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>))}</div></Field>
+        <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery",codAllowed?"Pay when it arrives":"Not available over "+rupee(COD_MAX)]].map(([val,title,sub])=>{ const disabled=(val==="COD"&&!codAllowed); return (<button key={val} type="button" disabled={disabled} onClick={()=>{ if(!disabled) setF({...f,pay:val}); }} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{}),...(disabled?{opacity:.5,cursor:"not-allowed"}:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>); })}</div></Field>
+        {!codAllowed && <p style={{fontSize:11.5,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>💳 Orders above {rupee(COD_MAX)} are prepaid only (secure online payment). This keeps prices low for everyone.</p>}
       </div>
       <div style={S.summary}>
         <h3 style={S.summaryTitle}>Order summary</h3>
