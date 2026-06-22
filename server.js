@@ -87,6 +87,15 @@ async function initDb() {
     created_at timestamptz DEFAULT now()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews(product_id)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS support_messages (
+    id bigserial PRIMARY KEY,
+    order_id text NOT NULL,
+    sender text NOT NULL,
+    body text NOT NULL,
+    seen_by_seller boolean DEFAULT false,
+    created_at timestamptz DEFAULT now()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS support_order_idx ON support_messages(order_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS stock_notify (
     id serial PRIMARY KEY,
     product_id text,
@@ -780,6 +789,102 @@ app.post("/api/admin/update", async (req, res) => {
     if (!r.rows.length) return res.status(404).json({ error: "Order not found." });
     res.json({ ok: true });
   } catch (e) { console.error("admin update failed:", e && e.message); res.status(500).json({ error: "Update failed." }); }
+});
+
+// ============ Help Center (order-linked support) ============
+// Customer: open/refresh the conversation for their order (verified by order id + phone)
+app.post("/api/support/thread", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Support isn't set up yet. Please contact us." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase().replace(/^#/, "");
+  const phone = String((req.body && req.body.phone) || "").replace(/\D/g, "").slice(-10);
+  if (!id || phone.length !== 10) return res.status(400).json({ error: "Enter your order ID and the 10-digit phone number you ordered with." });
+  try {
+    const r = await pool.query("SELECT id,name,status,total FROM orders WHERE id=$1 AND phone=$2", [id, phone]);
+    if (!r.rows.length) return res.status(404).json({ error: "No order found with that ID and phone number." });
+    const o = r.rows[0];
+    const m = await pool.query("SELECT id,sender,body,created_at FROM support_messages WHERE order_id=$1 ORDER BY created_at ASC", [id]);
+    res.json({ order: { id: o.id, name: o.name, status: o.status, total: o.total }, messages: m.rows });
+  } catch (e) { console.error("support thread failed:", e && e.message); res.status(500).json({ error: "Couldn't load your messages. Please try again." }); }
+});
+
+// Customer: send a message/complaint/request about their order
+app.post("/api/support/message", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Support isn't set up yet. Please contact us." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase().replace(/^#/, "");
+  const phone = String((req.body && req.body.phone) || "").replace(/\D/g, "").slice(-10);
+  const body = String((req.body && req.body.body) || "").trim().slice(0, 1000);
+  if (!id || phone.length !== 10) return res.status(400).json({ error: "Enter your order ID and the 10-digit phone number you ordered with." });
+  if (!body) return res.status(400).json({ error: "Type a message first." });
+  try {
+    const r = await pool.query("SELECT id,name,email,phone,total,status FROM orders WHERE id=$1 AND phone=$2", [id, phone]);
+    if (!r.rows.length) return res.status(404).json({ error: "No order found with that ID and phone number." });
+    const o = r.rows[0];
+    await pool.query("INSERT INTO support_messages (order_id,sender,body) VALUES ($1,'customer',$2)", [id, body]);
+    const sellerBody = [
+      `NEW SUPPORT MESSAGE — order ${o.id}`,
+      `Customer: ${o.name} | ${o.phone}${o.email ? " | " + o.email : ""}`,
+      `Order status: ${o.status || "Placed"}  |  Amount: Rs.${o.total}`,
+      "",
+      "Message:",
+      body,
+      "",
+      "Reply from your Seller dashboard → Support tab.",
+    ].join("\n");
+    try { await sendMail(ORDER_TO, `New support message — order ${o.id}`, sellerBody, o.email || undefined); } catch (e) { console.error("support notify failed:", e && e.message); }
+    const m = await pool.query("SELECT id,sender,body,created_at FROM support_messages WHERE order_id=$1 ORDER BY created_at ASC", [id]);
+    res.json({ ok: true, messages: m.rows });
+  } catch (e) { console.error("support message failed:", e && e.message); res.status(500).json({ error: "Couldn't send your message. Please try again." }); }
+});
+
+// Seller: list all support conversations (grouped by order)
+app.get("/api/admin/support", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  try {
+    const m = await pool.query("SELECT id,order_id,sender,body,seen_by_seller,created_at FROM support_messages ORDER BY created_at ASC");
+    const byOrder = {};
+    for (const row of m.rows) {
+      if (!byOrder[row.order_id]) byOrder[row.order_id] = { orderId: row.order_id, messages: [], unseen: 0, lastAt: null };
+      byOrder[row.order_id].messages.push({ id: row.id, sender: row.sender, body: row.body, created_at: row.created_at });
+      if (row.sender === "customer" && !row.seen_by_seller) byOrder[row.order_id].unseen++;
+      byOrder[row.order_id].lastAt = row.created_at;
+    }
+    const ids = Object.keys(byOrder);
+    if (ids.length) {
+      const info = await pool.query("SELECT id,name,phone,status,total FROM orders WHERE id = ANY($1::text[])", [ids]);
+      const map = {}; for (const o of info.rows) map[o.id] = o;
+      for (const oid of ids) { const o = map[oid] || {}; byOrder[oid].name = o.name || "(unknown order)"; byOrder[oid].phone = o.phone || ""; byOrder[oid].status = o.status || ""; byOrder[oid].total = o.total != null ? o.total : null; }
+    }
+    const threads = Object.values(byOrder).sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    res.json({ threads });
+  } catch (e) { console.error("admin support list failed:", e && e.message); res.status(500).json({ error: "Could not load support messages." }); }
+});
+
+// Seller: reply to a customer on an order (saved to thread + emailed to customer)
+app.post("/api/admin/support-reply", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  const body = String((req.body && req.body.body) || "").trim().slice(0, 1000);
+  if (!id) return res.status(400).json({ error: "Missing order id." });
+  if (!body) return res.status(400).json({ error: "Type a reply first." });
+  try {
+    const r = await pool.query("SELECT id,name,email FROM orders WHERE id=$1", [id]);
+    if (!r.rows.length) return res.status(404).json({ error: "Order not found." });
+    const o = r.rows[0];
+    await pool.query("INSERT INTO support_messages (order_id,sender,body) VALUES ($1,'seller',$2)", [id, body]);
+    await pool.query("UPDATE support_messages SET seen_by_seller=true WHERE order_id=$1 AND sender='customer'", [id]);
+    if (o.email) {
+      const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const inner = `<h2 style="color:#111;margin:0 0 10px">Hi ${eh(o.name)}, you have a reply</h2>
+        <p style="color:#555;line-height:1.6;margin:0 0 12px">About your order <strong>${eh(o.id)}</strong>:</p>
+        <p style="color:#222;line-height:1.6;margin:0 0 14px;padding:12px 14px;background:#f5f3ef;border-radius:8px">${eh(body)}</p>
+        <p style="color:#888;font-size:13px;line-height:1.6;margin:0">To reply, open our Help Center and enter your order ID and phone number.</p>`;
+      const text = `Hi ${o.name},\n\nYou have a reply about order ${o.id}:\n\n"${body}"\n\nTo continue the conversation, open our Help Center and enter your order ID and phone number.\n\n— Team Vector Grid`;
+      try { await sendMail(o.email, `Reply about your order ${o.id} — Vector Grid`, text, ORDER_TO, emailShell(inner)); } catch (e) { console.error("support reply email failed:", e && e.message); }
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error("admin support reply failed:", e && e.message); res.status(500).json({ error: "Reply failed." }); }
 });
 
 app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));

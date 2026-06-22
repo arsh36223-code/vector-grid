@@ -181,6 +181,7 @@ function App(){
     <div style={S.page}>
       <Header storeName={storeName} cartCount={cartCount} onCart={()=>setCartOpen(true)} onHome={()=>go(null)} onTrack={()=>go("track")} />
       {page==="track" ? <TrackOrder onBack={()=>go(null)} />
+        : page==="help" ? <HelpCenter onBack={()=>go(null)} />
         : page==="admin" ? <AdminOrders onBack={()=>go(null)} />
         : page ? <Policy pageKey={page} onBack={()=>go(null)} />
         : <Store products={products} onAdd={addToCart} onQuick={setQuick} onTrack={()=>go("track")} />}
@@ -661,18 +662,123 @@ function TrackOrder({onBack}){
   </main>);
 }
 
+function HelpCenter({onBack}){
+  const [id,setId]=useState(""); const [phone,setPhone]=useState("");
+  const [thread,setThread]=useState(null);
+  const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState(""); const [sending,setSending]=useState(false);
+  const open=async()=>{ setErr("");
+    const cleanId=id.trim().replace(/^#/,"");
+    if(!cleanId||phone.replace(/\D/g,"").length<10){ setErr("Enter your order ID and 10-digit phone number."); return; }
+    setBusy(true);
+    try{ const r=await fetch(API+"/api/support/thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:cleanId,phone})});
+      const j=await r.json(); setBusy(false);
+      if(r.ok){ setThread(j); } else { setErr(j.error||"Couldn't find that order."); }
+    }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
+  };
+  const send=async()=>{ const text=msg.trim(); if(!text||sending) return; setSending(true); setErr("");
+    try{ const r=await fetch(API+"/api/support/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:thread.order.id,phone,body:text})});
+      const j=await r.json(); setSending(false);
+      if(r.ok){ setThread(t=>t?{...t,messages:j.messages}:t); setMsg(""); } else { setErr(j.error||"Couldn't send your message."); }
+    }catch(e){ setSending(false); setErr("Something went wrong. Please try again."); }
+  };
+  const oid=thread&&thread.order?thread.order.id:null;
+  useEffect(()=>{ if(!oid) return;
+    const t=setInterval(async()=>{
+      try{ const r=await fetch(API+"/api/support/thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:oid,phone})});
+        const j=await r.json(); if(r.ok&&Array.isArray(j.messages)) setThread(prev=>prev?{...prev,messages:j.messages}:prev);
+      }catch(e){}
+    },5000);
+    return ()=>clearInterval(t);
+  },[oid]);
+  return (<main style={{...S.main,maxWidth:620}}>
+    <section style={{padding:"40px 0 8px"}}>
+      <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
+      <h1 style={{fontFamily:"var(--display)",fontSize:32,fontWeight:700,letterSpacing:"-.02em",margin:"14px 0 6px"}}>Help center</h1>
+      {!thread ? (<>
+        <p style={{color:T.inkSoft,marginBottom:20,fontSize:14.5}}>Have a question or a problem with an order? Enter your order ID and the phone number you ordered with, and we'll help you right here.</p>
+        <div style={{display:"grid",gap:12,maxWidth:420}}>
+          <input style={S.input} value={id} onChange={e=>setId(e.target.value)} placeholder="Order ID (e.g. VG12345678)" />
+          <input style={S.input} value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone number (10 digits)" inputMode="numeric" maxLength={10} />
+          <button onClick={open} disabled={busy} style={{...S.primaryBtn,...(busy?S.addBtnDisabled:{})}}>{busy?"Opening…":"Start chat"}</button>
+          {err && <p style={{color:T.danger,fontSize:13}}>{err}</p>}
+        </div>
+      </>) : (<>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:"12px 16px",marginBottom:14}}>
+          <div><strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(thread.order.id)}</strong><span style={{fontSize:12,color:T.inkSoft,marginLeft:10,fontFamily:"var(--mono)"}}>{esc(thread.order.status||"Placed")} · {rupee(thread.order.total)}</span></div>
+          <button onClick={()=>{ setThread(null); setMsg(""); setErr(""); }} style={{...S.linkBtn,fontSize:12.5}}>Use a different order</button>
+        </div>
+        <div style={{background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:14,padding:16,minHeight:200,maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:10}}>
+          {(!thread.messages||thread.messages.length===0)
+            ? <p style={{color:T.muted,fontSize:13.5,textAlign:"center",margin:"auto",lineHeight:1.6,maxWidth:320}}>👋 Describe your issue or request below and we'll get back to you here. You'll also receive our reply by email.</p>
+            : thread.messages.map(m=>{ const mine=m.sender==="customer"; return (
+              <div key={m.id} style={{alignSelf:mine?"flex-end":"flex-start",maxWidth:"82%"}}>
+                {!mine && <div style={{fontSize:10.5,color:T.muted,fontFamily:"var(--mono)",margin:"0 0 3px 4px",textTransform:"uppercase",letterSpacing:".04em"}}>Vector Grid</div>}
+                <div style={{background:mine?T.marigold:T.card,color:mine?"#fff":T.ink,border:mine?"none":"1px solid "+T.line,borderRadius:mine?"14px 14px 4px 14px":"14px 14px 14px 4px",padding:"9px 13px",fontSize:13.5,lineHeight:1.5,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{esc(m.body)}</div>
+                <div style={{fontSize:10,color:T.muted,fontFamily:"var(--mono)",margin:mine?"3px 4px 0 0":"3px 0 0 4px",textAlign:mine?"right":"left"}}>{new Date(m.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+              </div>); })}
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:12,alignItems:"flex-end"}}>
+          <textarea value={msg} onChange={e=>setMsg(e.target.value)} placeholder="Type your message…" rows={2} style={{...S.input,flex:1,resize:"vertical",fontFamily:"inherit",minHeight:44}} onKeyDown={e=>{ if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){ e.preventDefault(); send(); } }} />
+          <button onClick={send} disabled={sending||!msg.trim()} style={{...S.primaryBtn,width:"auto",padding:"11px 20px",...((sending||!msg.trim())?S.addBtnDisabled:{})}}>{sending?"…":"Send"}</button>
+        </div>
+        {err && <p style={{color:T.danger,fontSize:13,marginTop:8}}>{err}</p>}
+        <p style={{fontSize:11.5,color:T.muted,marginTop:10,lineHeight:1.5}}>This chat updates automatically. We reply as soon as we can — our reply also arrives by email.</p>
+      </>)}
+    </section>
+  </main>);
+}
+
+function AdminSupportThread({thread,adminKey,onReplied}){
+  const [reply,setReply]=useState(""); const [busy,setBusy]=useState(false); const [open,setOpen]=useState(thread.unseen>0);
+  const send=async()=>{ const text=reply.trim(); if(!text||busy) return; setBusy(true);
+    try{ const r=await fetch(API+"/api/admin/support-reply",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:thread.orderId,body:text})});
+      const j=await r.json(); setBusy(false); if(r.ok){ setReply(""); onReplied&&onReplied(); } }
+    catch(e){ setBusy(false); }
+  };
+  const last=thread.messages[thread.messages.length-1];
+  return (<div style={{background:T.card,border:"1px solid "+(thread.unseen>0?T.marigold:T.line),borderRadius:14,padding:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap",cursor:"pointer"}} onClick={()=>setOpen(!open)}>
+      <div style={{minWidth:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(thread.orderId)}</strong>
+          {thread.unseen>0 && <span style={{fontSize:10.5,fontWeight:700,background:T.marigold,color:"#fff",borderRadius:999,padding:"1px 8px",fontFamily:"var(--mono)"}}>{thread.unseen} new</span>}
+          <span style={{fontSize:11.5,color:T.inkSoft}}>{esc(thread.name)}{thread.phone?" · "+esc(thread.phone):""}</span>
+        </div>
+        <p style={{fontSize:12.5,color:T.muted,margin:"6px 0 0",lineHeight:1.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{last?((last.sender==="seller"?"You: ":"")+esc(last.body)):""}</p>
+      </div>
+      <span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)",flexShrink:0}}>{open?"▲":"▼"}</span>
+    </div>
+    {open && <>
+      <div style={{background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:14,margin:"12px 0",display:"flex",flexDirection:"column",gap:9,maxHeight:300,overflowY:"auto"}}>
+        {thread.messages.map(m=>{ const seller=m.sender==="seller"; return (
+          <div key={m.id} style={{alignSelf:seller?"flex-end":"flex-start",maxWidth:"85%"}}>
+            <div style={{fontSize:10,color:T.muted,fontFamily:"var(--mono)",margin:seller?"0 4px 2px 0":"0 0 2px 4px",textAlign:seller?"right":"left"}}>{seller?"You":esc(thread.name)} · {new Date(m.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+            <div style={{background:seller?T.teal:T.card,color:seller?"#fff":T.ink,border:seller?"none":"1px solid "+T.line,borderRadius:12,padding:"8px 12px",fontSize:13,lineHeight:1.5,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{esc(m.body)}</div>
+          </div>); })}
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+        <textarea value={reply} onChange={e=>setReply(e.target.value)} placeholder="Type your reply / solution…" rows={2} style={{...S.input,flex:1,resize:"vertical",fontFamily:"inherit",minHeight:42}} />
+        <button onClick={send} disabled={busy||!reply.trim()} style={{...S.primaryBtn,width:"auto",padding:"10px 18px",...((busy||!reply.trim())?S.addBtnDisabled:{})}}>{busy?"…":"Reply"}</button>
+      </div>
+      <p style={{fontSize:11,color:T.muted,marginTop:8}}>Your reply is saved to this conversation and emailed to the customer (if they left an email).</p>
+    </>}
+  </div>);
+}
+
 function AdminOrders({onBack}){
   const [key,setKey]=useState(""); const [authed,setAuthed]=useState(false);
   const [orders,setOrders]=useState([]); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
   const [remember,setRemember]=useState(true); const [booting,setBooting]=useState(true);
   const [tab,setTab]=useState("orders"); const [reviews,setReviews]=useState([]); const [revBusy,setRevBusy]=useState(false);
   const [prods,setProds]=useState([]); const [prodBusy,setProdBusy]=useState(false); const [editing,setEditing]=useState(null);
+  const [support,setSupport]=useState([]); const [supBusy,setSupBusy]=useState(false);
   const load=async(k,opts)=>{ setErr(""); setBusy(true);
     try{ const r=await fetch(API+"/api/admin/orders",{headers:{"x-admin-key":k}});
       const j=await r.json(); setBusy(false);
       if(r.ok){ setOrders(j.orders||[]); setAuthed(true); setKey(k);
         if(opts&&opts.remember){ try{ localStorage.setItem("vg_admin_key",k); }catch(e){} }
-        loadReviews(k); loadProds(k);
+        loadReviews(k); loadProds(k); loadSupport(k);
       } else { setErr(j.error||"That key didn't work. Please check and try again."); setAuthed(false);
         try{ localStorage.removeItem("vg_admin_key"); }catch(e){} }
     }catch(e){ setBusy(false); setErr("Something went wrong. Please try again."); }
@@ -684,6 +790,10 @@ function AdminOrders({onBack}){
   const loadProds=async(k)=>{ setProdBusy(true);
     try{ const r=await fetch(API+"/api/admin/products",{headers:{"x-admin-key":k||key}}); const j=await r.json(); setProdBusy(false); if(r.ok) setProds(j.products||[]); }
     catch(e){ setProdBusy(false); }
+  };
+  const loadSupport=async(k)=>{ setSupBusy(true);
+    try{ const r=await fetch(API+"/api/admin/support",{headers:{"x-admin-key":k||key}}); const j=await r.json(); setSupBusy(false); if(r.ok) setSupport(j.threads||[]); }
+    catch(e){ setSupBusy(false); }
   };
   const delReview=async(id)=>{ if(!window.confirm("Delete this review permanently?")) return;
     try{ const r=await fetch(API+"/api/admin/review-delete",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":key},body:JSON.stringify({id})});
@@ -704,6 +814,7 @@ function AdminOrders({onBack}){
   },[]);
   const logout=()=>{ try{ localStorage.removeItem("vg_admin_key"); }catch(e){} setAuthed(false); setKey(""); setOrders([]); setReviews([]); setErr(""); };
   const submit=()=>{ if(!key.trim()) return; load(key.trim(),{remember}); };
+  const supUnseen=support.reduce((s,t)=>s+(t.unseen||0),0);
   return (<main style={{...S.main,maxWidth:960}}>
     <section style={{padding:"40px 0 8px"}}>
       <button onClick={onBack} style={S.linkBtn}>← Back to store</button>
@@ -730,8 +841,8 @@ function AdminOrders({onBack}){
       ) : (
         <div style={{marginTop:18}}>
           <div style={{display:"flex",gap:6,marginBottom:18,borderBottom:"1px solid "+T.line,flexWrap:"wrap"}}>
-            {[["orders","Orders"],["products","Products"],["reviews","Reviews"]].map(([t,label])=>(
-              <button key={t} onClick={()=>setTab(t)} style={{background:"none",border:"none",borderBottom:"2px solid "+(tab===t?T.marigold:"transparent"),color:tab===t?T.ink:T.muted,padding:"8px 14px",fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:-1}}>{label}{t==="products"&&prods.length>0?" ("+prods.length+")":""}{t==="reviews"&&reviews.length>0?" ("+reviews.length+")":""}</button>
+            {[["orders","Orders"],["products","Products"],["reviews","Reviews"],["support","Support"]].map(([t,label])=>(
+              <button key={t} onClick={()=>setTab(t)} style={{background:"none",border:"none",borderBottom:"2px solid "+(tab===t?T.marigold:"transparent"),color:tab===t?T.ink:T.muted,padding:"8px 14px",fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:-1}}>{label}{t==="products"&&prods.length>0?" ("+prods.length+")":""}{t==="reviews"&&reviews.length>0?" ("+reviews.length+")":""}{t==="support"&&supUnseen>0?" ("+supUnseen+")":""}</button>
             ))}
           </div>
           {tab==="orders" ? (<div>
@@ -839,7 +950,7 @@ function AdminOrders({onBack}){
                   <button onClick={()=>delProduct(p.id)} style={{...S.linkBtn,color:T.danger,fontSize:12.5}}>Delete</button>
                 </div>
               </div>); })}</div>
-          </div>) : (<div>
+          </div>) : tab==="reviews" ? (<div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10,flexWrap:"wrap"}}>
               <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{reviews.length} review{reviews.length===1?"":"s"} · newest first</span>
               <button onClick={()=>loadReviews(key)} style={S.linkBtn}>↻ Refresh</button>
@@ -860,6 +971,14 @@ function AdminOrders({onBack}){
                 <button onClick={()=>delReview(rv.id)} style={{...S.linkBtn,color:T.danger,fontSize:12.5,flexShrink:0}}>Delete</button>
               </div>
             </div>))}</div>
+          </div>) : (<div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+              <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{support.length} conversation{support.length===1?"":"s"}{supUnseen>0?" · "+supUnseen+" new":""}</span>
+              <button onClick={()=>loadSupport(key)} style={S.linkBtn}>↻ Refresh</button>
+            </div>
+            {supBusy && support.length===0 && <p style={{color:T.muted}}>Loading conversations…</p>}
+            {!supBusy && support.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>💬</div><p style={{color:T.inkSoft,margin:0}}>No customer messages yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>When a customer contacts you from the Help Center, the conversation appears here.</p></div>}
+            <div style={{display:"grid",gap:12}}>{support.map(th=><AdminSupportThread key={th.orderId} thread={th} adminKey={key} onReplied={()=>loadSupport(key)} />)}</div>
           </div>)}
         </div>
       )}
@@ -1097,7 +1216,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
 }
 
 function Footer({storeName,onNav}){
-  const links=[["Track order","track"],["About","about"],["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"],["Seller","admin"]];
+  const links=[["Track order","track"],["Help center","help"],["About","about"],["Terms","terms"],["Privacy","privacy"],["Refund","refund"],["Shipping","shipping"],["Contact","contact"],["Seller","admin"]];
   return (<footer style={S.footer}>
     <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12,alignItems:"center"}}>
       <span style={{fontWeight:600,color:T.ink}}>{storeName}</span>

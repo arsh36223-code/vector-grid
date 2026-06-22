@@ -437,6 +437,8 @@ function App() {
     onTrack: () => go("track")
   }), page === "track" ? /*#__PURE__*/React.createElement(TrackOrder, {
     onBack: () => go(null)
+  }) : page === "help" ? /*#__PURE__*/React.createElement(HelpCenter, {
+    onBack: () => go(null)
   }) : page === "admin" ? /*#__PURE__*/React.createElement(AdminOrders, {
     onBack: () => go(null)
   }) : page ? /*#__PURE__*/React.createElement(Policy, {
@@ -2506,6 +2508,493 @@ function TrackOrder({
     })());
   })()));
 }
+function HelpCenter({
+  onBack
+}) {
+  const [id, setId] = useState("");
+  const [phone, setPhone] = useState("");
+  const [thread, setThread] = useState(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const open = async () => {
+    setErr("");
+    const cleanId = id.trim().replace(/^#/, "");
+    if (!cleanId || phone.replace(/\D/g, "").length < 10) {
+      setErr("Enter your order ID and 10-digit phone number.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch(API + "/api/support/thread", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: cleanId,
+          phone
+        })
+      });
+      const j = await r.json();
+      setBusy(false);
+      if (r.ok) {
+        setThread(j);
+      } else {
+        setErr(j.error || "Couldn't find that order.");
+      }
+    } catch (e) {
+      setBusy(false);
+      setErr("Something went wrong. Please try again.");
+    }
+  };
+  const send = async () => {
+    const text = msg.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setErr("");
+    try {
+      const r = await fetch(API + "/api/support/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: thread.order.id,
+          phone,
+          body: text
+        })
+      });
+      const j = await r.json();
+      setSending(false);
+      if (r.ok) {
+        setThread(t => t ? {
+          ...t,
+          messages: j.messages
+        } : t);
+        setMsg("");
+      } else {
+        setErr(j.error || "Couldn't send your message.");
+      }
+    } catch (e) {
+      setSending(false);
+      setErr("Something went wrong. Please try again.");
+    }
+  };
+  const oid = thread && thread.order ? thread.order.id : null;
+  useEffect(() => {
+    if (!oid) return;
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(API + "/api/support/thread", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            orderId: oid,
+            phone
+          })
+        });
+        const j = await r.json();
+        if (r.ok && Array.isArray(j.messages)) setThread(prev => prev ? {
+          ...prev,
+          messages: j.messages
+        } : prev);
+      } catch (e) {}
+    }, 5000);
+    return () => clearInterval(t);
+  }, [oid]);
+  return /*#__PURE__*/React.createElement("main", {
+    style: {
+      ...S.main,
+      maxWidth: 620
+    }
+  }, /*#__PURE__*/React.createElement("section", {
+    style: {
+      padding: "40px 0 8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    style: S.linkBtn
+  }, "\u2190 Back to store"), /*#__PURE__*/React.createElement("h1", {
+    style: {
+      fontFamily: "var(--display)",
+      fontSize: 32,
+      fontWeight: 700,
+      letterSpacing: "-.02em",
+      margin: "14px 0 6px"
+    }
+  }, "Help center"), !thread ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      marginBottom: 20,
+      fontSize: 14.5
+    }
+  }, "Have a question or a problem with an order? Enter your order ID and the phone number you ordered with, and we'll help you right here."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12,
+      maxWidth: 420
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: id,
+    onChange: e => setId(e.target.value),
+    placeholder: "Order ID (e.g. VG12345678)"
+  }), /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: phone,
+    onChange: e => setPhone(e.target.value),
+    placeholder: "Phone number (10 digits)",
+    inputMode: "numeric",
+    maxLength: 10
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: open,
+    disabled: busy,
+    style: {
+      ...S.primaryBtn,
+      ...(busy ? S.addBtnDisabled : {})
+    }
+  }, busy ? "Opening…" : "Start chat"), err && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      fontSize: 13
+    }
+  }, err))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap",
+      background: T.card,
+      border: "1px solid " + T.line,
+      borderRadius: 14,
+      padding: "12px 16px",
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontFamily: "var(--mono)",
+      fontSize: 14,
+      color: T.ink
+    }
+  }, esc(thread.order.id)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: T.inkSoft,
+      marginLeft: 10,
+      fontFamily: "var(--mono)"
+    }
+  }, esc(thread.order.status || "Placed"), " \xB7 ", rupee(thread.order.total))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setThread(null);
+      setMsg("");
+      setErr("");
+    },
+    style: {
+      ...S.linkBtn,
+      fontSize: 12.5
+    }
+  }, "Use a different order")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.bg || "#0f0d0a",
+      border: "1px solid " + T.line,
+      borderRadius: 14,
+      padding: 16,
+      minHeight: 200,
+      maxHeight: 380,
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: 10
+    }
+  }, !thread.messages || thread.messages.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13.5,
+      textAlign: "center",
+      margin: "auto",
+      lineHeight: 1.6,
+      maxWidth: 320
+    }
+  }, "\uD83D\uDC4B Describe your issue or request below and we'll get back to you here. You'll also receive our reply by email.") : thread.messages.map(m => {
+    const mine = m.sender === "customer";
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      style: {
+        alignSelf: mine ? "flex-end" : "flex-start",
+        maxWidth: "82%"
+      }
+    }, !mine && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        margin: "0 0 3px 4px",
+        textTransform: "uppercase",
+        letterSpacing: ".04em"
+      }
+    }, "Vector Grid"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: mine ? T.marigold : T.card,
+        color: mine ? "#fff" : T.ink,
+        border: mine ? "none" : "1px solid " + T.line,
+        borderRadius: mine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+        padding: "9px 13px",
+        fontSize: 13.5,
+        lineHeight: 1.5,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word"
+      }
+    }, esc(m.body)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        margin: mine ? "3px 4px 0 0" : "3px 0 0 4px",
+        textAlign: mine ? "right" : "left"
+      }
+    }, new Date(m.created_at).toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    })));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 12,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: msg,
+    onChange: e => setMsg(e.target.value),
+    placeholder: "Type your message\u2026",
+    rows: 2,
+    style: {
+      ...S.input,
+      flex: 1,
+      resize: "vertical",
+      fontFamily: "inherit",
+      minHeight: 44
+    },
+    onKeyDown: e => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        send();
+      }
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: send,
+    disabled: sending || !msg.trim(),
+    style: {
+      ...S.primaryBtn,
+      width: "auto",
+      padding: "11px 20px",
+      ...(sending || !msg.trim() ? S.addBtnDisabled : {})
+    }
+  }, sending ? "…" : "Send")), err && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.danger,
+      fontSize: 13,
+      marginTop: 8
+    }
+  }, err), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11.5,
+      color: T.muted,
+      marginTop: 10,
+      lineHeight: 1.5
+    }
+  }, "This chat updates automatically. We reply as soon as we can \u2014 our reply also arrives by email."))));
+}
+function AdminSupportThread({
+  thread,
+  adminKey,
+  onReplied
+}) {
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(thread.unseen > 0);
+  const send = async () => {
+    const text = reply.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch(API + "/api/admin/support-reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey
+        },
+        body: JSON.stringify({
+          orderId: thread.orderId,
+          body: text
+        })
+      });
+      const j = await r.json();
+      setBusy(false);
+      if (r.ok) {
+        setReply("");
+        onReplied && onReplied();
+      }
+    } catch (e) {
+      setBusy(false);
+    }
+  };
+  const last = thread.messages[thread.messages.length - 1];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.card,
+      border: "1px solid " + (thread.unseen > 0 ? T.marigold : T.line),
+      borderRadius: 14,
+      padding: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 10,
+      flexWrap: "wrap",
+      cursor: "pointer"
+    },
+    onClick: () => setOpen(!open)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("strong", {
+    style: {
+      fontFamily: "var(--mono)",
+      fontSize: 14,
+      color: T.ink
+    }
+  }, esc(thread.orderId)), thread.unseen > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10.5,
+      fontWeight: 700,
+      background: T.marigold,
+      color: "#fff",
+      borderRadius: 999,
+      padding: "1px 8px",
+      fontFamily: "var(--mono)"
+    }
+  }, thread.unseen, " new"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11.5,
+      color: T.inkSoft
+    }
+  }, esc(thread.name), thread.phone ? " · " + esc(thread.phone) : "")), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12.5,
+      color: T.muted,
+      margin: "6px 0 0",
+      lineHeight: 1.5,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, last ? (last.sender === "seller" ? "You: " : "") + esc(last.body) : "")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      fontFamily: "var(--mono)",
+      flexShrink: 0
+    }
+  }, open ? "▲" : "▼")), open && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.bg || "#0f0d0a",
+      border: "1px solid " + T.line,
+      borderRadius: 12,
+      padding: 14,
+      margin: "12px 0",
+      display: "flex",
+      flexDirection: "column",
+      gap: 9,
+      maxHeight: 300,
+      overflowY: "auto"
+    }
+  }, thread.messages.map(m => {
+    const seller = m.sender === "seller";
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      style: {
+        alignSelf: seller ? "flex-end" : "flex-start",
+        maxWidth: "85%"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        margin: seller ? "0 4px 2px 0" : "0 0 2px 4px",
+        textAlign: seller ? "right" : "left"
+      }
+    }, seller ? "You" : esc(thread.name), " \xB7 ", new Date(m.created_at).toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: seller ? T.teal : T.card,
+        color: seller ? "#fff" : T.ink,
+        border: seller ? "none" : "1px solid " + T.line,
+        borderRadius: 12,
+        padding: "8px 12px",
+        fontSize: 13,
+        lineHeight: 1.5,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word"
+      }
+    }, esc(m.body)));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: reply,
+    onChange: e => setReply(e.target.value),
+    placeholder: "Type your reply / solution\u2026",
+    rows: 2,
+    style: {
+      ...S.input,
+      flex: 1,
+      resize: "vertical",
+      fontFamily: "inherit",
+      minHeight: 42
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: send,
+    disabled: busy || !reply.trim(),
+    style: {
+      ...S.primaryBtn,
+      width: "auto",
+      padding: "10px 18px",
+      ...(busy || !reply.trim() ? S.addBtnDisabled : {})
+    }
+  }, busy ? "…" : "Reply")), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: T.muted,
+      marginTop: 8
+    }
+  }, "Your reply is saved to this conversation and emailed to the customer (if they left an email).")));
+}
 function AdminOrders({
   onBack
 }) {
@@ -2522,6 +3011,8 @@ function AdminOrders({
   const [prods, setProds] = useState([]);
   const [prodBusy, setProdBusy] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [support, setSupport] = useState([]);
+  const [supBusy, setSupBusy] = useState(false);
   const load = async (k, opts) => {
     setErr("");
     setBusy(true);
@@ -2544,6 +3035,7 @@ function AdminOrders({
         }
         loadReviews(k);
         loadProds(k);
+        loadSupport(k);
       } else {
         setErr(j.error || "That key didn't work. Please check and try again.");
         setAuthed(false);
@@ -2584,6 +3076,21 @@ function AdminOrders({
       if (r.ok) setProds(j.products || []);
     } catch (e) {
       setProdBusy(false);
+    }
+  };
+  const loadSupport = async k => {
+    setSupBusy(true);
+    try {
+      const r = await fetch(API + "/api/admin/support", {
+        headers: {
+          "x-admin-key": k || key
+        }
+      });
+      const j = await r.json();
+      setSupBusy(false);
+      if (r.ok) setSupport(j.threads || []);
+    } catch (e) {
+      setSupBusy(false);
     }
   };
   const delReview = async id => {
@@ -2666,6 +3173,7 @@ function AdminOrders({
       remember
     });
   };
+  const supUnseen = support.reduce((s, t) => s + (t.unseen || 0), 0);
   return /*#__PURE__*/React.createElement("main", {
     style: {
       ...S.main,
@@ -2807,7 +3315,7 @@ function AdminOrders({
       borderBottom: "1px solid " + T.line,
       flexWrap: "wrap"
     }
-  }, [["orders", "Orders"], ["products", "Products"], ["reviews", "Reviews"]].map(([t, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [["orders", "Orders"], ["products", "Products"], ["reviews", "Reviews"], ["support", "Support"]].map(([t, label]) => /*#__PURE__*/React.createElement("button", {
     key: t,
     onClick: () => setTab(t),
     style: {
@@ -2821,7 +3329,7 @@ function AdminOrders({
       cursor: "pointer",
       marginBottom: -1
     }
-  }, label, t === "products" && prods.length > 0 ? " (" + prods.length + ")" : "", t === "reviews" && reviews.length > 0 ? " (" + reviews.length + ")" : ""))), tab === "orders" ? /*#__PURE__*/React.createElement("div", null, (() => {
+  }, label, t === "products" && prods.length > 0 ? " (" + prods.length + ")" : "", t === "reviews" && reviews.length > 0 ? " (" + reviews.length + ")" : "", t === "support" && supUnseen > 0 ? " (" + supUnseen + ")" : ""))), tab === "orders" ? /*#__PURE__*/React.createElement("div", null, (() => {
     const stat = name => orders.filter(o => (o.status || "Placed") === name).length;
     const active = orders.filter(o => (o.status || "") !== "Cancelled");
     const revenue = active.reduce((s, o) => s + Number(o.total || 0), 0);
@@ -3363,7 +3871,7 @@ function AdminOrders({
         fontSize: 12.5
       }
     }, "Delete")));
-  }))) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }))) : tab === "reviews" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -3479,7 +3987,63 @@ function AdminOrders({
       fontSize: 12.5,
       flexShrink: 0
     }
-  }, "Delete"))))))), editing && /*#__PURE__*/React.createElement(ProductEditor, {
+  }, "Delete")))))) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.inkSoft,
+      fontSize: 13,
+      fontFamily: "var(--mono)"
+    }
+  }, support.length, " conversation", support.length === 1 ? "" : "s", supUnseen > 0 ? " · " + supUnseen + " new" : ""), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadSupport(key),
+    style: S.linkBtn
+  }, "\u21BB Refresh")), supBusy && support.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted
+    }
+  }, "Loading conversations\u2026"), !supBusy && support.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "48px 20px",
+      background: T.card,
+      border: "1px dashed " + T.line,
+      borderRadius: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 32,
+      marginBottom: 8
+    }
+  }, "\uD83D\uDCAC"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.inkSoft,
+      margin: 0
+    }
+  }, "No customer messages yet."), /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: T.muted,
+      fontSize: 13,
+      marginTop: 4
+    }
+  }, "When a customer contacts you from the Help Center, the conversation appears here.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gap: 12
+    }
+  }, support.map(th => /*#__PURE__*/React.createElement(AdminSupportThread, {
+    key: th.orderId,
+    thread: th,
+    adminKey: key,
+    onReplied: () => loadSupport(key)
+  }))))), editing && /*#__PURE__*/React.createElement(ProductEditor, {
     product: editing,
     adminKey: key,
     onClose: () => setEditing(null),
@@ -4545,7 +5109,7 @@ function Footer({
   storeName,
   onNav
 }) {
-  const links = [["Track order", "track"], ["About", "about"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
+  const links = [["Track order", "track"], ["Help center", "help"], ["About", "about"], ["Terms", "terms"], ["Privacy", "privacy"], ["Refund", "refund"], ["Shipping", "shipping"], ["Contact", "contact"], ["Seller", "admin"]];
   return /*#__PURE__*/React.createElement("footer", {
     style: S.footer
   }, /*#__PURE__*/React.createElement("div", {
