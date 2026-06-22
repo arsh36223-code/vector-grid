@@ -104,9 +104,14 @@ function App(){
   const [paying,setPaying]=useState(false);
   const [page,setPage]=useState(null);
   const go=(p)=>{ setPage(p); window.scrollTo(0,0); };
+  const PAGES=["track","help","admin","about","terms","privacy","refund","shipping","contact"];
+  const navReady=React.useRef(false); const navPop=React.useRef(false); const navDepth=React.useRef(0);
+  const navBack=()=>{ if(navDepth.current>0){ window.history.back(); } else { setPage(null); setQuick(null); window.scrollTo(0,0); } };
 
   useEffect(()=>{
-    const pid=(()=>{ try{ return new URLSearchParams(window.location.search).get("p"); }catch(e){ return null; } })();
+    let pid=null, pg=null;
+    try{ const sp=new URLSearchParams(window.location.search); pid=sp.get("p"); pg=sp.get("page"); }catch(e){}
+    if(pg && PAGES.includes(pg)) setPage(pg);
     (async()=>{
       let cat=SEED;
       try{ const r=await fetch(API+"/api/products"); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length) cat=j; } }catch(e){}
@@ -115,8 +120,38 @@ function App(){
     })();
   },[]);
 
-  // keep the address bar in sync with the open product, so the link can be shared / opened directly
-  useEffect(()=>{ try{ const u=new URL(window.location.href); if(quick) u.searchParams.set("p",quick.id); else u.searchParams.delete("p"); window.history.replaceState({},"",u); }catch(e){} },[quick]);
+  // Reflect the current page + open product in the URL so the browser Back/Forward buttons work,
+  // and so a product link stays shareable. User navigations push a history entry; Back pops it. No reload.
+  useEffect(()=>{
+    if(navPop.current){ navPop.current=false; return; }
+    try{
+      const u=new URL(window.location.href);
+      u.searchParams.delete("page"); u.searchParams.delete("p");
+      if(page) u.searchParams.set("page",page);
+      if(quick) u.searchParams.set("p",quick.id);
+      const target=u.pathname+u.search; const current=window.location.pathname+window.location.search;
+      if(target===current){ navReady.current=true; return; }
+      if(!navReady.current){ window.history.replaceState({d:navDepth.current},"",target); navReady.current=true; }
+      else { navDepth.current+=1; window.history.pushState({d:navDepth.current},"",target); }
+    }catch(e){}
+  },[page,quick]);
+
+  // Browser Back/Forward (or our back shortcut) → restore page + product from the URL, no reload.
+  useEffect(()=>{
+    const onPop=(ev)=>{
+      navPop.current=true;
+      navDepth.current=(ev.state&&typeof ev.state.d==="number")?ev.state.d:0;
+      try{
+        const sp=new URLSearchParams(window.location.search);
+        const pg=sp.get("page"); const pid=sp.get("p");
+        setPage(pg&&PAGES.includes(pg)?pg:null);
+        setQuick(pid?(products.find(x=>String(x.id)===String(pid))||null):null);
+        window.scrollTo(0,0);
+      }catch(e){ setPage(null); setQuick(null); }
+    };
+    window.addEventListener("popstate",onPop);
+    return ()=>window.removeEventListener("popstate",onPop);
+  },[products]);
 
   const addToCart=(id)=>{ const p=products.find(x=>x.id===id); const max=(p&&p.stock!=null&&p.stock>0)?Math.min(50,p.stock):(p&&p.stock===0?0:50); if(max<=0) return; setCart(c=>({...c,[id]:Math.min(max,(c[id]||0)+1)})); setCartOpen(true); };
   const setQty=(id,q)=>setCart(c=>{ const n={...c}; if(q<=0) delete n[id]; else n[id]=Math.min(50,q); return n; });
@@ -180,16 +215,16 @@ function App(){
   return (
     <div style={S.page}>
       <Header storeName={storeName} cartCount={cartCount} onCart={()=>setCartOpen(true)} onHome={()=>go(null)} onTrack={()=>go("track")} />
-      {page==="track" ? <TrackOrder onBack={()=>go(null)} />
-        : page==="help" ? <HelpCenter onBack={()=>go(null)} />
-        : page==="admin" ? <AdminOrders onBack={()=>go(null)} />
-        : page ? <Policy pageKey={page} onBack={()=>go(null)} />
+      {page==="track" ? <TrackOrder onBack={navBack} />
+        : page==="help" ? <HelpCenter onBack={navBack} />
+        : page==="admin" ? <AdminOrders onBack={navBack} />
+        : page ? <Policy pageKey={page} onBack={navBack} />
         : <Store products={products} onAdd={addToCart} onQuick={setQuick} onTrack={()=>go("track")} />}
       <Footer storeName={storeName} onNav={go} />
       {cartOpen && !checkout && <CartDrawer items={cartItems} subtotal={subtotal} shipping={shipping} total={total} setQty={setQty} onClose={()=>setCartOpen(false)} onCheckout={()=>{ if(cartItems.length) setCheckout(true); }} />}
       {checkout && <Checkout items={cartItems} total={total} shipping={shipping} subtotal={subtotal} paying={paying} onBack={()=>{ if(!paying) setCheckout(false); }} onPlace={handlePlace} />}
       {confirmed && <Confirmation order={confirmed} onClose={()=>setConfirmed(null)} />}
-      {quick && <QuickView product={quick} onClose={()=>setQuick(null)} onAdd={()=>{ addToCart(quick.id); setQuick(null); }} />}
+      {quick && <QuickView product={quick} onClose={navBack} onAdd={()=>{ addToCart(quick.id); navBack(); }} />}
     </div>
   );
 }

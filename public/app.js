@@ -224,14 +224,28 @@ function App() {
     setPage(p);
     window.scrollTo(0, 0);
   };
+  const PAGES = ["track", "help", "admin", "about", "terms", "privacy", "refund", "shipping", "contact"];
+  const navReady = React.useRef(false);
+  const navPop = React.useRef(false);
+  const navDepth = React.useRef(0);
+  const navBack = () => {
+    if (navDepth.current > 0) {
+      window.history.back();
+    } else {
+      setPage(null);
+      setQuick(null);
+      window.scrollTo(0, 0);
+    }
+  };
   useEffect(() => {
-    const pid = (() => {
-      try {
-        return new URLSearchParams(window.location.search).get("p");
-      } catch (e) {
-        return null;
-      }
-    })();
+    let pid = null,
+      pg = null;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      pid = sp.get("p");
+      pg = sp.get("page");
+    } catch (e) {}
+    if (pg && PAGES.includes(pg)) setPage(pg);
     (async () => {
       let cat = SEED;
       try {
@@ -250,14 +264,59 @@ function App() {
     })();
   }, []);
 
-  // keep the address bar in sync with the open product, so the link can be shared / opened directly
+  // Reflect the current page + open product in the URL so the browser Back/Forward buttons work,
+  // and so a product link stays shareable. User navigations push a history entry; Back pops it. No reload.
   useEffect(() => {
+    if (navPop.current) {
+      navPop.current = false;
+      return;
+    }
     try {
       const u = new URL(window.location.href);
-      if (quick) u.searchParams.set("p", quick.id);else u.searchParams.delete("p");
-      window.history.replaceState({}, "", u);
+      u.searchParams.delete("page");
+      u.searchParams.delete("p");
+      if (page) u.searchParams.set("page", page);
+      if (quick) u.searchParams.set("p", quick.id);
+      const target = u.pathname + u.search;
+      const current = window.location.pathname + window.location.search;
+      if (target === current) {
+        navReady.current = true;
+        return;
+      }
+      if (!navReady.current) {
+        window.history.replaceState({
+          d: navDepth.current
+        }, "", target);
+        navReady.current = true;
+      } else {
+        navDepth.current += 1;
+        window.history.pushState({
+          d: navDepth.current
+        }, "", target);
+      }
     } catch (e) {}
-  }, [quick]);
+  }, [page, quick]);
+
+  // Browser Back/Forward (or our back shortcut) → restore page + product from the URL, no reload.
+  useEffect(() => {
+    const onPop = ev => {
+      navPop.current = true;
+      navDepth.current = ev.state && typeof ev.state.d === "number" ? ev.state.d : 0;
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const pg = sp.get("page");
+        const pid = sp.get("p");
+        setPage(pg && PAGES.includes(pg) ? pg : null);
+        setQuick(pid ? products.find(x => String(x.id) === String(pid)) || null : null);
+        window.scrollTo(0, 0);
+      } catch (e) {
+        setPage(null);
+        setQuick(null);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [products]);
   const addToCart = id => {
     const p = products.find(x => x.id === id);
     const max = p && p.stock != null && p.stock > 0 ? Math.min(50, p.stock) : p && p.stock === 0 ? 0 : 50;
@@ -436,14 +495,14 @@ function App() {
     onHome: () => go(null),
     onTrack: () => go("track")
   }), page === "track" ? /*#__PURE__*/React.createElement(TrackOrder, {
-    onBack: () => go(null)
+    onBack: navBack
   }) : page === "help" ? /*#__PURE__*/React.createElement(HelpCenter, {
-    onBack: () => go(null)
+    onBack: navBack
   }) : page === "admin" ? /*#__PURE__*/React.createElement(AdminOrders, {
-    onBack: () => go(null)
+    onBack: navBack
   }) : page ? /*#__PURE__*/React.createElement(Policy, {
     pageKey: page,
-    onBack: () => go(null)
+    onBack: navBack
   }) : /*#__PURE__*/React.createElement(Store, {
     products: products,
     onAdd: addToCart,
@@ -477,10 +536,10 @@ function App() {
     onClose: () => setConfirmed(null)
   }), quick && /*#__PURE__*/React.createElement(QuickView, {
     product: quick,
-    onClose: () => setQuick(null),
+    onClose: navBack,
     onAdd: () => {
       addToCart(quick.id);
-      setQuick(null);
+      navBack();
     }
   }));
 }
