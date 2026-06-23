@@ -179,6 +179,29 @@ async function initDb() {
       await pool.query("INSERT INTO app_flags (key) VALUES ('catalog_v4') ON CONFLICT (key) DO NOTHING");
       console.log("Applied catalogue update v4 (accessories + per-garment costs).");
     }
+    // One-time v5: make the ceramic mug a customer-uploaded photo mug (prepaid custom product).
+    const f5 = await pool.query("SELECT key FROM app_flags WHERE key='catalog_v5'");
+    if (!f5.rows.length) {
+      await pool.query(
+        "UPDATE products SET name=$1, descr=$2, custom=true, supplier=$3 WHERE id='p16'",
+        ["Custom Photo Mug — Your Design",
+         "Your photo or design printed full-wrap on a glossy 11oz ceramic mug. Upload your image — microwave & dishwasher safe. Prepaid only.",
+         "Qikink (custom print)"]
+      );
+      await pool.query("INSERT INTO app_flags (key) VALUES ('catalog_v5') ON CONFLICT (key) DO NOTHING");
+      console.log("Applied catalogue update v5 (custom photo mug).");
+    }
+    // One-time v6: add the phone-model picker (stored in sizes) to the custom phone case.
+    const f6 = await pool.query("SELECT key FROM app_flags WHERE key='catalog_v6'");
+    if (!f6.rows.length) {
+      await pool.query(
+        "UPDATE products SET sizes=$1, descr=$2 WHERE id='p20'",
+        [PHONE_MODELS,
+         "Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only."]
+      );
+      await pool.query("INSERT INTO app_flags (key) VALUES ('catalog_v6') ON CONFLICT (key) DO NOTHING");
+      console.log("Applied catalogue update v6 (phone case model picker).");
+    }
   } catch (e) { console.error("demo seed failed:", e && e.message); }
   await refreshProductCache();
 }
@@ -222,6 +245,9 @@ function adminOk(req) {
    For dropshipping (Option A): set supplier + where to order +
    your cost, so the order email tells you exactly what to do.
    ============================================================ */
+// Phone models offered for the custom phone case. Trim/extend to match exactly what your
+// POD supplier (Qikink) currently stocks — check your Qikink dashboard's phone-case model list.
+const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
 const PRODUCTS = [
   { id: "p1", name: "Minimalist Steel Water Bottle", price: 549, mrp: 899, stock: 42, category: "Drinkware",
     img: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
@@ -296,10 +322,11 @@ const PRODUCTS = [
     styleCosts: "Regular Tee:420, Full Sleeve Tee:470, Oversized Tee:500, Sweatshirt:640, Hoodie:740, Oversized Hoodie:900, Zip Hoodie:1000", custom: true,
     cost: 420, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
   // ---- Accessories (Qikink print-on-demand; cost = landed estimate incl. print + shipping + GST) ----
-  { id: "p16", name: "Printed Ceramic Mug (325ml)", price: 449, mrp: 699, stock: 100, category: "Accessories",
+  { id: "p16", name: "Custom Photo Mug — Your Design", price: 449, mrp: 699, stock: 100, category: "Accessories",
     img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
-    desc: "Glossy 11oz ceramic mug with a full-wrap sublimation print. Microwave & dishwasher safe.",
-    cost: 210, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+    desc: "Your photo or design printed full-wrap on a glossy 11oz ceramic mug. Upload your image — microwave & dishwasher safe. Prepaid only.",
+    custom: true,
+    cost: 210, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
   { id: "p17", name: "All-Over Print Tote Bag", price: 599, mrp: 999, stock: 100, category: "Accessories",
     img: "https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80",
     desc: "Roomy cotton tote with an edge-to-edge printed design. Everyday carry, sturdy handles.",
@@ -314,8 +341,8 @@ const PRODUCTS = [
     cost: 420, supplier: "Qikink", supplierUrl: "https://qikink.com" },
   { id: "p20", name: "Custom Phone Case — Your Design", price: 699, mrp: 1199, stock: 100, category: "Accessories",
     img: "https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80",
-    desc: "Your photo or design on a durable anti-yellow clear case. Upload your image and tell us your exact phone model in the note box. Prepaid only.",
-    custom: true,
+    desc: "Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only.",
+    custom: true, sizes: PHONE_MODELS,
     cost: 310, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
 ];
 
@@ -373,7 +400,7 @@ function computeOrder(items, cod, requireDesign) {
     qtyById[p.id] = (qtyById[p.id] || 0) + qty;
     if (typeof p.stock === "number" && qtyById[p.id] > p.stock) return { error: `Only ${p.stock} of "${p.name}" left in stock.` };
     const opts = parseSizesList(p.sizes);
-    let size = it.size != null ? String(it.size).trim().slice(0, 20) : "";
+    let size = it.size != null ? String(it.size).trim().slice(0, 40) : "";
     if (opts.length) {
       if (!size) return { error: `Please choose a size for "${p.name}".` };
       if (!opts.includes(size)) return { error: `"${size}" isn't an available size for "${p.name}".` };
@@ -431,7 +458,7 @@ async function notifyOrder(order) {
   const c = order.customer;
   const lines = order.lineItems.map((li, i) =>
     li.custom
-      ? `- ${li.name}  x${li.qty}  [CUSTOM${li.style ? ": " + li.style.toUpperCase() : " PHOTO TEE"}${li.size ? ", size " + li.size : ""}]\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
+      ? `- ${li.name}  x${li.qty}  [CUSTOM${li.style ? ": " + li.style.toUpperCase() : ""}${li.size ? ", " + li.size : ""}]\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
       : `- ${li.name}${li.style ? "  [" + li.style + "]" : ""}${li.size ? "  [size: " + li.size + "]" : ""}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
   ).join("\n");
   // Build email attachments from any custom-design images.
@@ -746,7 +773,7 @@ app.post("/api/admin/product-save", async (req, res) => {
   const img = imgRaw.startsWith("data:image/") ? imgRaw.slice(0, 3600000) : imgRaw.slice(0, 500);
   const descr = String(b.desc || "").trim().slice(0, 600);
   const category = String(b.category || "").trim().slice(0, 40);
-  const sizes = parseSizesList(b.sizes).join(",").slice(0, 120);
+  const sizes = parseSizesList(b.sizes).join(",").slice(0, 4000);
   const styles = parseStylesList(b.styles).map(s => s.label + ":" + s.price).join(", ").slice(0, 240);
   const styleCosts = parseStylesList(b.styleCosts).map(s => s.label + ":" + s.price).join(", ").slice(0, 240);
   const custom = b.custom === true;

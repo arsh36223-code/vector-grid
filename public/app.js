@@ -18,6 +18,8 @@ const T = {
   danger: "#E5685A"
 };
 const INDIAN_STATES = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu & Kashmir", "Ladakh", "Puducherry", "Chandigarh", "Andaman & Nicobar"];
+// Phone models offered for the custom phone case (keep in sync with the server's list).
+const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
 const SEED = [{
   id: "p1",
   name: "Minimalist Steel Water Bottle",
@@ -173,13 +175,14 @@ const SEED = [{
   custom: true
 }, {
   id: "p16",
-  name: "Printed Ceramic Mug (325ml)",
+  name: "Custom Photo Mug — Your Design",
   price: 449,
   mrp: 699,
   stock: 100,
   category: "Accessories",
   img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
-  desc: "Glossy 11oz ceramic mug with a full-wrap sublimation print. Microwave & dishwasher safe."
+  desc: "Your photo or design printed full-wrap on a glossy 11oz ceramic mug. Upload your image — microwave & dishwasher safe. Prepaid only.",
+  custom: true
 }, {
   id: "p17",
   name: "All-Over Print Tote Bag",
@@ -215,8 +218,9 @@ const SEED = [{
   stock: 100,
   category: "Accessories",
   img: "https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80",
-  desc: "Your photo or design on a durable anti-yellow clear case. Upload your image and tell us your exact phone model in the note box. Prepaid only.",
-  custom: true
+  desc: "Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only.",
+  custom: true,
+  sizes: PHONE_MODELS
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
@@ -235,6 +239,39 @@ const parseStyles = s => typeof s === "string" ? s.split(",").map(part => {
     price
   };
 }).filter(Boolean) : [];
+// Garment mockups for the custom-print product: the preview swaps to match the chosen style
+// (tee → tee photo, hoodie → hoodie photo, etc.). Replace these URLs with your real Qikink mockups.
+const GARMENT_IMAGES = [{
+  kw: ["zip"],
+  img: "https://images.unsplash.com/photo-1605296866699-4bc5e3300d11?w=600&q=80"
+}, {
+  kw: ["oversized hoodie"],
+  img: "https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80"
+}, {
+  kw: ["hoodie"],
+  img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80"
+}, {
+  kw: ["sweat"],
+  img: "https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80"
+}, {
+  kw: ["full sleeve", "long sleeve", "full-sleeve"],
+  img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80"
+}, {
+  kw: ["oversized"],
+  img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80"
+}, {
+  kw: ["tee", "t-shirt", "shirt"],
+  img: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80"
+}];
+const garmentImage = (label, fallback) => {
+  const l = String(label || "").toLowerCase();
+  for (const g of GARMENT_IMAGES) {
+    if (g.kw.some(k => l.includes(k))) return g.img;
+  }
+  return fallback;
+};
+// True for the phone-case product, so its option list is shown as a "phone model" dropdown instead of size chips.
+const isPhoneCase = p => /\bphone\s*(case|cover)/i.test(p && p.name || "");
 function Stars({
   value,
   size
@@ -1002,7 +1039,7 @@ function Store({
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     let list = products.filter(p => {
-      const inCat = cat === "All" || p.category === cat;
+      const inCat = cat === "All" || p.category === cat || cat === "Custom" && p.custom === true;
       const hay = (esc(p.name) + " " + esc(p.desc) + " " + esc(p.category)).toLowerCase();
       return inCat && (!needle || hay.includes(needle));
     });
@@ -1405,6 +1442,7 @@ function QuickView({
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [sizeErr, setSizeErr] = useState(false);
   const isCustom = product.custom === true;
+  const phoneCase = isPhoneCase(product);
   const styleOpts = isCustom ? parseStyles(product.styles) : [];
   const [selStyle, setSelStyle] = useState(styleOpts.length ? styleOpts[0].label : "");
   const [styleErr, setStyleErr] = useState(false);
@@ -1584,8 +1622,15 @@ function QuickView({
       minHeight: 320
     }
   }, /*#__PURE__*/React.createElement("img", {
-    src: product.img,
+    src: isCustom && styleOpts.length ? garmentImage(selStyle, product.img) : product.img,
     alt: esc(product.name),
+    onError: e => {
+      if (e.currentTarget.src !== product.img) {
+        e.currentTarget.src = product.img;
+      } else {
+        e.currentTarget.style.opacity = 0.25;
+      }
+    },
     style: {
       width: "100%",
       height: "100%",
@@ -1739,7 +1784,7 @@ function QuickView({
       fontSize: 11,
       color: T.muted
     }
-  }, "JPG or PNG — this is what we print on your tee")) : /*#__PURE__*/React.createElement("div", {
+  }, "JPG or PNG — this is what we print on your product")) : /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 12,
@@ -1805,14 +1850,14 @@ function QuickView({
       fontWeight: 700,
       color: T.ink
     }
-  }, "Select size", sizeErr && !selSize ? /*#__PURE__*/React.createElement("span", {
+  }, phoneCase ? "Choose your phone model" : "Select size", sizeErr && !selSize ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: T.danger,
       fontWeight: 400,
       marginLeft: 6,
       fontSize: 12
     }
-  }, "· please pick one") : ""), /*#__PURE__*/React.createElement("button", {
+  }, "· please pick one") : ""), !phoneCase && /*#__PURE__*/React.createElement("button", {
     onClick: () => setSizeChartOpen(true),
     style: {
       background: "none",
@@ -1825,7 +1870,23 @@ function QuickView({
       padding: 0,
       fontFamily: "inherit"
     }
-  }, "📏 Size guide")), /*#__PURE__*/React.createElement("div", {
+  }, "📏 Size guide")), phoneCase ? /*#__PURE__*/React.createElement("select", {
+    value: selSize,
+    onChange: e => {
+      setSelSize(e.target.value);
+      setSizeErr(false);
+    },
+    style: {
+      ...S.input,
+      width: "100%",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "— Select your phone model —"), opts.map(sz => /*#__PURE__*/React.createElement("option", {
+    key: sz,
+    value: sz
+  }, sz))) : /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
@@ -1849,7 +1910,14 @@ function QuickView({
       background: selSize === sz ? T.marigold : "transparent",
       color: selSize === sz ? "#13100D" : T.ink
     }
-  }, sz)))), opts.length > 0 || isCustom ? /*#__PURE__*/React.createElement("button", {
+  }, sz))), phoneCase && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11.5,
+      color: T.muted,
+      margin: "8px 0 0",
+      lineHeight: 1.5
+    }
+  }, "Don't see your model? Message us — we add new models regularly.")), opts.length > 0 || isCustom ? /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (out) return;
       if (styleOpts.length > 0 && !selStyle) {
@@ -2180,7 +2248,7 @@ function CartDrawer({
         fontFamily: "var(--mono)",
         margin: "2px 0 0"
       }
-    }, [i.design && i.design.style ? esc(i.design.style) : null, i.size ? "Size: " + esc(i.size) : null].filter(Boolean).join("  ·  ")), /*#__PURE__*/React.createElement("p", {
+    }, [i.design && i.design.style ? esc(i.design.style) : null, i.size ? (isPhoneCase(i) ? "Model: " : "Size: ") + esc(i.size) : null].filter(Boolean).join("  ·  ")), /*#__PURE__*/React.createElement("p", {
       style: S.cartPrice
     }, rupee(i.price)), /*#__PURE__*/React.createElement("div", {
       style: S.qtyRow

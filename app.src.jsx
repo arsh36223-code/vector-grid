@@ -3,6 +3,8 @@ const API = "";
 
 const T = { paper:"#13100D", card:"#1C1814", ink:"#F3EFE8", inkSoft:"#B9B0A3", muted:"#8A8175", line:"#2F2922", marigold:"#EF901E", marigoldDark:"#C96A00", teal:"#2CBBA9", tint:"#221A11", danger:"#E5685A" };
 const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh","Andaman & Nicobar"];
+// Phone models offered for the custom phone case (keep in sync with the server's list).
+const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
 const SEED = [
   { id:"p1", name:"Minimalist Steel Water Bottle", price:549, mrp:899, stock:42, category:"Drinkware", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Insulated 750ml bottle. Keeps cold 24h, hot 12h." },
   { id:"p2", name:"Linen Cushion Cover (Set of 2)", price:699, mrp:1199, stock:30, category:"Home", img:"https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80", desc:"16x16 inch, washed linen, hidden zip." },
@@ -20,11 +22,11 @@ const SEED = [
   { id:"p14", name:"Graphic Sweatshirt", price:1399, mrp:2199, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80", desc:"300 GSM fleece sweatshirt, ribbed cuffs. Unisex.", sizes:"S,M,L,XL,XXL" },
   { id:"p15", name:"Oversized Hoodie — Heavy 400", price:1899, mrp:2999, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80", desc:"400 GSM heavyweight oversized hoodie, drop shoulder. Unisex.", sizes:"S,M,L,XL,XXL" },
   { id:"custom-tee", name:"Custom Print — Your Design", price:899, mrp:0, stock:100, category:"Custom", img:"https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80", desc:"Your design, printed on the garment of your choice. Pick a style, upload your image and choose a size — we print it and ship it to you. Prepaid only.", sizes:"S,M,L,XL,XXL", styles:"Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099", custom:true },
-  { id:"p16", name:"Printed Ceramic Mug (325ml)", price:449, mrp:699, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80", desc:"Glossy 11oz ceramic mug with a full-wrap sublimation print. Microwave & dishwasher safe." },
+  { id:"p16", name:"Custom Photo Mug — Your Design", price:449, mrp:699, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80", desc:"Your photo or design printed full-wrap on a glossy 11oz ceramic mug. Upload your image — microwave & dishwasher safe. Prepaid only.", custom:true },
   { id:"p17", name:"All-Over Print Tote Bag", price:599, mrp:999, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80", desc:"Roomy cotton tote with an edge-to-edge printed design. Everyday carry, sturdy handles." },
   { id:"p18", name:"Classic Embroidered Cap", price:699, mrp:1099, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&q=80", desc:"Structured 6-panel baseball cap with neat embroidery. Adjustable strap, one size fits most." },
   { id:"p19", name:"Insulated Steel Water Bottle (750ml)", price:849, mrp:1399, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Double-wall stainless steel bottle with a printed design. Keeps cold 24h, hot 12h." },
-  { id:"p20", name:"Custom Phone Case — Your Design", price:699, mrp:1199, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80", desc:"Your photo or design on a durable anti-yellow clear case. Upload your image and tell us your exact phone model in the note box. Prepaid only.", custom:true },
+  { id:"p20", name:"Custom Phone Case — Your Design", price:699, mrp:1199, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80", desc:"Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only.", custom:true, sizes:PHONE_MODELS },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
@@ -33,6 +35,20 @@ const esc = (s) => String(s==null?"":s);
 const parseSizes = (s) => (typeof s==="string" ? s.split(",").map(x=>x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
 // Garment styles for custom products: "Regular Tee:799, Oversized Tee:999, Hoodie:1399" -> [{label,price}]
 const parseStyles = (s) => (typeof s==="string" ? s.split(",").map(part=>{ const i=part.lastIndexOf(":"); if(i<0) return null; const label=part.slice(0,i).trim(); const price=parseInt(part.slice(i+1).trim(),10); if(!label||!(price>0)) return null; return {label,price}; }).filter(Boolean) : []);
+// Garment mockups for the custom-print product: the preview swaps to match the chosen style
+// (tee → tee photo, hoodie → hoodie photo, etc.). Replace these URLs with your real Qikink mockups.
+const GARMENT_IMAGES = [
+  { kw:["zip"],            img:"https://images.unsplash.com/photo-1605296866699-4bc5e3300d11?w=600&q=80" },
+  { kw:["oversized hoodie"], img:"https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80" },
+  { kw:["hoodie"],         img:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80" },
+  { kw:["sweat"],          img:"https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80" },
+  { kw:["full sleeve","long sleeve","full-sleeve"], img:"https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80" },
+  { kw:["oversized"],      img:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80" },
+  { kw:["tee","t-shirt","shirt"], img:"https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80" },
+];
+const garmentImage = (label, fallback) => { const l=String(label||"").toLowerCase(); for(const g of GARMENT_IMAGES){ if(g.kw.some(k=>l.includes(k))) return g.img; } return fallback; };
+// True for the phone-case product, so its option list is shown as a "phone model" dropdown instead of size chips.
+const isPhoneCase = (p) => /\bphone\s*(case|cover)/i.test((p && p.name) || "");
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
   return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
     {[1,2,3,4,5].map(n=>(<span key={n} style={{fontSize:sz,color:n<=Math.round(v)?"#F3A23E":"rgba(255,255,255,.22)"}}>★</span>))}
@@ -339,7 +355,7 @@ function Store({products,onAdd,onQuick,onTrack}){
   const shown=useMemo(()=>{
     const needle=q.trim().toLowerCase();
     let list=products.filter(p=>{
-      const inCat = cat==="All" || p.category===cat;
+      const inCat = cat==="All" || p.category===cat || (cat==="Custom" && p.custom===true);
       const hay=(esc(p.name)+" "+esc(p.desc)+" "+esc(p.category)).toLowerCase();
       return inCat && (!needle || hay.includes(needle));
     });
@@ -474,6 +490,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const [sizeChartOpen,setSizeChartOpen]=useState(false);
   const [sizeErr,setSizeErr]=useState(false);
   const isCustom=product.custom===true;
+  const phoneCase=isPhoneCase(product);
   const styleOpts=isCustom?parseStyles(product.styles):[];
   const [selStyle,setSelStyle]=useState(styleOpts.length?styleOpts[0].label:"");
   const [styleErr,setStyleErr]=useState(false);
@@ -530,7 +547,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
     <button onClick={onClose} style={S.quickClose} aria-label="Close">✕</button>
     {sizeChartOpen && <SizeChart onClose={()=>setSizeChartOpen(false)} />}
     <div className="vg-two" style={{display:"grid",gridTemplateColumns:"1fr 1fr",minHeight:320}}>
-      <img src={product.img} alt={esc(product.name)} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+      <img src={isCustom && styleOpts.length ? garmentImage(selStyle, product.img) : product.img} alt={esc(product.name)} onError={(e)=>{ if(e.currentTarget.src!==product.img){ e.currentTarget.src=product.img; } else { e.currentTarget.style.opacity=0.25; } }} style={{width:"100%",height:"100%",objectFit:"cover"}} />
       <div style={{padding:28}}>
         <button onClick={onClose} style={S.quickBack}>← Back to products</button>
         <h2 style={{...S.prodName,fontSize:22,margin:"10px 0 8px"}}>{esc(product.name)}</h2>
@@ -548,7 +565,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
           <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Upload your photo / design{imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please add an image</span>:""}</div>
           <input type="file" accept="image/*" id={"vg-custom-up-"+product.id} onChange={onPickCustom} style={{display:"none"}} />
           {!customImg
-            ? <label htmlFor={"vg-custom-up-"+product.id} style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:12,padding:"22px 14px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13}}>📷 Tap to upload your image<br/><span style={{fontSize:11,color:T.muted}}>JPG or PNG — this is what we print on your tee</span></label>
+            ? <label htmlFor={"vg-custom-up-"+product.id} style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:12,padding:"22px 14px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13}}>📷 Tap to upload your image<br/><span style={{fontSize:11,color:T.muted}}>JPG or PNG — this is what we print on your product</span></label>
             : <div style={{display:"flex",gap:12,alignItems:"center"}}>
                 <img src={customImg} alt="your design" style={{width:72,height:72,objectFit:"cover",borderRadius:10,border:"1px solid "+T.line}} />
                 <label htmlFor={"vg-custom-up-"+product.id} style={{...S.linkBtn,fontSize:12.5,cursor:"pointer"}}>Change photo</label>
@@ -559,12 +576,18 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         </div>}
         {opts.length>0 && <div style={{marginTop:16}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <span style={{fontSize:13,fontWeight:700,color:T.ink}}>Select size{sizeErr&&!selSize?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please pick one</span>:""}</span>
-            <button onClick={()=>setSizeChartOpen(true)} style={{background:"none",border:"none",color:T.marigold,fontSize:12.5,fontWeight:700,cursor:"pointer",textDecoration:"underline",padding:0,fontFamily:"inherit"}}>📏 Size guide</button>
+            <span style={{fontSize:13,fontWeight:700,color:T.ink}}>{phoneCase?"Choose your phone model":"Select size"}{sizeErr&&!selSize?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please pick one</span>:""}</span>
+            {!phoneCase && <button onClick={()=>setSizeChartOpen(true)} style={{background:"none",border:"none",color:T.marigold,fontSize:12.5,fontWeight:700,cursor:"pointer",textDecoration:"underline",padding:0,fontFamily:"inherit"}}>📏 Size guide</button>}
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {opts.map(sz=>(<button key={sz} onClick={()=>{setSelSize(sz);setSizeErr(false);}} style={{minWidth:46,padding:"9px 12px",borderRadius:10,fontFamily:"var(--mono)",fontWeight:700,fontSize:14,cursor:"pointer",border:"1.5px solid "+(selSize===sz?T.marigold:T.line),background:selSize===sz?T.marigold:"transparent",color:selSize===sz?"#13100D":T.ink}}>{sz}</button>))}
-          </div>
+          {phoneCase
+            ? <select value={selSize} onChange={e=>{setSelSize(e.target.value);setSizeErr(false);}} style={{...S.input,width:"100%",cursor:"pointer"}}>
+                <option value="">— Select your phone model —</option>
+                {opts.map(sz=>(<option key={sz} value={sz}>{sz}</option>))}
+              </select>
+            : <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {opts.map(sz=>(<button key={sz} onClick={()=>{setSelSize(sz);setSizeErr(false);}} style={{minWidth:46,padding:"9px 12px",borderRadius:10,fontFamily:"var(--mono)",fontWeight:700,fontSize:14,cursor:"pointer",border:"1.5px solid "+(selSize===sz?T.marigold:T.line),background:selSize===sz?T.marigold:"transparent",color:selSize===sz?"#13100D":T.ink}}>{sz}</button>))}
+              </div>}
+          {phoneCase && <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>Don't see your model? Message us — we add new models regularly.</p>}
         </div>}
         {(opts.length>0 || isCustom)
           ? <button onClick={()=>{ if(out)return; if(styleOpts.length>0 && !selStyle){ setStyleErr(true); return; } if(isCustom && !customImg){ setImgErr(true); return; } if(opts.length>0 && !selSize){ setSizeErr(true); return; } onAdd(selSize, isCustom?{image:customImg,notes:customNotes,style:selStyle,price:curStyle?curStyle.price:product.price}:null); }} disabled={out} style={{...S.addBtn,marginTop:18,...(out?S.addBtnDisabled:{})}}>{out?"Unavailable":(isCustom?"Add custom print to cart":"Add to cart")}</button>
@@ -615,7 +638,7 @@ function CartDrawer({items,subtotal,shipping,total,setQty,onClose,onCheckout}){ 
       {items.length===0 && <p style={{color:T.muted,marginTop:24}}>Your cart is empty.</p>}
       {items.map(i=>{ const max=(i.stock!=null&&i.stock>0)?Math.min(50,i.stock):50; const atMax=i.qty>=max; return (<div key={i.key} style={S.cartRow}>
         <img src={i.design?i.design.image:i.img} alt="" style={S.cartThumb} />
-        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,i.size?("Size: "+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
+        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,i.size?((isPhoneCase(i)?"Model: ":"Size: ")+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
           <div style={S.qtyRow}><button onClick={()=>setQty(i.key,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>{ if(!atMax) setQty(i.key,i.qty+1); }} disabled={atMax} style={{...S.qtyBtn,...(atMax?{opacity:.4,cursor:"not-allowed"}:{})}} aria-label="Increase">+</button></div>
           {atMax && i.stock!=null && i.stock>0 && i.stock<50 && <p style={{fontSize:11,color:T.muted,margin:"4px 0 0",fontFamily:"var(--mono)"}}>Only {i.stock} in stock</p>}
         </div><span style={S.cartLine}>{rupee(i.price*i.qty)}</span>
