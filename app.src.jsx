@@ -931,6 +931,11 @@ function AdminOrders({onBack}){
     try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":key},body:JSON.stringify(body)});
       if(r.ok) loadProds(key); }catch(e){}
   };
+  const seedDemo=async()=>{
+    try{ const r=await fetch(API+"/api/admin/seed-demo",{method:"POST",headers:{"x-admin-key":key}}); const j=await r.json();
+      if(r.ok){ loadProds(key); alert(j.added>0?("Added "+j.added+" demo product(s): an Oversized Tee, a Hoodie, and a Custom Photo T-Shirt. Open your store to test them (Clothing / Custom categories), then delete them here when you're done."):"The demo products are already added. Check the Clothing and Custom categories in your store."); }
+      else alert(j.error||"Could not add demo products."); }catch(e){ alert("Could not add demo products. Please try again."); }
+  };
   useEffect(()=>{ let saved=""; try{ saved=localStorage.getItem("vg_admin_key")||""; }catch(e){}
     if(saved){ setKey(saved); load(saved,{remember:true}).finally(()=>setBooting(false)); }
     else setBooting(false);
@@ -1051,6 +1056,7 @@ function AdminOrders({onBack}){
               <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{prods.length} product{prods.length===1?"":"s"}</span>
               <div style={{display:"flex",gap:10}}>
                 <button onClick={()=>loadProds(key)} style={S.linkBtn}>↻ Refresh</button>
+                <button onClick={seedDemo} style={{...S.linkBtn,fontSize:13}}>✨ Add demo clothing</button>
                 <button onClick={()=>setEditing({_new:true,name:"",price:"",mrp:"",stock:"",category:"",img:"",descr:"",cost:"",supplier:"",supplier_url:"",active:true})} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 18px",fontSize:13.5}}>+ Add product</button>
               </div>
             </div>
