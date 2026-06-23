@@ -20,6 +20,11 @@ const SEED = [
   { id:"p14", name:"Graphic Sweatshirt", price:1399, mrp:2199, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80", desc:"300 GSM fleece sweatshirt, ribbed cuffs. Unisex.", sizes:"S,M,L,XL,XXL" },
   { id:"p15", name:"Oversized Hoodie — Heavy 400", price:1899, mrp:2999, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80", desc:"400 GSM heavyweight oversized hoodie, drop shoulder. Unisex.", sizes:"S,M,L,XL,XXL" },
   { id:"custom-tee", name:"Custom Print — Your Design", price:899, mrp:0, stock:100, category:"Custom", img:"https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80", desc:"Your design, printed on the garment of your choice. Pick a style, upload your image and choose a size — we print it and ship it to you. Prepaid only.", sizes:"S,M,L,XL,XXL", styles:"Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099", custom:true },
+  { id:"p16", name:"Printed Ceramic Mug (325ml)", price:449, mrp:699, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80", desc:"Glossy 11oz ceramic mug with a full-wrap sublimation print. Microwave & dishwasher safe." },
+  { id:"p17", name:"All-Over Print Tote Bag", price:599, mrp:999, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80", desc:"Roomy cotton tote with an edge-to-edge printed design. Everyday carry, sturdy handles." },
+  { id:"p18", name:"Classic Embroidered Cap", price:699, mrp:1099, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&q=80", desc:"Structured 6-panel baseball cap with neat embroidery. Adjustable strap, one size fits most." },
+  { id:"p19", name:"Insulated Steel Water Bottle (750ml)", price:849, mrp:1399, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Double-wall stainless steel bottle with a printed design. Keeps cold 24h, hot 12h." },
+  { id:"p20", name:"Custom Phone Case — Your Design", price:699, mrp:1199, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80", desc:"Your photo or design on a durable anti-yellow clear case. Upload your image and tell us your exact phone model in the note box. Prepaid only.", custom:true },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
@@ -124,6 +129,11 @@ function App(){
   const PAGES=["track","help","admin","about","terms","privacy","refund","shipping","contact"];
   const navReady=React.useRef(false); const navPop=React.useRef(false); const navDepth=React.useRef(0);
   const navBack=()=>{ if(navDepth.current>0){ window.history.back(); } else { setPage(null); setQuick(null); window.scrollTo(0,0); } };
+  // Every time a product is opened we bump this counter and fold it into the QuickView key, so each
+  // open is a guaranteed-fresh mount. This makes sure a custom image uploaded for one product can never
+  // linger into the next product's upload box (even if the same product is reopened back-to-back).
+  const quickSeq=React.useRef(0);
+  const showQuick=(p)=>{ if(p) quickSeq.current+=1; setQuick(p); };
 
   useEffect(()=>{
     let pid=null, pg=null;
@@ -133,7 +143,7 @@ function App(){
       let cat=SEED;
       try{ const r=await fetch(API+"/api/products"); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length) cat=j; } }catch(e){}
       setProducts(cat); setLoading(false);
-      if(pid){ const found=cat.find(x=>String(x.id)===String(pid)); if(found) setQuick(found); }
+      if(pid){ const found=cat.find(x=>String(x.id)===String(pid)); if(found) showQuick(found); }
     })();
   },[]);
 
@@ -162,7 +172,7 @@ function App(){
         const sp=new URLSearchParams(window.location.search);
         const pg=sp.get("page"); const pid=sp.get("p");
         setPage(pg&&PAGES.includes(pg)?pg:null);
-        setQuick(pid?(products.find(x=>String(x.id)===String(pid))||null):null);
+        showQuick(pid?(products.find(x=>String(x.id)===String(pid))||null):null);
         window.scrollTo(0,0);
       }catch(e){ setPage(null); setQuick(null); }
     };
@@ -224,7 +234,7 @@ function App(){
           setPaying(false);
           if(j.ok){ finishOrder(form,"Paid online",paidAmount,j.orderId); }
           else { alert(j.error||"Payment could not be verified. If money was deducted it will be auto-refunded — please contact us."); }
-        }catch(e){ setPaying(false); alert("Couldn't confirm your order. Please contact us with your payment id."); }
+        }catch(e){ setPaying(false); alert("Couldn't confirm your order, but your payment may have gone through. Please contact us and quote payment id: "+(resp&&resp.razorpay_payment_id?resp.razorpay_payment_id:"(unavailable)")); }
       },
       modal:{ ondismiss:()=>setPaying(false) }
     };
@@ -240,12 +250,12 @@ function App(){
         : page==="help" ? <HelpCenter onBack={navBack} />
         : page==="admin" ? <AdminOrders onBack={navBack} />
         : page ? <Policy pageKey={page} onBack={navBack} />
-        : <Store products={products} onAdd={addToCart} onQuick={setQuick} onTrack={()=>go("track")} />}
+        : <Store products={products} onAdd={addToCart} onQuick={showQuick} onTrack={()=>go("track")} />}
       <Footer storeName={storeName} onNav={go} />
       {cartOpen && !checkout && <CartDrawer items={cartItems} subtotal={subtotal} shipping={shipping} total={total} setQty={setQty} onClose={()=>setCartOpen(false)} onCheckout={()=>{ if(cartItems.length) setCheckout(true); }} />}
       {checkout && <Checkout items={cartItems} total={total} shipping={shipping} subtotal={subtotal} paying={paying} onBack={()=>{ if(!paying) setCheckout(false); }} onPlace={handlePlace} />}
       {confirmed && <Confirmation order={confirmed} onClose={()=>setConfirmed(null)} />}
-      {quick && <QuickView key={quick.id} product={quick} onClose={navBack} onAdd={(size,design)=>{ addToCart(quick.id,size,design); navBack(); }} />}
+      {quick && <QuickView key={quick.id+"#"+quickSeq.current} product={quick} onClose={navBack} onAdd={(size,design)=>{ addToCart(quick.id,size,design); navBack(); }} />}
     </div>
   );
 }
@@ -536,12 +546,12 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         </div>}
         {isCustom && <div style={{marginTop:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Upload your photo / design{imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please add an image</span>:""}</div>
-          <input type="file" accept="image/*" id="vg-custom-up" onChange={onPickCustom} style={{display:"none"}} />
+          <input type="file" accept="image/*" id={"vg-custom-up-"+product.id} onChange={onPickCustom} style={{display:"none"}} />
           {!customImg
-            ? <label htmlFor="vg-custom-up" style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:12,padding:"22px 14px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13}}>📷 Tap to upload your image<br/><span style={{fontSize:11,color:T.muted}}>JPG or PNG — this is what we print on your tee</span></label>
+            ? <label htmlFor={"vg-custom-up-"+product.id} style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:12,padding:"22px 14px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13}}>📷 Tap to upload your image<br/><span style={{fontSize:11,color:T.muted}}>JPG or PNG — this is what we print on your tee</span></label>
             : <div style={{display:"flex",gap:12,alignItems:"center"}}>
                 <img src={customImg} alt="your design" style={{width:72,height:72,objectFit:"cover",borderRadius:10,border:"1px solid "+T.line}} />
-                <label htmlFor="vg-custom-up" style={{...S.linkBtn,fontSize:12.5,cursor:"pointer"}}>Change photo</label>
+                <label htmlFor={"vg-custom-up-"+product.id} style={{...S.linkBtn,fontSize:12.5,cursor:"pointer"}}>Change photo</label>
                 <button onClick={()=>setCustomImg("")} style={{...S.linkBtn,fontSize:12.5,color:T.danger}}>Remove</button>
               </div>}
           <textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} maxLength={500} placeholder="Any instructions? e.g. center the photo, add the name 'Aarav' underneath, plain white background" style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit",marginTop:10}} />
@@ -669,11 +679,14 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         {f.pay==="COD" && COD_FEE>0 && <Row label="COD fee" value={rupee(COD_FEE)} />}
         <Row label="Total" value={rupee(total+(f.pay==="COD"?COD_FEE:0))} bold />
         {f.pay==="COD" && COD_FEE>0 && <p style={{fontSize:11,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>A {rupee(COD_FEE)} fee applies to Cash on Delivery orders. Pay online to skip it.</p>}
+        <div style={{margin:"12px 0 0",padding:"11px 13px",border:"1px solid "+T.line,borderRadius:10}}>
+          <div style={{fontWeight:700,color:T.ink,fontSize:12.5,marginBottom:3}}>↩ Returns &amp; refunds</div>
+          <p style={{margin:0,fontSize:11.5,color:T.muted,lineHeight:1.55}}>If your item arrives <strong style={{color:T.inkSoft}}>damaged, defective, or wrong</strong>, email us within {INFO.returnWindow} — you choose a <strong style={{color:T.inkSoft}}>refund</strong> or a <strong style={{color:T.inkSoft}}>replacement</strong>. Refunds are processed once the returned item reaches us. Full policy in the footer.</p>
+        </div>
         <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(total+COD_FEE):"Pay "+rupee(total))}</button>
         <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Online payments are processed securely by Razorpay. Your card details never touch this site.</p>
         <div style={S.coSecure}>
           <div style={S.coSecureRow}><span aria-hidden="true">🔒</span><span>Payments secured by <strong style={{color:T.ink}}>Razorpay</strong> — UPI, cards & netbanking. Your card details never touch this site.</span></div>
-          <div style={S.coSecureRow}><span aria-hidden="true">↩</span><span>Free <strong style={{color:T.ink}}>7-day replacement or refund</strong> on damaged or defective items. Other returns reviewed case by case.</span></div>
           <div style={S.coSecureRow}><span aria-hidden="true">📦</span><span>Dispatched in 24–48h · delivered in 3–7 days, pan-India.</span></div>
         </div>
       </div>
@@ -1141,6 +1154,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     cost:product.cost??"", supplier:product.supplier||"", supplierUrl:(product.supplier_url!=null?product.supplier_url:product.supplierUrl)||"",
     sizes:(product.sizes!=null?product.sizes:"")||"",
     styles:(product.styles!=null?product.styles:"")||"",
+    styleCosts:(product.style_costs!=null?product.style_costs:"")||"",
     custom:product.custom===true,
     active:product.active!==false,
   });
@@ -1169,7 +1183,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     setSaving(true);
     try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({
         id:isNew?"":f.id, name:f.name, price:Number(f.price), mrp:Number(f.mrp)||0, stock:Number(f.stock)||0,
-        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, styles:f.styles, custom:f.custom, active:f.active })});
+        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, styles:f.styles, styleCosts:f.styleCosts, custom:f.custom, active:f.active })});
       const j=await r.json(); setSaving(false);
       if(r.ok) onSaved(); else setMsg(j.error||"Couldn't save the product.");
     }catch(e){ setSaving(false); setMsg("Something went wrong. Please try again."); }
@@ -1215,6 +1229,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
         <L label="Supplier name"><input style={S.input} value={f.supplier} onChange={up("supplier")} maxLength={120} placeholder="Moradabad Metals" /></L>
       </div>
       <L label="Supplier link" hint="where you order it"><input style={S.input} value={f.supplierUrl} onChange={up("supplierUrl")} maxLength={300} placeholder="https://supplier..." /></L>
+      {(f.custom || f.styles.trim()) && <L label="Garment costs (hidden)" hint="custom only — Label:Cost matching your styles above. Makes your profit dashboard exact per garment. Never shown to customers."><input style={S.input} value={f.styleCosts} onChange={up("styleCosts")} maxLength={240} placeholder="Regular Tee:420, Hoodie:740" /></L>}
     </div>
     <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,fontSize:13.5,color:T.inkSoft,cursor:"pointer"}}>
       <input type="checkbox" checked={f.active} onChange={e=>setF({...f,active:e.target.checked})} style={{width:16,height:16,accentColor:T.teal}} />
@@ -1257,11 +1272,13 @@ function AdminRow({o,adminKey,prods,onSaved}){
   let items=[]; try{ items=Array.isArray(o.items)?o.items:JSON.parse(o.items||"[]"); }catch(e){ items=[]; }
   // supply info: prefer stored supply snapshot, else match current products by name
   let supply=[]; try{ supply=Array.isArray(o.supply)?o.supply:JSON.parse(o.supply||"[]"); }catch(e){ supply=[]; }
-  const supplyFor=(it)=>{
-    let s=supply.find(x=>x.name===it.name)||{};
+  const supplyFor=(it,idx)=>{
+    // Prefer the exact line by position (supply[] and items[] are saved in the same order),
+    // so two items with the same product name but different garment styles each show their own cost.
+    let s=(idx!=null && supply[idx] && supply[idx].name===it.name) ? supply[idx] : (supply.find(x=>x.name===it.name)||{});
     if((!s.supplier&&!s.supplierUrl)&&Array.isArray(prods)){
       const p=prods.find(pp=>pp.name===it.name)||{};
-      s={supplier:p.supplier,supplierUrl:p.supplier_url,cost:p.cost};
+      s={supplier:p.supplier,supplierUrl:p.supplier_url,cost:(s.cost!=null?s.cost:p.cost)};
     }
     return s;
   };
@@ -1327,7 +1344,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
         {!o.customer_confirmed && <div style={{background:"rgba(229,104,90,.12)",border:"1px solid rgba(229,104,90,.3)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:12.5,color:"#e5685a",lineHeight:1.5}}>⏳ The customer hasn't confirmed this order yet. We recommend waiting for confirmation (or sending the confirm message above) before you ship.</div>}
         <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.55}}>Order each item from your supplier and enter <strong style={{color:T.inkSoft}}>this customer's address</strong> as the delivery address. Then come back and mark it Shipped with the tracking link.</p>
         <div style={{display:"grid",gap:8,marginBottom:12}}>
-          {items.map((it,idx)=>{ const s=supplyFor(it); return (
+          {items.map((it,idx)=>{ const s=supplyFor(it,idx); return (
             <div key={idx} style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
               <div style={{fontSize:13,color:T.ink}}>{esc(it.name)} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {it.qty||1}</span>
                 <div style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)",marginTop:3}}>{s.supplier?("Supplier: "+esc(s.supplier)):"Supplier: not set"}{s.cost!=null?" · your cost "+rupee(s.cost):""}</div>

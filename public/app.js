@@ -171,6 +171,52 @@ const SEED = [{
   sizes: "S,M,L,XL,XXL",
   styles: "Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099",
   custom: true
+}, {
+  id: "p16",
+  name: "Printed Ceramic Mug (325ml)",
+  price: 449,
+  mrp: 699,
+  stock: 100,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
+  desc: "Glossy 11oz ceramic mug with a full-wrap sublimation print. Microwave & dishwasher safe."
+}, {
+  id: "p17",
+  name: "All-Over Print Tote Bag",
+  price: 599,
+  mrp: 999,
+  stock: 100,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80",
+  desc: "Roomy cotton tote with an edge-to-edge printed design. Everyday carry, sturdy handles."
+}, {
+  id: "p18",
+  name: "Classic Embroidered Cap",
+  price: 699,
+  mrp: 1099,
+  stock: 100,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&q=80",
+  desc: "Structured 6-panel baseball cap with neat embroidery. Adjustable strap, one size fits most."
+}, {
+  id: "p19",
+  name: "Insulated Steel Water Bottle (750ml)",
+  price: 849,
+  mrp: 1399,
+  stock: 100,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
+  desc: "Double-wall stainless steel bottle with a printed design. Keeps cold 24h, hot 12h."
+}, {
+  id: "p20",
+  name: "Custom Phone Case — Your Design",
+  price: 699,
+  mrp: 1199,
+  stock: 100,
+  category: "Accessories",
+  img: "https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80",
+  desc: "Your photo or design on a durable anti-yellow clear case. Upload your image and tell us your exact phone model in the note box. Prepaid only.",
+  custom: true
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
@@ -327,6 +373,14 @@ function App() {
       window.scrollTo(0, 0);
     }
   };
+  // Every time a product is opened we bump this counter and fold it into the QuickView key, so each
+  // open is a guaranteed-fresh mount. This makes sure a custom image uploaded for one product can never
+  // linger into the next product's upload box (even if the same product is reopened back-to-back).
+  const quickSeq = React.useRef(0);
+  const showQuick = p => {
+    if (p) quickSeq.current += 1;
+    setQuick(p);
+  };
   useEffect(() => {
     let pid = null,
       pg = null;
@@ -349,7 +403,7 @@ function App() {
       setLoading(false);
       if (pid) {
         const found = cat.find(x => String(x.id) === String(pid));
-        if (found) setQuick(found);
+        if (found) showQuick(found);
       }
     })();
   }, []);
@@ -397,7 +451,7 @@ function App() {
         const pg = sp.get("page");
         const pid = sp.get("p");
         setPage(pg && PAGES.includes(pg) ? pg : null);
-        setQuick(pid ? products.find(x => String(x.id) === String(pid)) || null : null);
+        showQuick(pid ? products.find(x => String(x.id) === String(pid)) || null : null);
         window.scrollTo(0, 0);
       } catch (e) {
         setPage(null);
@@ -599,7 +653,7 @@ function App() {
           }
         } catch (e) {
           setPaying(false);
-          alert("Couldn't confirm your order. Please contact us with your payment id.");
+          alert("Couldn't confirm your order, but your payment may have gone through. Please contact us and quote payment id: " + (resp && resp.razorpay_payment_id ? resp.razorpay_payment_id : "(unavailable)"));
         }
       },
       modal: {
@@ -645,7 +699,7 @@ function App() {
   }) : /*#__PURE__*/React.createElement(Store, {
     products: products,
     onAdd: addToCart,
-    onQuick: setQuick,
+    onQuick: showQuick,
     onTrack: () => go("track")
   }), /*#__PURE__*/React.createElement(Footer, {
     storeName: storeName,
@@ -674,7 +728,7 @@ function App() {
     order: confirmed,
     onClose: () => setConfirmed(null)
   }), quick && /*#__PURE__*/React.createElement(QuickView, {
-    key: quick.id,
+    key: quick.id + "#" + quickSeq.current,
     product: quick,
     onClose: navBack,
     onAdd: (size, design) => {
@@ -1663,13 +1717,13 @@ function QuickView({
   }, "· please add an image") : ""), /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
-    id: "vg-custom-up",
+    id: "vg-custom-up-" + product.id,
     onChange: onPickCustom,
     style: {
       display: "none"
     }
   }), !customImg ? /*#__PURE__*/React.createElement("label", {
-    htmlFor: "vg-custom-up",
+    htmlFor: "vg-custom-up-" + product.id,
     style: {
       display: "block",
       border: "1.5px dashed " + T.line,
@@ -1702,7 +1756,7 @@ function QuickView({
       border: "1px solid " + T.line
     }
   }), /*#__PURE__*/React.createElement("label", {
-    htmlFor: "vg-custom-up",
+    htmlFor: "vg-custom-up-" + product.id,
     style: {
       ...S.linkBtn,
       fontSize: 12.5,
@@ -2486,7 +2540,40 @@ function Checkout({
       margin: "6px 0 0",
       lineHeight: 1.5
     }
-  }, "A ", rupee(COD_FEE), " fee applies to Cash on Delivery orders. Pay online to skip it."), /*#__PURE__*/React.createElement("button", {
+  }, "A ", rupee(COD_FEE), " fee applies to Cash on Delivery orders. Pay online to skip it."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      margin: "12px 0 0",
+      padding: "11px 13px",
+      border: "1px solid " + T.line,
+      borderRadius: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      color: T.ink,
+      fontSize: 12.5,
+      marginBottom: 3
+    }
+  }, "↩ Returns & refunds"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      margin: 0,
+      fontSize: 11.5,
+      color: T.muted,
+      lineHeight: 1.55
+    }
+  }, "If your item arrives ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.inkSoft
+    }
+  }, "damaged, defective, or wrong"), ", email us within ", INFO.returnWindow, " — you choose a ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.inkSoft
+    }
+  }, "refund"), " or a ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.inkSoft
+    }
+  }, "replacement"), ". Refunds are processed once the returned item reaches us. Full policy in the footer.")), /*#__PURE__*/React.createElement("button", {
     onClick: submit,
     disabled: paying,
     style: {
@@ -2512,14 +2599,6 @@ function Checkout({
       color: T.ink
     }
   }, "Razorpay"), " — UPI, cards & netbanking. Your card details never touch this site.")), /*#__PURE__*/React.createElement("div", {
-    style: S.coSecureRow
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "↩"), /*#__PURE__*/React.createElement("span", null, "Free ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: T.ink
-    }
-  }, "7-day replacement or refund"), " on damaged or defective items. Other returns reviewed case by case.")), /*#__PURE__*/React.createElement("div", {
     style: S.coSecureRow
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
@@ -4737,6 +4816,7 @@ function ProductEditor({
     supplierUrl: (product.supplier_url != null ? product.supplier_url : product.supplierUrl) || "",
     sizes: (product.sizes != null ? product.sizes : "") || "",
     styles: (product.styles != null ? product.styles : "") || "",
+    styleCosts: (product.style_costs != null ? product.style_costs : "") || "",
     custom: product.custom === true,
     active: product.active !== false
   });
@@ -4815,6 +4895,7 @@ function ProductEditor({
           supplierUrl: f.supplierUrl,
           sizes: f.sizes,
           styles: f.styles,
+          styleCosts: f.styleCosts,
           custom: f.custom,
           active: f.active
         })
@@ -5119,6 +5200,15 @@ function ProductEditor({
     onChange: up("supplierUrl"),
     maxLength: 300,
     placeholder: "https://supplier..."
+  })), (f.custom || f.styles.trim()) && /*#__PURE__*/React.createElement(L, {
+    label: "Garment costs (hidden)",
+    hint: "custom only — Label:Cost matching your styles above. Makes your profit dashboard exact per garment. Never shown to customers."
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.styleCosts,
+    onChange: up("styleCosts"),
+    maxLength: 240,
+    placeholder: "Regular Tee:420, Hoodie:740"
   }))), /*#__PURE__*/React.createElement("label", {
     style: {
       display: "flex",
@@ -5296,14 +5386,16 @@ function AdminRow({
   } catch (e) {
     supply = [];
   }
-  const supplyFor = it => {
-    let s = supply.find(x => x.name === it.name) || {};
+  const supplyFor = (it, idx) => {
+    // Prefer the exact line by position (supply[] and items[] are saved in the same order),
+    // so two items with the same product name but different garment styles each show their own cost.
+    let s = idx != null && supply[idx] && supply[idx].name === it.name ? supply[idx] : supply.find(x => x.name === it.name) || {};
     if (!s.supplier && !s.supplierUrl && Array.isArray(prods)) {
       const p = prods.find(pp => pp.name === it.name) || {};
       s = {
         supplier: p.supplier,
         supplierUrl: p.supplier_url,
-        cost: p.cost
+        cost: s.cost != null ? s.cost : p.cost
       };
     }
     return s;
@@ -5631,7 +5723,7 @@ function AdminRow({
       marginBottom: 12
     }
   }, items.map((it, idx) => {
-    const s = supplyFor(it);
+    const s = supplyFor(it, idx);
     return /*#__PURE__*/React.createElement("div", {
       key: idx,
       style: {
