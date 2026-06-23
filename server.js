@@ -118,6 +118,16 @@ async function initDb() {
     active boolean DEFAULT true,
     created_at timestamptz DEFAULT now()
   )`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes text`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS custom boolean DEFAULT false`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS order_designs (
+    id serial PRIMARY KEY,
+    order_id text,
+    idx int,
+    image text,
+    notes text,
+    created_at timestamptz DEFAULT now()
+  )`);
   await seedProducts();
   await refreshProductCache();
 }
@@ -125,7 +135,7 @@ if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => conso
 
 async function saveOrder(o) {
   if (!pool) return;
-  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price }));
+  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price, size: li.size || "", custom: li.custom || false, notes: li.notes || "" }));
   const supply = o.lineItems.map((li) => ({ id: li.id, name: li.name, qty: li.qty, cost: li.cost, supplier: li.supplier, supplierUrl: li.supplierUrl }));
   await pool.query(
     `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply,cod_fee,confirm_token)
@@ -134,6 +144,15 @@ async function saveOrder(o) {
      o.customer.city, o.customer.state, o.customer.pincode, JSON.stringify(items),
      o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply), o.codFee || 0, o.confirmToken || null]
   );
+  // Persist any custom-design images in a side table (kept out of the orders row to keep order lists light).
+  try {
+    for (let i = 0; i < o.lineItems.length; i++) {
+      const li = o.lineItems[i];
+      if (li.custom && li.design && li.design.image) {
+        await pool.query("INSERT INTO order_designs (order_id, idx, image, notes) VALUES ($1,$2,$3,$4)", [o.id, i, li.design.image, li.design.notes || ""]);
+      }
+    }
+  } catch (e) { console.error("save design failed:", e && e.message); }
 }
 
 // ---- Seller admin auth (for updating order status) ----
@@ -189,9 +208,25 @@ const PRODUCTS = [
     img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
     desc: "500 GSM, quick-dry, soft combed cotton.",
     cost: 430, supplier: "vFulfill", supplierUrl: "https://supplier.example.com/towel" },
+  { id: "p10", name: "Oversized Graphic Tee — Drop 01", price: 699, mrp: 1299, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
+    desc: "240 GSM oversized cotton tee, DTF print. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 320, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p11", name: "Heavyweight Hoodie — Night Edition", price: 1199, mrp: 2199, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80",
+    desc: "320 GSM fleece hoodie, soft brushed inside. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 720, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "custom-tee", name: "Custom Photo T-Shirt", price: 799, mrp: 1299, stock: 100, category: "Custom",
+    img: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80",
+    desc: "Your photo, printed on a premium cotton tee. Upload an image, pick a size — we design it and ship it to you. Prepaid only.",
+    sizes: "S,M,L,XL,XXL", custom: true,
+    cost: 350, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
 ];
 
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
+const parseSizesList = (s) => (typeof s === "string" ? s.split(",").map(x => x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
 const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
 // Cash-on-Delivery fee (₹). COD costs more (courier COD charges + higher return rate).
 // Set to 0 to disable. Change this number to adjust the fee.
@@ -207,8 +242,8 @@ async function seedProducts() {
     if (c.rows[0].n === 0) {
       for (const p of PRODUCTS) {
         await pool.query(
-          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true) ON CONFLICT (id) DO NOTHING",
-          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl]
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
         );
       }
       console.log("Seeded products table with starter products.");
@@ -218,18 +253,19 @@ async function seedProducts() {
 async function refreshProductCache() {
   if (!pool) { productCache = PRODUCTS.slice(); return; }
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active FROM products ORDER BY created_at ASC");
     if (r.rows.length) {
       productCache = r.rows.map(row => ({ id: row.id, name: row.name, price: row.price, mrp: row.mrp, stock: row.stock,
-        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, active: row.active }));
+        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, sizes: row.sizes, custom: row.custom, active: row.active }));
     } else { productCache = PRODUCTS.slice(); }
   } catch (e) { console.error("product cache refresh failed:", e && e.message); }
 }
 
 // Compute an order from item ids+qty using TRUSTED server prices
-function computeOrder(items, cod) {
+function computeOrder(items, cod, requireDesign) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 50) return { error: "Invalid cart" };
   const lineItems = []; let subtotal = 0, totalCost = 0;
+  const qtyById = {};
   for (const it of items) {
     if (!it || typeof it.id !== "string") return { error: "Invalid item" };
     const qty = Number.isInteger(it.qty) ? it.qty : parseInt(it.qty, 10);
@@ -237,10 +273,29 @@ function computeOrder(items, cod) {
     const p = productCache.find(pp => pp.id === it.id);
     if (!p || p.active === false) return { error: "Unknown product" };
     if (typeof p.stock === "number" && p.stock <= 0) return { error: `"${p.name}" is out of stock.` };
-    if (typeof p.stock === "number" && qty > p.stock) return { error: `Only ${p.stock} of "${p.name}" left in stock.` };
+    // Guard against oversell when the same product appears as several lines (different sizes / custom designs).
+    qtyById[p.id] = (qtyById[p.id] || 0) + qty;
+    if (typeof p.stock === "number" && qtyById[p.id] > p.stock) return { error: `Only ${p.stock} of "${p.name}" left in stock.` };
+    const opts = parseSizesList(p.sizes);
+    let size = it.size != null ? String(it.size).trim().slice(0, 20) : "";
+    if (opts.length) {
+      if (!size) return { error: `Please choose a size for "${p.name}".` };
+      if (!opts.includes(size)) return { error: `"${size}" isn't an available size for "${p.name}".` };
+    } else { size = ""; }
+    const isCustom = p.custom === true;
+    let design = null;
+    if (isCustom) {
+      const d = it.design || {};
+      const img = typeof d.image === "string" ? d.image : "";
+      if (requireDesign) {
+        if (!img || !/^data:image\//.test(img)) return { error: `Please upload your design image for "${p.name}".` };
+        if (img.length > 9000000) return { error: "Your design image is too large. Please use an image under ~6 MB." };
+      }
+      design = { image: img, notes: typeof d.notes === "string" ? d.notes.trim().slice(0, 500) : "" };
+    }
     subtotal += p.price * qty;
     if (typeof p.cost === "number") totalCost += p.cost * qty;
-    lineItems.push({ id: p.id, name: p.name, price: p.price, qty, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
+    lineItems.push({ id: p.id, name: p.name, price: p.price, qty, size, custom: isCustom, notes: design ? design.notes : "", design, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
   }
   const shipping = shippingFor(subtotal);
   const codFee = cod === true ? COD_FEE : 0;
@@ -265,9 +320,22 @@ function sanitizeCustomer(c) {
 
 async function notifyOrder(order) {
   const c = order.customer;
-  const lines = order.lineItems.map(li =>
-    `- ${li.name}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
+  const lines = order.lineItems.map((li, i) =>
+    li.custom
+      ? `- ${li.name}  x${li.qty}  [CUSTOM PHOTO TEE${li.size ? ", size " + li.size : ""}]\n    your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
+      : `- ${li.name}${li.size ? "  [size: " + li.size + "]" : ""}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
   ).join("\n");
+  // Build email attachments from any custom-design images.
+  const attachments = [];
+  order.lineItems.forEach((li, i) => {
+    if (li.custom && li.design && li.design.image) {
+      const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(li.design.image);
+      if (m) {
+        const ext = m[1].split("/")[1].replace("jpeg", "jpg");
+        attachments.push({ filename: `design-${order.id}-${i}.${ext}`, content: m[2] });
+      }
+    }
+  });
   const margin = (order.totalCost != null && order.totalCost > 0) ? rupee(order.total - order.shipping - (order.codFee || 0) - order.totalCost) : "n/a";
   const body = [
     `NEW ORDER ${order.id}  —  ${order.paid ? "PAID ONLINE" : "COD (collect on delivery)"}`,
@@ -284,7 +352,7 @@ async function notifyOrder(order) {
     `${c.city}, ${c.state} - ${c.pincode}`,
     `Phone ${c.phone}` + (c.email ? ` | Email ${c.email}` : ""),
     "",
-    "Next step: place this order with the supplier(s) above and have them ship to the address.",
+    attachments.length ? "Custom tee: download the attached design, make the print-ready artwork, then place the order at your print supplier to this address." : "Next step: place this order with the supplier(s) above and have them ship to the address.",
   ].filter(x => x !== "").join("\n");
 
   console.log("==== ORDER ====\n" + body + "\n===============");  // backup record in server logs
@@ -298,12 +366,15 @@ async function notifyOrder(order) {
       to,
       subject: `New order ${order.id} — ${order.paid ? "PAID" : "COD"} — ${rupee(order.total)}`,
       text: body,
+      ...(attachments.length ? { attachments } : {}),
     }),
   });
   if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 
 // Branded HTML wrapper for customer emails (logo header + footer)
+const INSTAGRAM_URL = process.env.INSTAGRAM_URL || "https://instagram.com/shopvectorgrid";
+const INSTAGRAM_HANDLE = "@shopvectorgrid";
 function emailHeader() {
   const site = process.env.SITE_URL || "https://shopvectorgrid.com";
   return `<div style="text-align:center;padding:6px 0 18px">
@@ -313,11 +384,54 @@ function emailHeader() {
 function emailFooter() {
   const site = process.env.SITE_URL || "https://shopvectorgrid.com";
   return `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e6e2da">
+    <p style="margin:0 0 10px"><a href="${INSTAGRAM_URL}" style="color:#E8820C;text-decoration:none;font-size:13px;font-weight:bold">📸 Follow us on Instagram ${INSTAGRAM_HANDLE}</a></p>
     <p style="color:#aaa;font-size:12px;margin:0;line-height:1.6">Vector Grid · Ships pan-India<br/><a href="${site}" style="color:#E8820C;text-decoration:none">${site.replace(/^https?:\/\//,"")}</a></p>
   </div>`;
 }
 function emailShell(innerHtml) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;padding:16px;background:#ffffff">${emailHeader()}${innerHtml}${emailFooter()}</div>`;
+}
+
+// Sent when an order is marked Delivered: invites the customer to rate what they received.
+async function notifyReviewRequest(orderRow) {
+  if (!RESEND_API_KEY || !orderRow || !orderRow.email) return;
+  const site = process.env.SITE_URL || "https://shopvectorgrid.com";
+  const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  let supply = [];
+  try { supply = Array.isArray(orderRow.supply) ? orderRow.supply : JSON.parse(orderRow.supply || "[]"); } catch (e) { supply = []; }
+  const seen = new Set(); const prods = [];
+  for (const s of supply) { if (s && s.id && !seen.has(s.id)) { seen.add(s.id); prods.push({ id: s.id, name: s.name }); } }
+  if (!prods.length) return;
+  const rateLink = (p) => `${site}/?p=${encodeURIComponent(p.id)}`;
+  const textList = prods.map(p => `- ${p.name}: ${rateLink(p)}`).join("\n");
+  const body = [
+    `Hi ${orderRow.name || "there"},`,
+    "",
+    `Your order ${orderRow.id} has been delivered — we hope you love it!`,
+    "",
+    "Would you take 30 seconds to rate what you received? It really helps us and other shoppers:",
+    "",
+    textList,
+    "",
+    `Love it? Follow us on Instagram for new drops and offers: ${INSTAGRAM_URL}`,
+    "",
+    "Thank you for shopping with Vector Grid!",
+    "— Team Vector Grid",
+  ].join("\n");
+  const itemsHtml = prods.map(p => `<tr><td style="padding:9px 0;color:#444;font-size:14px">${eh(p.name)}</td><td style="padding:9px 0;text-align:right"><a href="${rateLink(p)}" style="background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:13px;padding:8px 16px;border-radius:999px;display:inline-block">★ Rate this</a></td></tr>`).join("");
+  const html = emailShell(`
+    <h2 style="color:#111;margin:0 0 6px">How was your order, ${eh(orderRow.name || "")}?</h2>
+    <p style="color:#555;line-height:1.5;margin:0 0 18px">Your order <strong>${eh(orderRow.id)}</strong> has been delivered — we hope you love it! Could you take 30 seconds to rate what you received? It really helps us keep improving.</p>
+    <table style="width:100%;border-collapse:collapse">${itemsHtml}</table>
+    <div style="text-align:center;margin:26px 0 0">
+      <a href="${INSTAGRAM_URL}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:bold;font-size:14px;padding:12px 24px;border-radius:999px">📸 Follow ${INSTAGRAM_HANDLE} for new drops</a>
+    </div>`);
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: ORDER_FROM, to: [orderRow.email], reply_to: ORDER_TO, subject: `How was your Vector Grid order ${orderRow.id}? Rate it ★`, text: body, html }),
+  });
+  if (!resp.ok) throw new Error("Resend " + resp.status + ": " + (await resp.text()).slice(0, 200));
 }
 // Email everyone waiting for a product that just came back in stock, then clear the list.
 async function notifyRestock(productId, productName) {
@@ -408,7 +522,7 @@ async function notifyBuyer(order) {
 // Public catalogue (cost/supplier stripped out)
 app.get("/api/products", async (req, res) => {
   const list = (productCache && productCache.length ? productCache : PRODUCTS).filter(p => p.active !== false);
-  const base = list.map(({ id, name, price, mrp, stock, img, desc, category }) => ({ id, name, price, mrp, stock, img, desc, category, rating: 0, reviewCount: 0 }));
+  const base = list.map(({ id, name, price, mrp, stock, img, desc, category, sizes, custom }) => ({ id, name, price, mrp, stock, img, desc, category, sizes: sizes || "", custom: custom === true, rating: 0, reviewCount: 0 }));
   if (pool) {
     try {
       const r = await pool.query("SELECT product_id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(*) AS cnt FROM reviews WHERE hidden=false GROUP BY product_id");
@@ -473,7 +587,7 @@ app.get("/api/admin/products", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active,created_at FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active,created_at FROM products ORDER BY created_at ASC");
     res.json({ products: r.rows });
   } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
 });
@@ -503,6 +617,8 @@ app.post("/api/admin/product-save", async (req, res) => {
   const img = imgRaw.startsWith("data:image/") ? imgRaw.slice(0, 3600000) : imgRaw.slice(0, 500);
   const descr = String(b.desc || "").trim().slice(0, 600);
   const category = String(b.category || "").trim().slice(0, 40);
+  const sizes = parseSizesList(b.sizes).join(",").slice(0, 120);
+  const custom = b.custom === true;
   const cost = b.cost === "" || b.cost == null ? null : Math.round(Number(b.cost));
   const supplier = String(b.supplier || "").trim().slice(0, 120);
   const supplierUrl = String(b.supplierUrl || "").trim().slice(0, 300);
@@ -517,15 +633,15 @@ app.post("/api/admin/product-save", async (req, res) => {
       const prev = await pool.query("SELECT stock FROM products WHERE id=$1", [id]);
       wasOutOfStock = prev.rows.length && Number(prev.rows[0].stock) <= 0;
       const r = await pool.query(
-        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,active=$12 WHERE id=$1 RETURNING id",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, active]
+        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,sizes=$12,custom=$13,active=$14 WHERE id=$1 RETURNING id",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active]
       );
       if (!r.rows.length) return res.status(404).json({ error: "Product not found." });
     } else {
       id = "p" + Date.now().toString(36);
       await pool.query(
-        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, active]
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active]
       );
     }
     await refreshProductCache();
@@ -577,8 +693,9 @@ app.post("/api/create-order", async (req, res) => {
 app.post("/api/place-order", async (req, res) => {
   try {
     const b = req.body || {};
-    const calc = computeOrder(b.items, b.cod === true);
+    const calc = computeOrder(b.items, b.cod === true, true);
     if (calc.error) return res.status(400).json({ error: calc.error });
+    if (b.cod === true && calc.lineItems.some(li => li.custom)) return res.status(400).json({ error: "Custom photo tees are prepaid only. Please choose online payment." });
     const customer = sanitizeCustomer(b.customer);
     if (customer.error) return res.status(400).json({ error: customer.error });
 
@@ -771,6 +888,18 @@ app.get("/api/admin/orders", async (req, res) => {
   } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }
 });
 
+// ---- Seller: fetch the custom-design image(s) for one order (kept out of the order list to keep it light) ----
+app.get("/api/admin/order-designs", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const oid = String((req.query && req.query.orderId) || "").trim().toUpperCase().slice(0, 40);
+  if (!oid) return res.status(400).json({ error: "Missing order id." });
+  try {
+    const r = await pool.query("SELECT idx, image, notes FROM order_designs WHERE order_id=$1 ORDER BY idx ASC", [oid]);
+    res.json({ designs: r.rows });
+  } catch (e) { console.error("order-designs failed:", e && e.message); res.status(500).json({ error: "Could not load designs." }); }
+});
+
 // ---- Seller: update an order's status / tracking ----
 app.post("/api/admin/update", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
@@ -782,12 +911,18 @@ app.post("/api/admin/update", async (req, res) => {
   const trackingUrl = String((req.body && req.body.trackingUrl) || "").trim().slice(0, 300);
   const trackingCarrier = String((req.body && req.body.trackingCarrier) || "").trim().slice(0, 60);
   try {
+    const prev = await pool.query("SELECT status, name, email, supply FROM orders WHERE id=$1", [id]);
     const r = await pool.query(
       "UPDATE orders SET status=$2, tracking_url=$3, tracking_carrier=$4, updated_at=now() WHERE id=$1 RETURNING id",
       [id, status, trackingUrl, trackingCarrier]
     );
     if (!r.rows.length) return res.status(404).json({ error: "Order not found." });
     res.json({ ok: true });
+    // Newly Delivered → invite the customer to rate what they received (runs in background).
+    if (status === "Delivered" && prev.rows.length && prev.rows[0].status !== "Delivered" && prev.rows[0].email) {
+      notifyReviewRequest({ id, name: prev.rows[0].name, email: prev.rows[0].email, supply: prev.rows[0].supply })
+        .catch((e) => console.error("review request email failed:", e && e.message));
+    }
   } catch (e) { console.error("admin update failed:", e && e.message); res.status(500).json({ error: "Update failed." }); }
 });
 
