@@ -592,6 +592,26 @@ app.get("/api/admin/products", async (req, res) => {
   } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
 });
 
+// ---- Seller: add demo clothing products (one-click, idempotent) so you can test the apparel/custom features ----
+app.post("/api/admin/seed-demo", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const demoIds = ["p10", "p11", "custom-tee"];
+  const demos = PRODUCTS.filter(p => demoIds.includes(p.id));
+  try {
+    let added = 0;
+    for (const p of demos) {
+      const r = await pool.query(
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING RETURNING id",
+        [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
+      );
+      if (r.rows.length) added++;
+    }
+    await refreshProductCache();
+    res.json({ ok: true, added, total: demos.length });
+  } catch (e) { console.error("seed-demo failed:", e && e.message); res.status(500).json({ error: "Could not add demo products." }); }
+});
+
 app.post("/api/notify-restock", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Not available right now." });
   const b = req.body || {};

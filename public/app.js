@@ -3649,6 +3649,23 @@ function AdminOrders({
       if (r.ok) loadProds(key);
     } catch (e) {}
   };
+  const seedDemo = async () => {
+    try {
+      const r = await fetch(API + "/api/admin/seed-demo", {
+        method: "POST",
+        headers: {
+          "x-admin-key": key
+        }
+      });
+      const j = await r.json();
+      if (r.ok) {
+        loadProds(key);
+        alert(j.added > 0 ? "Added " + j.added + " demo product(s): an Oversized Tee, a Hoodie, and a Custom Photo T-Shirt. Open your store to test them (Clothing / Custom categories), then delete them here when you're done." : "The demo products are already added. Check the Clothing and Custom categories in your store.");
+      } else alert(j.error || "Could not add demo products.");
+    } catch (e) {
+      alert("Could not add demo products. Please try again.");
+    }
+  };
   useEffect(() => {
     let saved = "";
     try {
@@ -4216,6 +4233,12 @@ function AdminOrders({
     onClick: () => loadProds(key),
     style: S.linkBtn
   }, "↻ Refresh"), /*#__PURE__*/React.createElement("button", {
+    onClick: seedDemo,
+    style: {
+      ...S.linkBtn,
+      fontSize: 13
+    }
+  }, "✨ Add demo clothing"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditing({
       _new: true,
       name: "",
