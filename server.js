@@ -129,6 +129,26 @@ async function initDb() {
     created_at timestamptz DEFAULT now()
   )`);
   await seedProducts();
+  // One-time demo clothing seed so the apparel + custom features are visible right after deploy,
+  // with no manual steps. Guarded by a flag row: it runs once ever, and deleting the demos later
+  // will NOT bring them back (even though the free-tier server restarts often).
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS app_flags (key text PRIMARY KEY, created_at timestamptz DEFAULT now())`);
+    const flag = await pool.query("SELECT key FROM app_flags WHERE key='demo_clothing_seeded'");
+    if (!flag.rows.length) {
+      const demoIds = ["p10", "p11", "custom-tee"];
+      let n = 0;
+      for (const p of PRODUCTS.filter(pp => demoIds.includes(pp.id))) {
+        const r = await pool.query(
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING RETURNING id",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
+        );
+        if (r.rows.length) n++;
+      }
+      await pool.query("INSERT INTO app_flags (key) VALUES ('demo_clothing_seeded') ON CONFLICT (key) DO NOTHING");
+      console.log("Seeded " + n + " demo clothing product(s) (one-time).");
+    }
+  } catch (e) { console.error("demo seed failed:", e && e.message); }
   await refreshProductCache();
 }
 if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => console.error("DB init failed:", e && e.message));
