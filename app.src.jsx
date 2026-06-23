@@ -13,15 +13,21 @@ const SEED = [
   { id:"p7", name:"Heavy Canvas Tote Bag", price:449, mrp:799, stock:75, category:"Accessories", img:"https://images.unsplash.com/photo-1597484661643-2f5fef640dd1?w=600&q=80", desc:"12oz cotton canvas, roomy, everyday carry." },
   { id:"p8", name:"Adjustable LED Desk Lamp", price:1099, mrp:1899, stock:22, category:"Tech", img:"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80", desc:"3 light modes, touch dimmer, USB-powered." },
   { id:"p9", name:"Cotton Bath Towel (Pack of 2)", price:749, mrp:1299, stock:0, category:"Home", img:"https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80", desc:"500 GSM, quick-dry, soft combed cotton." },
-  { id:"p10", name:"Oversized Graphic Tee — Drop 01", price:699, mrp:1299, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80", desc:"240 GSM oversized cotton tee, DTF print. Unisex.", sizes:"S,M,L,XL,XXL" },
-  { id:"p11", name:"Heavyweight Hoodie — Night Edition", price:1199, mrp:2199, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80", desc:"320 GSM fleece hoodie, soft brushed inside. Unisex.", sizes:"S,M,L,XL,XXL" },
-  { id:"custom-tee", name:"Custom Photo T-Shirt", price:799, mrp:1299, stock:100, category:"Custom", img:"https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80", desc:"Your photo, printed on a premium cotton tee. Upload an image, pick a size — we design it and ship it to you. Prepaid only.", sizes:"S,M,L,XL,XXL", custom:true },
+  { id:"p10", name:"Oversized Graphic Tee — Drop 01", price:1099, mrp:1599, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80", desc:"240 GSM oversized cotton tee, DTF print. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"p11", name:"Heavyweight Hoodie — Night Edition", price:1599, mrp:2499, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80", desc:"300 GSM fleece hoodie, soft brushed inside. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"p12", name:"Classic Graphic Tee", price:899, mrp:1499, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80", desc:"180 GSM regular-fit cotton tee, DTF print. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"p13", name:"Full Sleeve Tee — Mono", price:999, mrp:1599, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80", desc:"180 GSM full-sleeve cotton tee, DTF print. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"p14", name:"Graphic Sweatshirt", price:1399, mrp:2199, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80", desc:"300 GSM fleece sweatshirt, ribbed cuffs. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"p15", name:"Oversized Hoodie — Heavy 400", price:1899, mrp:2999, stock:100, category:"Clothing", img:"https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80", desc:"400 GSM heavyweight oversized hoodie, drop shoulder. Unisex.", sizes:"S,M,L,XL,XXL" },
+  { id:"custom-tee", name:"Custom Print — Your Design", price:899, mrp:0, stock:100, category:"Custom", img:"https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80", desc:"Your design, printed on the garment of your choice. Pick a style, upload your image and choose a size — we print it and ship it to you. Prepaid only.", sizes:"S,M,L,XL,XXL", styles:"Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099", custom:true },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
 const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match server.
 const esc = (s) => String(s==null?"":s);
 const parseSizes = (s) => (typeof s==="string" ? s.split(",").map(x=>x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
+// Garment styles for custom products: "Regular Tee:799, Oversized Tee:999, Hoodie:1399" -> [{label,price}]
+const parseStyles = (s) => (typeof s==="string" ? s.split(",").map(part=>{ const i=part.lastIndexOf(":"); if(i<0) return null; const label=part.slice(0,i).trim(); const price=parseInt(part.slice(i+1).trim(),10); if(!label||!(price>0)) return null; return {label,price}; }).filter(Boolean) : []);
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
   return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
     {[1,2,3,4,5].map(n=>(<span key={n} style={{fontSize:sz,color:n<=Math.round(v)?"#F3A23E":"rgba(255,255,255,.22)"}}>★</span>))}
@@ -169,7 +175,7 @@ function App(){
     if(design){ const rid=Math.random().toString(36).slice(2,9); key=id+"::"+(size||"")+"::"+rid; setCustomDesigns(d=>({...d,[key]:design})); }
     setCart(c=>({...c,[key]:Math.min(max,(c[key]||0)+1)})); setCartOpen(true); };
   const setQty=(key,q)=>{ setCart(c=>{ const n={...c}; if(q<=0) delete n[key]; else n[key]=Math.min(50,q); return n; }); if(q<=0) setCustomDesigns(d=>{ if(!(key in d)) return d; const n={...d}; delete n[key]; return n; }); };
-  const cartItems=useMemo(()=>Object.entries(cart).map(([key,qty])=>{ const parts=key.split("::"); const id=parts[0]; const size=parts[1]||""; const p=products.find(pp=>pp.id===id); if(!p) return null; const design=customDesigns[key]||null; return {...p,qty,size,key,design}; }).filter(Boolean),[cart,products,customDesigns]);
+  const cartItems=useMemo(()=>Object.entries(cart).map(([key,qty])=>{ const parts=key.split("::"); const id=parts[0]; const size=parts[1]||""; const p=products.find(pp=>pp.id===id); if(!p) return null; const design=customDesigns[key]||null; const price=(design&&typeof design.price==="number")?design.price:p.price; return {...p,qty,size,key,design,price}; }).filter(Boolean),[cart,products,customDesigns]);
   const cartCount=cartItems.reduce((s,i)=>s+i.qty,0);
   const subtotal=cartItems.reduce((s,i)=>s+i.qty*i.price,0);
   const shipping=subtotal===0?0:(subtotal>=999?0:49);
@@ -181,8 +187,8 @@ function App(){
   };
 
   const handlePlace=async(form)=>{
-    const items=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design?{design:i.design}:{})}));
-    const itemsLite=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||""}));
+    const items=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design?{design:i.design}:{})}));
+    const itemsLite=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{})}));
     // ---- Cash on delivery: record order + notify seller ----
     if(form.pay==="COD"){
       setPaying(true);
@@ -399,7 +405,7 @@ function Store({products,onAdd,onQuick,onTrack}){
             <h3 style={S.prodName}>{esc(p.name)}</h3>
             {p.reviewCount>0 && <div style={{display:"flex",alignItems:"center",gap:6,margin:"2px 0 4px"}}><Stars value={p.rating} size={13} /><span style={{fontSize:11.5,color:T.muted,fontFamily:"var(--mono)"}}>{p.rating} ({p.reviewCount})</span></div>}
             <p style={S.prodDesc}>{esc(p.desc)}</p>
-            <div style={{...S.priceRow,marginTop:"auto"}}><span style={S.price}>{rupee(p.price)}</span>{p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
+            <div style={{...S.priceRow,marginTop:"auto"}}>{p.custom&&parseStyles(p.styles).length>0 && <span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)",marginRight:2}}>From</span>}<span style={S.price}>{rupee(p.custom&&parseStyles(p.styles).length>0?Math.min(...parseStyles(p.styles).map(s=>s.price)):p.price)}</span>{!(p.custom&&parseStyles(p.styles).length>0) && p.mrp>p.price && <span style={S.mrp}>{rupee(p.mrp)}</span>}</div>
             {!out && p.stock>0 && p.stock<10 && <p style={{fontSize:11.5,color:T.marigold,fontFamily:"var(--mono)",fontWeight:700,margin:"6px 0 0",letterSpacing:".02em"}}>🔥 Only {p.stock} left!</p>}
             {(parseSizes(p.sizes).length>0 || p.custom)
               ? <button onClick={()=>onQuick(p)} disabled={out} style={{...S.addBtn,marginTop:18,...(out?S.addBtnDisabled:{})}}>{out?"Sold out":(p.custom?"Customize →":"Select size")}</button>
@@ -458,6 +464,11 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const [sizeChartOpen,setSizeChartOpen]=useState(false);
   const [sizeErr,setSizeErr]=useState(false);
   const isCustom=product.custom===true;
+  const styleOpts=isCustom?parseStyles(product.styles):[];
+  const [selStyle,setSelStyle]=useState(styleOpts.length?styleOpts[0].label:"");
+  const [styleErr,setStyleErr]=useState(false);
+  const curStyle=styleOpts.find(s=>s.label===selStyle)||null;
+  const shownPrice=curStyle?curStyle.price:product.price;
   const [customImg,setCustomImg]=useState("");
   const [customNotes,setCustomNotes]=useState("");
   const [imgErr,setImgErr]=useState(false);
@@ -514,9 +525,15 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         <button onClick={onClose} style={S.quickBack}>← Back to products</button>
         <h2 style={{...S.prodName,fontSize:22,margin:"10px 0 8px"}}>{esc(product.name)}</h2>
         {avg && <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><Stars value={avg} /><span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)"}}>{avg} · {reviews.length} review{reviews.length===1?"":"s"}</span></div>}
-        <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(product.price)}</span>{product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
+        <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(shownPrice)}</span>{!styleOpts.length && product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:(product.stock<10?T.marigold:T.teal),marginTop:14,fontWeight:product.stock>0&&product.stock<10?700:400}}>{out?"Out of stock":product.stock<10?("🔥 Only "+product.stock+" left — order soon!"):("In stock · "+product.stock+" available")}</p>
+        {styleOpts.length>0 && <div style={{marginTop:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Choose your style{styleErr&&!selStyle?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please pick one</span>:""}</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {styleOpts.map(st=>(<button key={st.label} onClick={()=>{setSelStyle(st.label);setStyleErr(false);}} style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2,padding:"9px 14px",borderRadius:12,cursor:"pointer",border:"1.5px solid "+(selStyle===st.label?T.marigold:T.line),background:selStyle===st.label?T.marigold:"transparent",color:selStyle===st.label?"#13100D":T.ink}}><span style={{fontSize:13.5,fontWeight:700}}>{esc(st.label)}</span><span style={{fontFamily:"var(--mono)",fontSize:12,opacity:.85}}>{rupee(st.price)}</span></button>))}
+          </div>
+        </div>}
         {isCustom && <div style={{marginTop:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Upload your photo / design{imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please add an image</span>:""}</div>
           <input type="file" accept="image/*" id="vg-custom-up" onChange={onPickCustom} style={{display:"none"}} />
@@ -528,7 +545,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
                 <button onClick={()=>setCustomImg("")} style={{...S.linkBtn,fontSize:12.5,color:T.danger}}>Remove</button>
               </div>}
           <textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} maxLength={500} placeholder="Any instructions? e.g. center the photo, add the name 'Aarav' underneath, plain white background" style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit",marginTop:10}} />
-          <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>💳 Custom tees are prepaid only. We design your print and ship it to you.</p>
+          <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>💳 Custom prints are prepaid only. We print your design and ship it to you.</p>
         </div>}
         {opts.length>0 && <div style={{marginTop:16}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -540,7 +557,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
           </div>
         </div>}
         {(opts.length>0 || isCustom)
-          ? <button onClick={()=>{ if(out)return; if(isCustom && !customImg){ setImgErr(true); return; } if(opts.length>0 && !selSize){ setSizeErr(true); return; } onAdd(selSize, isCustom?{image:customImg,notes:customNotes}:null); }} disabled={out} style={{...S.addBtn,marginTop:18,...(out?S.addBtnDisabled:{})}}>{out?"Unavailable":(isCustom?"Add custom tee to cart":"Add to cart")}</button>
+          ? <button onClick={()=>{ if(out)return; if(styleOpts.length>0 && !selStyle){ setStyleErr(true); return; } if(isCustom && !customImg){ setImgErr(true); return; } if(opts.length>0 && !selSize){ setSizeErr(true); return; } onAdd(selSize, isCustom?{image:customImg,notes:customNotes,style:selStyle,price:curStyle?curStyle.price:product.price}:null); }} disabled={out} style={{...S.addBtn,marginTop:18,...(out?S.addBtnDisabled:{})}}>{out?"Unavailable":(isCustom?"Add custom print to cart":"Add to cart")}</button>
           : <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />}
         <button onClick={doShare} style={{width:"100%",marginTop:10,padding:"11px 16px",fontSize:14,fontWeight:600,color:T.inkSoft,background:"transparent",border:"1px solid "+T.line,borderRadius:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>{shared?("✓ "+shared):"🔗 Share this product"}</button>
         {out && <div style={{marginTop:14,background:T.tint,border:"1px solid "+T.line,borderRadius:12,padding:14}}>
@@ -588,7 +605,7 @@ function CartDrawer({items,subtotal,shipping,total,setQty,onClose,onCheckout}){ 
       {items.length===0 && <p style={{color:T.muted,marginTop:24}}>Your cart is empty.</p>}
       {items.map(i=>{ const max=(i.stock!=null&&i.stock>0)?Math.min(50,i.stock):50; const atMax=i.qty>=max; return (<div key={i.key} style={S.cartRow}>
         <img src={i.design?i.design.image:i.img} alt="" style={S.cartThumb} />
-        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{i.size && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>Size: {esc(i.size)}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
+        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,i.size?("Size: "+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
           <div style={S.qtyRow}><button onClick={()=>setQty(i.key,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>{ if(!atMax) setQty(i.key,i.qty+1); }} disabled={atMax} style={{...S.qtyBtn,...(atMax?{opacity:.4,cursor:"not-allowed"}:{})}} aria-label="Increase">+</button></div>
           {atMax && i.stock!=null && i.stock>0 && i.stock<50 && <p style={{fontSize:11,color:T.muted,margin:"4px 0 0",fontFamily:"var(--mono)"}}>Only {i.stock} in stock</p>}
         </div><span style={S.cartLine}>{rupee(i.price*i.qty)}</span>
@@ -638,13 +655,13 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         <div style={S.two} className="vg-pair"><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
         <Field label="State"><select style={S.input} value={f.state} onChange={up("state")}>{INDIAN_STATES.map(s=><option key={s}>{s}</option>)}</select></Field>
         <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery",codAllowed?"Pay when it arrives":(hasCustom?"Not available for custom orders":"Not available over "+rupee(COD_MAX))]].map(([val,title,sub])=>{ const disabled=(val==="COD"&&!codAllowed); return (<button key={val} type="button" disabled={disabled} onClick={()=>{ if(!disabled) setF({...f,pay:val}); }} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{}),...(disabled?{opacity:.5,cursor:"not-allowed"}:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>); })}</div></Field>
-        {!codAllowed && <p style={{fontSize:11.5,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>{hasCustom?"💳 Custom photo tees are prepaid only — please pay online. We start your design once payment is confirmed.":"💳 Orders above "+rupee(COD_MAX)+" are prepaid only (secure online payment). This keeps prices low for everyone."}</p>}
+        {!codAllowed && <p style={{fontSize:11.5,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>{hasCustom?"💳 Custom prints are prepaid only — please pay online. We start printing once payment is confirmed.":"💳 Orders above "+rupee(COD_MAX)+" are prepaid only (secure online payment). This keeps prices low for everyone."}</p>}
       </div>
       <div style={S.summary}>
         <h3 style={S.summaryTitle}>Order summary</h3>
         <p style={{fontSize:12,color:T.muted,margin:"-6px 0 12px",fontFamily:"var(--mono)"}}>{items.reduce((n,i)=>n+i.qty,0)} item{items.reduce((n,i)=>n+i.qty,0)===1?"":"s"} · {items.length} product{items.length===1?"":"s"}</p>
         {items.map(i=>(<div key={i.key} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,padding:"7px 0",color:T.inkSoft,borderBottom:"1px solid "+T.line}}>
-          <span style={{flex:1}}>{esc(i.name)}{i.design?<span style={{color:T.marigold}}> · 🎨 custom</span>:""}{i.size?<span style={{color:T.muted}}> · {esc(i.size)}</span>:""}<br/><span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>{rupee(i.price)} × {i.qty}</span></span>
+          <span style={{flex:1}}>{esc(i.name)}{i.design?<span style={{color:T.marigold}}> · 🎨 custom</span>:""}{(i.design&&i.design.style)?<span style={{color:T.muted}}> · {esc(i.design.style)}</span>:""}{i.size?<span style={{color:T.muted}}> · {esc(i.size)}</span>:""}<br/><span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>{rupee(i.price)} × {i.qty}</span></span>
           <span style={{fontWeight:600,color:T.ink}}>{rupee(i.price*i.qty)}</span>
         </div>))}
         <div style={{height:8}} />
@@ -674,7 +691,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
     <div style={S.stepper}>{steps.map((s,idx)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:idx===0?T.teal:T.line,color:idx===0?"#fff":T.muted}}>{idx+1}</div><span style={{fontSize:11,color:idx===0?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{idx<steps.length-1 && <div style={S.stepLine} />}</React.Fragment>))}</div>
     {items.length>0 && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
       <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
-      {items.map((i,ix)=>(<div key={i.key||i.id||ix} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)}{i.design?" · 🎨 custom":""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty}</span></span><span style={{color:T.ink}}>{rupee(i.price*i.qty)}</span></div>))}
+      {items.map((i,ix)=>(<div key={i.key||i.id||ix} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)}{i.design?" · 🎨 custom":""}{(i.design&&i.design.style)?" · "+esc(i.design.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty}</span></span><span style={{color:T.ink}}>{rupee(i.price*i.qty)}</span></div>))}
       <div style={{height:1,background:T.line,margin:"8px 0"}} />
       {order.subtotal!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Subtotal</span><span>{rupee(order.subtotal)}</span></div>}
       {order.shipping!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Shipping</span><span>{order.shipping===0?"Free":rupee(order.shipping)}</span></div>}
@@ -752,7 +769,7 @@ function TrackOrder({onBack}){
           : <div style={S.stepper}>{steps.map((s,i)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:i<=idx?T.teal:T.line,color:i<=idx?"#fff":T.muted}}>{i<=idx?"✓":i+1}</div><span style={{fontSize:11,color:i<=idx?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{i<steps.length-1 && <div style={{...S.stepLine,background:i<idx?T.teal:T.line}} />}</React.Fragment>))}</div>}
         {items.length>0 && <div style={{textAlign:"left",background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
           <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
-          {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+          {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
           <div style={{height:1,background:T.line,margin:"8px 0"}} />
           <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink}}><span>Total</span><span>{rupee(res.total)}</span></div>
         </div>}
@@ -933,7 +950,7 @@ function AdminOrders({onBack}){
   };
   const seedDemo=async()=>{
     try{ const r=await fetch(API+"/api/admin/seed-demo",{method:"POST",headers:{"x-admin-key":key}}); const j=await r.json();
-      if(r.ok){ loadProds(key); alert(j.added>0?("Added "+j.added+" demo product(s): an Oversized Tee, a Hoodie, and a Custom Photo T-Shirt. Open your store to test them (Clothing / Custom categories), then delete them here when you're done."):"The demo products are already added. Check the Clothing and Custom categories in your store."); }
+      if(r.ok){ loadProds(key); alert(j.added>0?("Added "+j.added+" demo product(s): a full clothing range (tees, full-sleeve, sweatshirt, hoodies) plus the Custom Print product. Open your store to test them (Clothing / Custom categories), then delete any you don't want."):"The demo products are already added. Check the Clothing and Custom categories in your store."); }
       else alert(j.error||"Could not add demo products."); }catch(e){ alert("Could not add demo products. Please try again."); }
   };
   useEffect(()=>{ let saved=""; try{ saved=localStorage.getItem("vg_admin_key")||""; }catch(e){}
@@ -1123,6 +1140,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     desc:(product.descr!=null?product.descr:product.desc)||"",
     cost:product.cost??"", supplier:product.supplier||"", supplierUrl:(product.supplier_url!=null?product.supplier_url:product.supplierUrl)||"",
     sizes:(product.sizes!=null?product.sizes:"")||"",
+    styles:(product.styles!=null?product.styles:"")||"",
     custom:product.custom===true,
     active:product.active!==false,
   });
@@ -1151,7 +1169,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     setSaving(true);
     try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({
         id:isNew?"":f.id, name:f.name, price:Number(f.price), mrp:Number(f.mrp)||0, stock:Number(f.stock)||0,
-        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, custom:f.custom, active:f.active })});
+        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, styles:f.styles, custom:f.custom, active:f.active })});
       const j=await r.json(); setSaving(false);
       if(r.ok) onSaved(); else setMsg(j.error||"Couldn't save the product.");
     }catch(e){ setSaving(false); setMsg("Something went wrong. Please try again."); }
@@ -1172,6 +1190,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
       <L label="Category" hint="e.g. Home"><input style={S.input} value={f.category} onChange={up("category")} maxLength={40} placeholder="Home" /></L>
     </div>
     <L label="Sizes" hint="clothing only — comma-separated. Leave blank for non-clothing."><input style={S.input} value={f.sizes} onChange={up("sizes")} maxLength={120} placeholder="S,M,L,XL,XXL" /></L>
+    <L label="Garment styles & prices" hint="custom only — Label:Price, comma-separated. Sets the price per garment. Leave blank to use the single price above."><input style={S.input} value={f.styles} onChange={up("styles")} maxLength={240} placeholder="Regular Tee:799, Oversized Tee:999, Hoodie:1399" /></L>
     <label style={{display:"flex",alignItems:"flex-start",gap:8,margin:"0 0 12px",fontSize:13.5,color:T.inkSoft,cursor:"pointer",lineHeight:1.5}}>
       <input type="checkbox" checked={f.custom} onChange={e=>setF({...f,custom:e.target.checked})} style={{width:16,height:16,marginTop:2,accentColor:T.marigold,flexShrink:0}} />
       <span>Custom photo product · customer uploads their own image and it's <strong style={{color:T.inkSoft}}>prepaid only</strong>. Turn this on for "design your own" tees.</span>
@@ -1247,8 +1266,8 @@ function AdminRow({o,adminKey,prods,onSaved}){
     return s;
   };
   const addressText=`${o.name}\n${o.line1}${o.line2?", "+o.line2:""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
-  const fullOrderText=`Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n`+items.map(i=>`- ${i.name}${i.size?" ["+i.size+"]":""} x${i.qty||1}`).join("\n");
-  const itemSummary=items.map(i=>`${i.name}${i.size?" ("+i.size+")":""} x${i.qty||1}`).join(", ");
+  const fullOrderText=`Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n`+items.map(i=>`- ${i.name}${i.style?" - "+i.style:""}${i.size?" ["+i.size+"]":""} x${i.qty||1}`).join("\n");
+  const itemSummary=items.map(i=>`${i.name}${i.style?" - "+i.style:""}${i.size?" ("+i.size+")":""} x${i.qty||1}`).join(", ");
   const confirmMsg=`Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2?", "+o.line2:""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
   const dt=o.created_at?new Date(o.created_at):null;
   const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
@@ -1279,7 +1298,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
     {items.length>0 && <div style={{padding:"0 18px 14px"}}>
       <button onClick={()=>setOpen(!open)} style={{...S.linkBtn,fontSize:12.5}}>{open?"▾ Hide items":"▸ "+items.reduce((n,i)=>n+(i.qty||1),0)+" item"+(items.reduce((n,i)=>n+(i.qty||1),0)===1?"":"s")}</button>
       {open && <div style={{marginTop:8,background:T.bg||"#0f0d0a",borderRadius:10,padding:"10px 12px"}}>
-        {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+        {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
       </div>}
     </div>}
     {(!o.paid && o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(232,130,12,.07)"}}>

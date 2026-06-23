@@ -120,6 +120,7 @@ async function initDb() {
   )`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes text`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS custom boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS styles text`);
   await pool.query(`CREATE TABLE IF NOT EXISTS order_designs (
     id serial PRIMARY KEY,
     order_id text,
@@ -136,17 +137,32 @@ async function initDb() {
     await pool.query(`CREATE TABLE IF NOT EXISTS app_flags (key text PRIMARY KEY, created_at timestamptz DEFAULT now())`);
     const flag = await pool.query("SELECT key FROM app_flags WHERE key='demo_clothing_seeded'");
     if (!flag.rows.length) {
-      const demoIds = ["p10", "p11", "custom-tee"];
+      const demoIds = ["p10", "p11", "p12", "p13", "p14", "p15", "custom-tee"];
       let n = 0;
       for (const p of PRODUCTS.filter(pp => demoIds.includes(pp.id))) {
         const r = await pool.query(
-          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING RETURNING id",
-          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) ON CONFLICT (id) DO NOTHING RETURNING id",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.custom || false]
         );
         if (r.rows.length) n++;
       }
       await pool.query("INSERT INTO app_flags (key) VALUES ('demo_clothing_seeded') ON CONFLICT (key) DO NOTHING");
       console.log("Seeded " + n + " demo clothing product(s) (one-time).");
+    }
+    // One-time catalogue update: add the newer demo garments + apply final prices/styles (runs once; safe to re-edit after).
+    const f3 = await pool.query("SELECT key FROM app_flags WHERE key='demo_catalog_v3'");
+    if (!f3.rows.length) {
+      for (const p of PRODUCTS.filter(pp => ["p12", "p13", "p14", "p15"].includes(pp.id))) {
+        await pool.query(
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.custom || false]
+        );
+      }
+      await pool.query("UPDATE products SET name='Custom Print — Your Design', styles=$1, price=899, mrp=0 WHERE id='custom-tee'", ["Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099"]);
+      await pool.query("UPDATE products SET price=1099, mrp=1599, cost=500 WHERE id='p10'");
+      await pool.query("UPDATE products SET price=1599, mrp=2499, cost=740 WHERE id='p11'");
+      await pool.query("INSERT INTO app_flags (key) VALUES ('demo_catalog_v3') ON CONFLICT (key) DO NOTHING");
+      console.log("Applied demo catalogue update v3 (one-time).");
     }
   } catch (e) { console.error("demo seed failed:", e && e.message); }
   await refreshProductCache();
@@ -155,7 +171,7 @@ if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => conso
 
 async function saveOrder(o) {
   if (!pool) return;
-  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price, size: li.size || "", custom: li.custom || false, notes: li.notes || "" }));
+  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price, size: li.size || "", style: li.style || "", custom: li.custom || false, notes: li.notes || "" }));
   const supply = o.lineItems.map((li) => ({ id: li.id, name: li.name, qty: li.qty, cost: li.cost, supplier: li.supplier, supplierUrl: li.supplierUrl }));
   await pool.query(
     `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply,cod_fee,confirm_token)
@@ -228,25 +244,47 @@ const PRODUCTS = [
     img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
     desc: "500 GSM, quick-dry, soft combed cotton.",
     cost: 430, supplier: "vFulfill", supplierUrl: "https://supplier.example.com/towel" },
-  { id: "p10", name: "Oversized Graphic Tee — Drop 01", price: 699, mrp: 1299, stock: 100, category: "Clothing",
+  { id: "p10", name: "Oversized Graphic Tee — Drop 01", price: 1099, mrp: 1599, stock: 100, category: "Clothing",
     img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
     desc: "240 GSM oversized cotton tee, DTF print. Unisex.",
     sizes: "S,M,L,XL,XXL",
-    cost: 320, supplier: "Qikink", supplierUrl: "https://qikink.com" },
-  { id: "p11", name: "Heavyweight Hoodie — Night Edition", price: 1199, mrp: 2199, stock: 100, category: "Clothing",
+    cost: 500, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p11", name: "Heavyweight Hoodie — Night Edition", price: 1599, mrp: 2499, stock: 100, category: "Clothing",
     img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80",
-    desc: "320 GSM fleece hoodie, soft brushed inside. Unisex.",
+    desc: "300 GSM fleece hoodie, soft brushed inside. Unisex.",
     sizes: "S,M,L,XL,XXL",
-    cost: 720, supplier: "Qikink", supplierUrl: "https://qikink.com" },
-  { id: "custom-tee", name: "Custom Photo T-Shirt", price: 799, mrp: 1299, stock: 100, category: "Custom",
+    cost: 740, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p12", name: "Classic Graphic Tee", price: 899, mrp: 1499, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
+    desc: "180 GSM regular-fit cotton tee, DTF print. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 420, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p13", name: "Full Sleeve Tee — Mono", price: 999, mrp: 1599, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80",
+    desc: "180 GSM full-sleeve cotton tee, DTF print. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 470, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p14", name: "Graphic Sweatshirt", price: 1399, mrp: 2199, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80",
+    desc: "300 GSM fleece sweatshirt, ribbed cuffs. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 640, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "p15", name: "Oversized Hoodie — Heavy 400", price: 1899, mrp: 2999, stock: 100, category: "Clothing",
+    img: "https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80",
+    desc: "400 GSM heavyweight oversized hoodie, drop shoulder. Unisex.",
+    sizes: "S,M,L,XL,XXL",
+    cost: 900, supplier: "Qikink", supplierUrl: "https://qikink.com" },
+  { id: "custom-tee", name: "Custom Print — Your Design", price: 899, mrp: 0, stock: 100, category: "Custom",
     img: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80",
-    desc: "Your photo, printed on a premium cotton tee. Upload an image, pick a size — we design it and ship it to you. Prepaid only.",
-    sizes: "S,M,L,XL,XXL", custom: true,
-    cost: 350, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
+    desc: "Your design, printed on the garment of your choice. Pick a style, upload your image and choose a size — we print it and ship it to you. Prepaid only.",
+    sizes: "S,M,L,XL,XXL", styles: "Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099", custom: true,
+    cost: 420, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
 ];
 
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
 const parseSizesList = (s) => (typeof s === "string" ? s.split(",").map(x => x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
+// Garment styles for custom products: "Regular Tee:799, Hoodie:1399" -> [{label,price}]; labels sanitized, price positive int.
+const parseStylesList = (s) => (typeof s === "string" ? s.split(",").map(part => { const i = part.lastIndexOf(":"); if (i < 0) return null; const label = part.slice(0, i).trim().replace(/[^a-zA-Z0-9 +/&'\-]/g, "").slice(0, 40); const price = parseInt(part.slice(i + 1).trim(), 10); if (!label || !(price > 0) || price > 1000000) return null; return { label, price }; }).filter(Boolean) : []);
 const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
 // Cash-on-Delivery fee (₹). COD costs more (courier COD charges + higher return rate).
 // Set to 0 to disable. Change this number to adjust the fee.
@@ -262,8 +300,8 @@ async function seedProducts() {
     if (c.rows[0].n === 0) {
       for (const p of PRODUCTS) {
         await pool.query(
-          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING",
-          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.custom || false]
         );
       }
       console.log("Seeded products table with starter products.");
@@ -273,10 +311,10 @@ async function seedProducts() {
 async function refreshProductCache() {
   if (!pool) { productCache = PRODUCTS.slice(); return; }
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active FROM products ORDER BY created_at ASC");
     if (r.rows.length) {
       productCache = r.rows.map(row => ({ id: row.id, name: row.name, price: row.price, mrp: row.mrp, stock: row.stock,
-        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, sizes: row.sizes, custom: row.custom, active: row.active }));
+        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, sizes: row.sizes, styles: row.styles, custom: row.custom, active: row.active }));
     } else { productCache = PRODUCTS.slice(); }
   } catch (e) { console.error("product cache refresh failed:", e && e.message); }
 }
@@ -303,6 +341,15 @@ function computeOrder(items, cod, requireDesign) {
       if (!opts.includes(size)) return { error: `"${size}" isn't an available size for "${p.name}".` };
     } else { size = ""; }
     const isCustom = p.custom === true;
+    const styleList = isCustom ? parseStylesList(p.styles) : [];
+    let unitPrice = p.price;
+    let style = "";
+    if (styleList.length) {
+      style = it.style != null ? String(it.style).trim().slice(0, 40) : "";
+      const match = styleList.find(s => s.label === style);
+      if (!style || !match) return { error: `Please choose a style for "${p.name}".` };
+      unitPrice = match.price;
+    }
     let design = null;
     if (isCustom) {
       const d = it.design || {};
@@ -313,9 +360,9 @@ function computeOrder(items, cod, requireDesign) {
       }
       design = { image: img, notes: typeof d.notes === "string" ? d.notes.trim().slice(0, 500) : "" };
     }
-    subtotal += p.price * qty;
+    subtotal += unitPrice * qty;
     if (typeof p.cost === "number") totalCost += p.cost * qty;
-    lineItems.push({ id: p.id, name: p.name, price: p.price, qty, size, custom: isCustom, notes: design ? design.notes : "", design, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
+    lineItems.push({ id: p.id, name: p.name, price: unitPrice, qty, size, style, custom: isCustom, notes: design ? design.notes : "", design, cost: p.cost, supplier: p.supplier, supplierUrl: p.supplierUrl });
   }
   const shipping = shippingFor(subtotal);
   const codFee = cod === true ? COD_FEE : 0;
@@ -342,8 +389,8 @@ async function notifyOrder(order) {
   const c = order.customer;
   const lines = order.lineItems.map((li, i) =>
     li.custom
-      ? `- ${li.name}  x${li.qty}  [CUSTOM PHOTO TEE${li.size ? ", size " + li.size : ""}]\n    your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
-      : `- ${li.name}${li.size ? "  [size: " + li.size + "]" : ""}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
+      ? `- ${li.name}  x${li.qty}  [CUSTOM${li.style ? ": " + li.style.toUpperCase() : " PHOTO TEE"}${li.size ? ", size " + li.size : ""}]\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
+      : `- ${li.name}${li.style ? "  [" + li.style + "]" : ""}${li.size ? "  [size: " + li.size + "]" : ""}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
   ).join("\n");
   // Build email attachments from any custom-design images.
   const attachments = [];
@@ -372,7 +419,7 @@ async function notifyOrder(order) {
     `${c.city}, ${c.state} - ${c.pincode}`,
     `Phone ${c.phone}` + (c.email ? ` | Email ${c.email}` : ""),
     "",
-    attachments.length ? "Custom tee: download the attached design, make the print-ready artwork, then place the order at your print supplier to this address." : "Next step: place this order with the supplier(s) above and have them ship to the address.",
+    attachments.length ? "Custom order: download the attached design, make the print-ready artwork, then place the order at your print supplier to this address." : "Next step: place this order with the supplier(s) above and have them ship to the address.",
   ].filter(x => x !== "").join("\n");
 
   console.log("==== ORDER ====\n" + body + "\n===============");  // backup record in server logs
@@ -542,7 +589,7 @@ async function notifyBuyer(order) {
 // Public catalogue (cost/supplier stripped out)
 app.get("/api/products", async (req, res) => {
   const list = (productCache && productCache.length ? productCache : PRODUCTS).filter(p => p.active !== false);
-  const base = list.map(({ id, name, price, mrp, stock, img, desc, category, sizes, custom }) => ({ id, name, price, mrp, stock, img, desc, category, sizes: sizes || "", custom: custom === true, rating: 0, reviewCount: 0 }));
+  const base = list.map(({ id, name, price, mrp, stock, img, desc, category, sizes, styles, custom }) => ({ id, name, price, mrp, stock, img, desc, category, sizes: sizes || "", styles: styles || "", custom: custom === true, rating: 0, reviewCount: 0 }));
   if (pool) {
     try {
       const r = await pool.query("SELECT product_id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(*) AS cnt FROM reviews WHERE hidden=false GROUP BY product_id");
@@ -607,7 +654,7 @@ app.get("/api/admin/products", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active,created_at FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active,created_at FROM products ORDER BY created_at ASC");
     res.json({ products: r.rows });
   } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
 });
@@ -616,14 +663,14 @@ app.get("/api/admin/products", async (req, res) => {
 app.post("/api/admin/seed-demo", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
-  const demoIds = ["p10", "p11", "custom-tee"];
+  const demoIds = ["p10", "p11", "p12", "p13", "p14", "p15", "custom-tee"];
   const demos = PRODUCTS.filter(p => demoIds.includes(p.id));
   try {
     let added = 0;
     for (const p of demos) {
       const r = await pool.query(
-        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true) ON CONFLICT (id) DO NOTHING RETURNING id",
-        [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.custom || false]
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true) ON CONFLICT (id) DO NOTHING RETURNING id",
+        [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.custom || false]
       );
       if (r.rows.length) added++;
     }
@@ -658,6 +705,7 @@ app.post("/api/admin/product-save", async (req, res) => {
   const descr = String(b.desc || "").trim().slice(0, 600);
   const category = String(b.category || "").trim().slice(0, 40);
   const sizes = parseSizesList(b.sizes).join(",").slice(0, 120);
+  const styles = parseStylesList(b.styles).map(s => s.label + ":" + s.price).join(", ").slice(0, 240);
   const custom = b.custom === true;
   const cost = b.cost === "" || b.cost == null ? null : Math.round(Number(b.cost));
   const supplier = String(b.supplier || "").trim().slice(0, 120);
@@ -673,15 +721,15 @@ app.post("/api/admin/product-save", async (req, res) => {
       const prev = await pool.query("SELECT stock FROM products WHERE id=$1", [id]);
       wasOutOfStock = prev.rows.length && Number(prev.rows[0].stock) <= 0;
       const r = await pool.query(
-        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,sizes=$12,custom=$13,active=$14 WHERE id=$1 RETURNING id",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active]
+        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,sizes=$12,custom=$13,active=$14,styles=$15 WHERE id=$1 RETURNING id",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles]
       );
       if (!r.rows.length) return res.status(404).json({ error: "Product not found." });
     } else {
       id = "p" + Date.now().toString(36);
       await pool.query(
-        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active]
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active,styles) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles]
       );
     }
     await refreshProductCache();
@@ -735,7 +783,7 @@ app.post("/api/place-order", async (req, res) => {
     const b = req.body || {};
     const calc = computeOrder(b.items, b.cod === true, true);
     if (calc.error) return res.status(400).json({ error: calc.error });
-    if (b.cod === true && calc.lineItems.some(li => li.custom)) return res.status(400).json({ error: "Custom photo tees are prepaid only. Please choose online payment." });
+    if (b.cod === true && calc.lineItems.some(li => li.custom)) return res.status(400).json({ error: "Custom prints are prepaid only. Please choose online payment." });
     const customer = sanitizeCustomer(b.customer);
     if (customer.error) return res.status(400).json({ error: customer.error });
 

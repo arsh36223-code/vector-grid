@@ -102,8 +102,8 @@ const SEED = [{
 }, {
   id: "p10",
   name: "Oversized Graphic Tee — Drop 01",
-  price: 699,
-  mrp: 1299,
+  price: 1099,
+  mrp: 1599,
   stock: 100,
   category: "Clothing",
   img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
@@ -112,23 +112,64 @@ const SEED = [{
 }, {
   id: "p11",
   name: "Heavyweight Hoodie — Night Edition",
-  price: 1199,
-  mrp: 2199,
+  price: 1599,
+  mrp: 2499,
   stock: 100,
   category: "Clothing",
   img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80",
-  desc: "320 GSM fleece hoodie, soft brushed inside. Unisex.",
+  desc: "300 GSM fleece hoodie, soft brushed inside. Unisex.",
+  sizes: "S,M,L,XL,XXL"
+}, {
+  id: "p12",
+  name: "Classic Graphic Tee",
+  price: 899,
+  mrp: 1499,
+  stock: 100,
+  category: "Clothing",
+  img: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
+  desc: "180 GSM regular-fit cotton tee, DTF print. Unisex.",
+  sizes: "S,M,L,XL,XXL"
+}, {
+  id: "p13",
+  name: "Full Sleeve Tee — Mono",
+  price: 999,
+  mrp: 1599,
+  stock: 100,
+  category: "Clothing",
+  img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80",
+  desc: "180 GSM full-sleeve cotton tee, DTF print. Unisex.",
+  sizes: "S,M,L,XL,XXL"
+}, {
+  id: "p14",
+  name: "Graphic Sweatshirt",
+  price: 1399,
+  mrp: 2199,
+  stock: 100,
+  category: "Clothing",
+  img: "https://images.unsplash.com/photo-1572495641004-28421ae29ed4?w=600&q=80",
+  desc: "300 GSM fleece sweatshirt, ribbed cuffs. Unisex.",
+  sizes: "S,M,L,XL,XXL"
+}, {
+  id: "p15",
+  name: "Oversized Hoodie — Heavy 400",
+  price: 1899,
+  mrp: 2999,
+  stock: 100,
+  category: "Clothing",
+  img: "https://images.unsplash.com/photo-1565693413579-8a73ffa8de15?w=600&q=80",
+  desc: "400 GSM heavyweight oversized hoodie, drop shoulder. Unisex.",
   sizes: "S,M,L,XL,XXL"
 }, {
   id: "custom-tee",
-  name: "Custom Photo T-Shirt",
-  price: 799,
-  mrp: 1299,
+  name: "Custom Print — Your Design",
+  price: 899,
+  mrp: 0,
   stock: 100,
   category: "Custom",
   img: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80",
-  desc: "Your photo, printed on a premium cotton tee. Upload an image, pick a size — we design it and ship it to you. Prepaid only.",
+  desc: "Your design, printed on the garment of your choice. Pick a style, upload your image and choose a size — we print it and ship it to you. Prepaid only.",
   sizes: "S,M,L,XL,XXL",
+  styles: "Regular Tee:899, Full Sleeve Tee:999, Oversized Tee:1099, Sweatshirt:1399, Hoodie:1599, Oversized Hoodie:1899, Zip Hoodie:2099",
   custom: true
 }];
 const rupee = n => "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -136,6 +177,18 @@ const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disa
 const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match server.
 const esc = s => String(s == null ? "" : s);
 const parseSizes = s => typeof s === "string" ? s.split(",").map(x => x.trim()).filter(Boolean) : Array.isArray(s) ? s.filter(Boolean) : [];
+// Garment styles for custom products: "Regular Tee:799, Oversized Tee:999, Hoodie:1399" -> [{label,price}]
+const parseStyles = s => typeof s === "string" ? s.split(",").map(part => {
+  const i = part.lastIndexOf(":");
+  if (i < 0) return null;
+  const label = part.slice(0, i).trim();
+  const price = parseInt(part.slice(i + 1).trim(), 10);
+  if (!label || !(price > 0)) return null;
+  return {
+    label,
+    price
+  };
+}).filter(Boolean) : [];
 function Stars({
   value,
   size
@@ -398,12 +451,14 @@ function App() {
     const p = products.find(pp => pp.id === id);
     if (!p) return null;
     const design = customDesigns[key] || null;
+    const price = design && typeof design.price === "number" ? design.price : p.price;
     return {
       ...p,
       qty,
       size,
       key,
-      design
+      design,
+      price
     };
   }).filter(Boolean), [cart, products, customDesigns]);
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
@@ -431,6 +486,9 @@ function App() {
       id: i.id,
       qty: i.qty,
       size: i.size || "",
+      ...(i.design && i.design.style ? {
+        style: i.design.style
+      } : {}),
       ...(i.design ? {
         design: i.design
       } : {})
@@ -438,7 +496,10 @@ function App() {
     const itemsLite = cartItems.map(i => ({
       id: i.id,
       qty: i.qty,
-      size: i.size || ""
+      size: i.size || "",
+      ...(i.design && i.design.style ? {
+        style: i.design.style
+      } : {})
     }));
     // ---- Cash on delivery: record order + notify seller ----
     if (form.pay === "COD") {
@@ -1084,9 +1145,16 @@ function Store({
         ...S.priceRow,
         marginTop: "auto"
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, p.custom && parseStyles(p.styles).length > 0 && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: T.muted,
+        fontFamily: "var(--mono)",
+        marginRight: 2
+      }
+    }, "From"), /*#__PURE__*/React.createElement("span", {
       style: S.price
-    }, rupee(p.price)), p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
+    }, rupee(p.custom && parseStyles(p.styles).length > 0 ? Math.min(...parseStyles(p.styles).map(s => s.price)) : p.price)), !(p.custom && parseStyles(p.styles).length > 0) && p.mrp > p.price && /*#__PURE__*/React.createElement("span", {
       style: S.mrp
     }, rupee(p.mrp))), !out && p.stock > 0 && p.stock < 10 && /*#__PURE__*/React.createElement("p", {
       style: {
@@ -1283,6 +1351,11 @@ function QuickView({
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [sizeErr, setSizeErr] = useState(false);
   const isCustom = product.custom === true;
+  const styleOpts = isCustom ? parseStyles(product.styles) : [];
+  const [selStyle, setSelStyle] = useState(styleOpts.length ? styleOpts[0].label : "");
+  const [styleErr, setStyleErr] = useState(false);
+  const curStyle = styleOpts.find(s => s.label === selStyle) || null;
+  const shownPrice = curStyle ? curStyle.price : product.price;
   const [customImg, setCustomImg] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [imgErr, setImgErr] = useState(false);
@@ -1499,7 +1572,7 @@ function QuickView({
       ...S.price,
       fontSize: 22
     }
-  }, rupee(product.price)), product.mrp > product.price && /*#__PURE__*/React.createElement("span", {
+  }, rupee(shownPrice)), !styleOpts.length && product.mrp > product.price && /*#__PURE__*/React.createElement("span", {
     style: S.mrp
   }, rupee(product.mrp))), /*#__PURE__*/React.createElement("p", {
     style: {
@@ -1516,7 +1589,60 @@ function QuickView({
       marginTop: 14,
       fontWeight: product.stock > 0 && product.stock < 10 ? 700 : 400
     }
-  }, out ? "Out of stock" : product.stock < 10 ? "🔥 Only " + product.stock + " left — order soon!" : "In stock · " + product.stock + " available"), isCustom && /*#__PURE__*/React.createElement("div", {
+  }, out ? "Out of stock" : product.stock < 10 ? "🔥 Only " + product.stock + " left — order soon!" : "In stock · " + product.stock + " available"), styleOpts.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: T.ink,
+      marginBottom: 8
+    }
+  }, "Choose your style", styleErr && !selStyle ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.danger,
+      fontWeight: 400,
+      marginLeft: 6,
+      fontSize: 12
+    }
+  }, "· please pick one") : ""), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, styleOpts.map(st => /*#__PURE__*/React.createElement("button", {
+    key: st.label,
+    onClick: () => {
+      setSelStyle(st.label);
+      setStyleErr(false);
+    },
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: 2,
+      padding: "9px 14px",
+      borderRadius: 12,
+      cursor: "pointer",
+      border: "1.5px solid " + (selStyle === st.label ? T.marigold : T.line),
+      background: selStyle === st.label ? T.marigold : "transparent",
+      color: selStyle === st.label ? "#13100D" : T.ink
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13.5,
+      fontWeight: 700
+    }
+  }, esc(st.label)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "var(--mono)",
+      fontSize: 12,
+      opacity: .85
+    }
+  }, rupee(st.price)))))), isCustom && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16
     }
@@ -1608,7 +1734,7 @@ function QuickView({
       margin: "8px 0 0",
       lineHeight: 1.5
     }
-  }, "💳 Custom tees are prepaid only. We design your print and ship it to you.")), opts.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "💳 Custom prints are prepaid only. We print your design and ship it to you.")), opts.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 16
     }
@@ -1672,6 +1798,10 @@ function QuickView({
   }, sz)))), opts.length > 0 || isCustom ? /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (out) return;
+      if (styleOpts.length > 0 && !selStyle) {
+        setStyleErr(true);
+        return;
+      }
       if (isCustom && !customImg) {
         setImgErr(true);
         return;
@@ -1682,7 +1812,9 @@ function QuickView({
       }
       onAdd(selSize, isCustom ? {
         image: customImg,
-        notes: customNotes
+        notes: customNotes,
+        style: selStyle,
+        price: curStyle ? curStyle.price : product.price
       } : null);
     },
     disabled: out,
@@ -1691,7 +1823,7 @@ function QuickView({
       marginTop: 18,
       ...(out ? S.addBtnDisabled : {})
     }
-  }, out ? "Unavailable" : isCustom ? "Add custom tee to cart" : "Add to cart") : /*#__PURE__*/React.createElement(AddButton, {
+  }, out ? "Unavailable" : isCustom ? "Add custom print to cart" : "Add to cart") : /*#__PURE__*/React.createElement(AddButton, {
     onAdd: onAdd,
     out: out,
     full: true,
@@ -1987,14 +2119,14 @@ function CartDrawer({
         margin: "2px 0 0",
         fontWeight: 700
       }
-    }, "🎨 Custom design"), i.size && /*#__PURE__*/React.createElement("p", {
+    }, "🎨 Custom design"), (i.design && i.design.style || i.size) && /*#__PURE__*/React.createElement("p", {
       style: {
         fontSize: 11,
         color: T.muted,
         fontFamily: "var(--mono)",
         margin: "2px 0 0"
       }
-    }, "Size: ", esc(i.size)), /*#__PURE__*/React.createElement("p", {
+    }, [i.design && i.design.style ? esc(i.design.style) : null, i.size ? "Size: " + esc(i.size) : null].filter(Boolean).join("  ·  ")), /*#__PURE__*/React.createElement("p", {
       style: S.cartPrice
     }, rupee(i.price)), /*#__PURE__*/React.createElement("div", {
       style: S.qtyRow
@@ -2281,7 +2413,7 @@ function Checkout({
       margin: "6px 0 0",
       lineHeight: 1.5
     }
-  }, hasCustom ? "💳 Custom photo tees are prepaid only — please pay online. We start your design once payment is confirmed." : "💳 Orders above " + rupee(COD_MAX) + " are prepaid only (secure online payment). This keeps prices low for everyone.")), /*#__PURE__*/React.createElement("div", {
+  }, hasCustom ? "💳 Custom prints are prepaid only — please pay online. We start printing once payment is confirmed." : "💳 Orders above " + rupee(COD_MAX) + " are prepaid only (secure online payment). This keeps prices low for everyone.")), /*#__PURE__*/React.createElement("div", {
     style: S.summary
   }, /*#__PURE__*/React.createElement("h3", {
     style: S.summaryTitle
@@ -2311,7 +2443,11 @@ function Checkout({
     style: {
       color: T.marigold
     }
-  }, " · 🎨 custom") : "", i.size ? /*#__PURE__*/React.createElement("span", {
+  }, " · 🎨 custom") : "", i.design && i.design.style ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.muted
+    }
+  }, " · ", esc(i.design.style)) : "", i.size ? /*#__PURE__*/React.createElement("span", {
     style: {
       color: T.muted
     }
@@ -2496,7 +2632,7 @@ function Confirmation({
       padding: "5px 0",
       color: T.inkSoft
     }
-  }, /*#__PURE__*/React.createElement("span", null, esc(i.name), i.design ? " · 🎨 custom" : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, esc(i.name), i.design ? " · 🎨 custom" : "", i.design && i.design.style ? " · " + esc(i.design.style) : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: T.muted,
       fontFamily: "var(--mono)",
@@ -2897,7 +3033,7 @@ function TrackOrder({
         padding: "4px 0",
         color: T.inkSoft
       }
-    }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), i.custom ? " · 🎨 custom" : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), i.custom ? " · 🎨 custom" : "", i.style ? " · " + esc(i.style) : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
       style: {
         color: T.muted,
         fontFamily: "var(--mono)",
@@ -3660,7 +3796,7 @@ function AdminOrders({
       const j = await r.json();
       if (r.ok) {
         loadProds(key);
-        alert(j.added > 0 ? "Added " + j.added + " demo product(s): an Oversized Tee, a Hoodie, and a Custom Photo T-Shirt. Open your store to test them (Clothing / Custom categories), then delete them here when you're done." : "The demo products are already added. Check the Clothing and Custom categories in your store.");
+        alert(j.added > 0 ? "Added " + j.added + " demo product(s): a full clothing range (tees, full-sleeve, sweatshirt, hoodies) plus the Custom Print product. Open your store to test them (Clothing / Custom categories), then delete any you don't want." : "The demo products are already added. Check the Clothing and Custom categories in your store.");
       } else alert(j.error || "Could not add demo products.");
     } catch (e) {
       alert("Could not add demo products. Please try again.");
@@ -4600,6 +4736,7 @@ function ProductEditor({
     supplier: product.supplier || "",
     supplierUrl: (product.supplier_url != null ? product.supplier_url : product.supplierUrl) || "",
     sizes: (product.sizes != null ? product.sizes : "") || "",
+    styles: (product.styles != null ? product.styles : "") || "",
     custom: product.custom === true,
     active: product.active !== false
   });
@@ -4677,6 +4814,7 @@ function ProductEditor({
           supplier: f.supplier,
           supplierUrl: f.supplierUrl,
           sizes: f.sizes,
+          styles: f.styles,
           custom: f.custom,
           active: f.active
         })
@@ -4786,6 +4924,15 @@ function ProductEditor({
     onChange: up("sizes"),
     maxLength: 120,
     placeholder: "S,M,L,XL,XXL"
+  })), /*#__PURE__*/React.createElement(L, {
+    label: "Garment styles & prices",
+    hint: "custom only — Label:Price, comma-separated. Sets the price per garment. Leave blank to use the single price above."
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.input,
+    value: f.styles,
+    onChange: up("styles"),
+    maxLength: 240,
+    placeholder: "Regular Tee:799, Oversized Tee:999, Hoodie:1399"
   })), /*#__PURE__*/React.createElement("label", {
     style: {
       display: "flex",
@@ -5162,8 +5309,8 @@ function AdminRow({
     return s;
   };
   const addressText = `${o.name}\n${o.line1}${o.line2 ? ", " + o.line2 : ""}\n${o.city}, ${o.state} - ${o.pincode}\nPhone: ${o.phone}`;
-  const fullOrderText = `Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n` + items.map(i => `- ${i.name}${i.size ? " [" + i.size + "]" : ""} x${i.qty || 1}`).join("\n");
-  const itemSummary = items.map(i => `${i.name}${i.size ? " (" + i.size + ")" : ""} x${i.qty || 1}`).join(", ");
+  const fullOrderText = `Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n` + items.map(i => `- ${i.name}${i.style ? " - " + i.style : ""}${i.size ? " [" + i.size + "]" : ""} x${i.qty || 1}`).join("\n");
+  const itemSummary = items.map(i => `${i.name}${i.style ? " - " + i.style : ""}${i.size ? " (" + i.size + ")" : ""} x${i.qty || 1}`).join(", ");
   const confirmMsg = `Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2 ? ", " + o.line2 : ""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
   const dt = o.created_at ? new Date(o.created_at) : null;
   const dstr = dt ? dt.toLocaleString("en-IN", {
@@ -5317,7 +5464,7 @@ function AdminRow({
       color: T.inkSoft,
       padding: "3px 0"
     }
-  }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), i.custom ? " · 🎨 custom" : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, esc(i.name || "Item"), i.custom ? " · 🎨 custom" : "", i.style ? " · " + esc(i.style) : "", i.size ? " · " + esc(i.size) : "", " ", /*#__PURE__*/React.createElement("span", {
     style: {
       color: T.muted,
       fontFamily: "var(--mono)"
