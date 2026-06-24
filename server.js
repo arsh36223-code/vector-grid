@@ -33,7 +33,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 // Product save can carry an uploaded (base64) image, so it needs a bigger body limit than the rest.
-app.use("/api/admin/product-save", express.json({ limit: "4mb" }));
+app.use("/api/admin/product-save", express.json({ limit: "8mb" }));
 app.use(express.json({ limit: "10kb" }));
 app.use("/api/", rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -124,6 +124,8 @@ async function initDb() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS custom boolean DEFAULT false`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS styles text`);
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS style_costs text`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS style_images jsonb`);
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS bundle_items text`);
   await pool.query(`CREATE TABLE IF NOT EXISTS order_designs (
     id serial PRIMARY KEY,
     order_id text,
@@ -203,6 +205,18 @@ async function initDb() {
       );
       await pool.query("INSERT INTO app_flags (key) VALUES ('catalog_v6') ON CONFLICT (key) DO NOTHING");
       console.log("Applied catalogue update v6 (phone case model picker).");
+    }
+    // One-time v7: Gaming Gear section (sourced accessories + bundles). Adds the new products to existing stores.
+    const f7 = await pool.query("SELECT key FROM app_flags WHERE key='catalog_v7'");
+    if (!f7.rows.length) {
+      for (const p of PRODUCTS.filter(pp => ["g1", "g2", "g3", "g4", "g5", "g-kit1", "g-kit2"].includes(pp.id))) {
+        await pool.query(
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,bundle_items,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.styleCosts || null, p.custom || false, p.bundleItems || null]
+        );
+      }
+      await pool.query("INSERT INTO app_flags (key) VALUES ('catalog_v7') ON CONFLICT (key) DO NOTHING");
+      console.log("Applied catalogue update v7 (Gaming Gear + bundles).");
     }
   } catch (e) { console.error("demo seed failed:", e && e.message); }
   await refreshProductCache();
@@ -362,17 +376,65 @@ const PRODUCTS = [
     desc: "Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only.",
     custom: true, sizes: PHONE_MODELS,
     cost: 310, supplier: "Qikink (custom print)", supplierUrl: "https://qikink.com" },
+  // ---- Gaming Gear (sourced accessories — generic hardware, no IP; cost = landed wholesale estimate) ----
+  { id: "g1", name: "Mobile Gaming Triggers (L1/R1)", price: 299, mrp: 599, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=600&q=80",
+    desc: "Ultra-sensitive L1/R1 shoulder triggers for claw-grip play. Clip on and go — no app, no Bluetooth, no charging. Compatible with BGMI, Free Fire, COD Mobile & PUBG Mobile.",
+    cost: 60, supplier: "IndiaMART / Baapstore", supplierUrl: "https://dir.indiamart.com/impcat/game-controller.html" },
+  { id: "g2", name: "Anti-Sweat Finger Sleeves (2 Pairs)", price: 249, mrp: 499, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80",
+    desc: "Silver-fibre thumb sleeves that kill sweat and sharpen touch accuracy through long matches. Breathable, washable, universal fit. 2 pairs (4 pieces).",
+    cost: 45, supplier: "IndiaMART", supplierUrl: "https://dir.indiamart.com/impcat/gaming-finger-sleeve.html" },
+  { id: "g3", name: "Magnetic Phone Cooler", price: 899, mrp: 1599, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600&q=80",
+    desc: "Semiconductor cooling fan that drops your phone's back-panel temperature in seconds — stops thermal throttling and frame drops in long sessions. Magnetic + clip mount.",
+    cost: 320, supplier: "IndiaMART / Baapstore", supplierUrl: "https://dir.indiamart.com/impcat/mobile-cooler.html" },
+  { id: "g4", name: "Mobile Gamepad Controller", price: 1299, mrp: 2299, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=600&q=80",
+    desc: "Wireless grip controller with mappable triggers and dual joysticks for console-style mobile play. Telescopic fit, low-latency. Works with Android & iOS battle-royale titles.",
+    cost: 540, supplier: "IndiaMART", supplierUrl: "https://dir.indiamart.com/impcat/game-controller.html" },
+  { id: "g5", name: "XL Gaming Desk Mat", price: 699, mrp: 1199, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=600&q=80",
+    desc: "900×400mm stitched-edge desk mat with a smooth, low-friction surface for pixel-precise aim — covers your whole keyboard-and-mouse setup. Original Vector Grid artwork.",
+    cost: 260, supplier: "Qikink (print-on-demand)", supplierUrl: "https://qikink.com" },
+  // ---- Bundles (priced as a single SKU; mrp = sum of the separate retail prices so the saving shows automatically) ----
+  { id: "g-kit1", name: "BGMI Starter Kit", price: 1199, mrp: 1447, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&q=80",
+    desc: "Everything a mobile gamer needs to go from casual to clutch — triggers for claw control, sleeves to kill sweat, and a cooler to stop throttling. One kit, one price.",
+    bundleItems: "Mobile Gaming Triggers (L1/R1)\nAnti-Sweat Finger Sleeves (2 pairs)\nMagnetic Phone Cooler",
+    cost: 425, supplier: "IndiaMART / Baapstore", supplierUrl: "https://dir.indiamart.com/impcat/game-controller.html" },
+  { id: "g-kit2", name: "Pro Mobile Setup Pack", price: 1999, mrp: 2447, stock: 50, category: "Gaming",
+    img: "https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=600&q=80",
+    desc: "The full competitive loadout — a console-grade gamepad, active cooling, and sweat-proof sleeves. Built for players who take ranked seriously.",
+    bundleItems: "Mobile Gamepad Controller\nMagnetic Phone Cooler\nAnti-Sweat Finger Sleeves (2 pairs)",
+    cost: 905, supplier: "IndiaMART", supplierUrl: "https://dir.indiamart.com/impcat/game-controller.html" },
 ];
 
 const rupee = (n) => "Rs." + Number(n || 0).toLocaleString("en-IN");
 const parseSizesList = (s) => (typeof s === "string" ? s.split(",").map(x => x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
 // Garment styles for custom products: "Regular Tee:799, Hoodie:1399" -> [{label,price}]; labels sanitized, price positive int.
 const parseStylesList = (s) => (typeof s === "string" ? s.split(",").map(part => { const i = part.lastIndexOf(":"); if (i < 0) return null; const label = part.slice(0, i).trim().replace(/[^a-zA-Z0-9 +/&'\-]/g, "").slice(0, 40); const price = parseInt(part.slice(i + 1).trim(), 10); if (!label || !(price > 0) || price > 1000000) return null; return { label, price }; }).filter(Boolean) : []);
+// Sanitize the per-style image map {label: url|dataURL}. Keeps only valid http(s) links or data:image values, capped.
+const sanitizeStyleImages = (raw) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {}; let n = 0;
+  for (const k of Object.keys(raw)) {
+    if (n >= 20) break;
+    const label = String(k).trim().replace(/[^a-zA-Z0-9 +/&'\-]/g, "").slice(0, 40);
+    let v = raw[k]; if (typeof v !== "string") continue; v = v.trim(); if (!v || !label) continue;
+    if (v.startsWith("data:image/")) v = v.slice(0, 3600000);
+    else if (/^https?:\/\//i.test(v)) v = v.slice(0, 500);
+    else continue;
+    out[label] = v; n++;
+  }
+  return Object.keys(out).length ? out : null;
+};
 const shippingFor = (s) => s === 0 ? 0 : (s >= 999 ? 0 : 49);
 // Cash-on-Delivery fee (₹). COD costs more (courier COD charges + higher return rate).
 // Set to 0 to disable. Change this number to adjust the fee.
 const COD_FEE = 0; // Cash-on-Delivery fee (₹). Set to 0 = no COD fee. Change to re-enable.
 const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match client.
+const PREPAID_DISCOUNT_PCT = 5; // % off when the customer pays online instead of COD — nudges prepaid, cuts RTO. Must match client.
 
 // In-memory product cache (trusted source for pricing). Falls back to the constant above.
 let productCache = PRODUCTS.slice();
@@ -383,8 +445,8 @@ async function seedProducts() {
     if (c.rows[0].n === 0) {
       for (const p of PRODUCTS) {
         await pool.query(
-          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,true) ON CONFLICT (id) DO NOTHING",
-          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.styleCosts || null, p.custom || false]
+          "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,bundle_items,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true) ON CONFLICT (id) DO NOTHING",
+          [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.styleCosts || null, p.custom || false, p.bundleItems || null]
         );
       }
       console.log("Seeded products table with starter products.");
@@ -394,10 +456,10 @@ async function seedProducts() {
 async function refreshProductCache() {
   if (!pool) { productCache = PRODUCTS.slice(); return; }
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,active FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,style_images,bundle_items,custom,active FROM products ORDER BY created_at ASC");
     if (r.rows.length) {
       productCache = r.rows.map(row => ({ id: row.id, name: row.name, price: row.price, mrp: row.mrp, stock: row.stock,
-        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, sizes: row.sizes, styles: row.styles, styleCosts: row.style_costs, custom: row.custom, active: row.active }));
+        img: row.img, desc: row.descr, category: row.category, cost: row.cost, supplier: row.supplier, supplierUrl: row.supplier_url, sizes: row.sizes, styles: row.styles, styleCosts: row.style_costs, styleImages: row.style_images || null, bundleItems: row.bundle_items || null, custom: row.custom, active: row.active }));
     } else { productCache = PRODUCTS.slice(); }
   } catch (e) { console.error("product cache refresh failed:", e && e.message); }
 }
@@ -454,7 +516,9 @@ function computeOrder(items, cod, requireDesign) {
   }
   const shipping = shippingFor(subtotal);
   const codFee = cod === true ? COD_FEE : 0;
-  return { lineItems, subtotal, shipping, codFee, total: subtotal + shipping + codFee, totalCost };
+  // Pay-online discount: only for prepaid orders. Free-shipping threshold stays on the pre-discount subtotal so the discount never costs the customer free shipping.
+  const prepaidDiscount = cod === true ? 0 : Math.round(subtotal * PREPAID_DISCOUNT_PCT / 100);
+  return { lineItems, subtotal, shipping, codFee, prepaidDiscount, total: subtotal - prepaidDiscount + shipping + codFee, totalCost };
 }
 
 function sanitizeCustomer(c) {
@@ -501,6 +565,7 @@ async function notifyOrder(order) {
     lines,
     "",
     `Revenue ${rupee(order.total)}${order.codFee ? " (incl. COD fee " + rupee(order.codFee) + ")" : ""}  |  Your cost ${order.totalCost != null ? rupee(order.totalCost) : "n/a"}  |  Margin ${margin}`,
+    order.prepaidDiscount ? `Pay-online discount applied: −${rupee(order.prepaidDiscount)} (prepaid, no RTO risk)` : "",
     "",
     "SHIP TO:",
     c.name,
@@ -678,7 +743,7 @@ async function notifyBuyer(order) {
 // Public catalogue (cost/supplier stripped out)
 app.get("/api/products", async (req, res) => {
   const list = (productCache && productCache.length ? productCache : PRODUCTS).filter(p => p.active !== false);
-  const base = list.map(({ id, name, price, mrp, stock, img, desc, category, sizes, styles, custom }) => ({ id, name, price, mrp, stock, img, desc, category, sizes: sizes || "", styles: styles || "", custom: custom === true, rating: 0, reviewCount: 0 }));
+  const base = list.map(({ id, name, price, mrp, stock, img, desc, category, sizes, styles, custom, bundleItems }) => ({ id, name, price, mrp, stock, img, desc, category, sizes: sizes || "", styles: styles || "", custom: custom === true, bundleItems: bundleItems || "", rating: 0, reviewCount: 0 }));
   if (pool) {
     try {
       const r = await pool.query("SELECT product_id, ROUND(AVG(rating)::numeric,1) AS avg, COUNT(*) AS cnt FROM reviews WHERE hidden=false GROUP BY product_id");
@@ -688,6 +753,15 @@ app.get("/api/products", async (req, res) => {
     } catch (e) { console.error("ratings join failed:", e && e.message); }
   }
   res.json(base);
+});
+
+// Per-style preview images for a custom product. Kept separate from /api/products so the grid payload stays light;
+// the storefront only fetches this when a custom product's detail view is opened.
+app.get("/api/style-images", (req, res) => {
+  const id = String(req.query.id || "").trim().slice(0, 40);
+  if (!id) return res.json({});
+  const p = (productCache || []).find(pp => pp.id === id);
+  res.json((p && p.styleImages) || {});
 });
 
 // ---- Reviews: list for a product ----
@@ -743,7 +817,7 @@ app.get("/api/admin/products", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
-    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,active,created_at FROM products ORDER BY created_at ASC");
+    const r = await pool.query("SELECT id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,style_images,bundle_items,custom,active,created_at FROM products ORDER BY created_at ASC");
     res.json({ products: r.rows });
   } catch (e) { console.error("admin products failed:", e && e.message); res.status(500).json({ error: "Could not load products." }); }
 });
@@ -752,14 +826,15 @@ app.get("/api/admin/products", async (req, res) => {
 app.post("/api/admin/seed-demo", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Database not connected." });
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
-  const demoIds = ["p10", "p11", "p12", "p13", "p14", "p15", "custom-tee"];
-  const demos = PRODUCTS.filter(p => demoIds.includes(p.id));
+  // Load the full demo catalogue on demand (home decor, clothing, accessories, and the custom print / mug / phone-case products).
+  // Idempotent: products that already exist are skipped, so this is safe to click any time to fill an empty store.
+  const demos = PRODUCTS;
   try {
     let added = 0;
     for (const p of demos) {
       const r = await pool.query(
-        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,true) ON CONFLICT (id) DO NOTHING RETURNING id",
-        [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.styleCosts || null, p.custom || false]
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,styles,style_costs,custom,bundle_items,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true) ON CONFLICT (id) DO NOTHING RETURNING id",
+        [p.id, p.name, p.price, p.mrp, p.stock, p.img, p.desc, p.category, p.cost, p.supplier, p.supplierUrl, p.sizes || null, p.styles || null, p.styleCosts || null, p.custom || false, p.bundleItems || null]
       );
       if (r.rows.length) added++;
     }
@@ -796,6 +871,10 @@ app.post("/api/admin/product-save", async (req, res) => {
   const sizes = parseSizesList(b.sizes).join(",").slice(0, 4000);
   const styles = parseStylesList(b.styles).map(s => s.label + ":" + s.price).join(", ").slice(0, 240);
   const styleCosts = parseStylesList(b.styleCosts).map(s => s.label + ":" + s.price).join(", ").slice(0, 240);
+  const styleImages = sanitizeStyleImages(b.styleImages);
+  const styleImagesJson = styleImages ? JSON.stringify(styleImages) : null;
+  // Bundle contents: one item per line. Non-empty = the product is shown as a bundle on the storefront.
+  const bundleItems = String(b.bundleItems || "").split(/\r?\n|\|/).map(s => s.trim()).filter(Boolean).slice(0, 12).map(s => s.slice(0, 80)).join("\n").slice(0, 600) || null;
   const custom = b.custom === true;
   const cost = b.cost === "" || b.cost == null ? null : Math.round(Number(b.cost));
   const supplier = String(b.supplier || "").trim().slice(0, 120);
@@ -811,15 +890,15 @@ app.post("/api/admin/product-save", async (req, res) => {
       const prev = await pool.query("SELECT stock FROM products WHERE id=$1", [id]);
       wasOutOfStock = prev.rows.length && Number(prev.rows[0].stock) <= 0;
       const r = await pool.query(
-        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,sizes=$12,custom=$13,active=$14,styles=$15,style_costs=$16 WHERE id=$1 RETURNING id",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles, styleCosts]
+        "UPDATE products SET name=$2,price=$3,mrp=$4,stock=$5,img=$6,descr=$7,category=$8,cost=$9,supplier=$10,supplier_url=$11,sizes=$12,custom=$13,active=$14,styles=$15,style_costs=$16,style_images=$17,bundle_items=$18 WHERE id=$1 RETURNING id",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles, styleCosts, styleImagesJson, bundleItems]
       );
       if (!r.rows.length) return res.status(404).json({ error: "Product not found." });
     } else {
       id = "p" + Date.now().toString(36);
       await pool.query(
-        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active,styles,style_costs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)",
-        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles, styleCosts]
+        "INSERT INTO products (id,name,price,mrp,stock,img,descr,category,cost,supplier,supplier_url,sizes,custom,active,styles,style_costs,style_images,bundle_items) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)",
+        [id, name, price, mrp, stock, img, descr, category, cost, supplier, supplierUrl, sizes, custom, active, styles, styleCosts, styleImagesJson, bundleItems]
       );
     }
     await refreshProductCache();
@@ -866,6 +945,52 @@ app.post("/api/admin/order-review", async (req, res) => {
     if (r.rowCount === 0) return res.status(404).json({ error: "Order not found." });
     res.json({ ok: true });
   } catch (e) { console.error("order review failed:", e && e.message); res.status(500).json({ error: "Update failed." }); }
+});
+
+// Generate a Razorpay payment link to convert a COD order to prepaid (with the pay-online discount applied).
+// Send the link to the customer; once they pay, mark the order paid (auto via the link's reminders, or manually below).
+app.post("/api/admin/payment-link", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  if (!razorpay) return res.status(503).json({ error: "Razorpay isn't configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  if (!id) return res.status(400).json({ error: "Missing order id." });
+  try {
+    const r = await pool.query("SELECT id,name,phone,email,subtotal,shipping,total,paid FROM orders WHERE id=$1", [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Order not found." });
+    const o = r.rows[0];
+    if (o.paid) return res.status(400).json({ error: "This order is already paid." });
+    const discount = Math.round(Number(o.subtotal || 0) * PREPAID_DISCOUNT_PCT / 100);
+    const amount = Math.max(1, Number(o.subtotal || 0) + Number(o.shipping || 0) - discount); // prepaid amount (₹), with the discount
+    const link = await razorpay.paymentLink.create({
+      amount: amount * 100, currency: "INR",
+      accept_partial: false,
+      reference_id: o.id + "-" + Date.now().toString(36),
+      description: `Order ${o.id} — pay online & save ${PREPAID_DISCOUNT_PCT}%`,
+      customer: { name: o.name || "", contact: o.phone ? ("+91" + String(o.phone).replace(/\D/g, "").slice(-10)) : undefined, email: o.email || undefined },
+      notify: { sms: !!o.phone, email: !!o.email },
+      reminder_enable: true,
+      notes: { orderId: o.id },
+    });
+    res.json({ ok: true, url: link.short_url, amount, discount });
+  } catch (e) { console.error("payment link failed:", e && (e.error && e.error.description || e.message)); res.status(500).json({ error: "Couldn't create the payment link. Check your Razorpay keys and try again." }); }
+});
+
+// Manually mark a COD order as paid (after the customer pays the prepaid link). Applies the pay-online discount to the total.
+app.post("/api/admin/mark-paid", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  if (!id) return res.status(400).json({ error: "Missing order id." });
+  try {
+    const r = await pool.query("SELECT subtotal,shipping,paid FROM orders WHERE id=$1", [id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Order not found." });
+    if (r.rows[0].paid) return res.json({ ok: true, already: true });
+    const discount = Math.round(Number(r.rows[0].subtotal || 0) * PREPAID_DISCOUNT_PCT / 100);
+    const newTotal = Math.max(0, Number(r.rows[0].subtotal || 0) + Number(r.rows[0].shipping || 0) - discount);
+    await pool.query("UPDATE orders SET paid=true, cod_fee=0, total=$2, customer_confirmed=true, updated_at=now() WHERE id=$1", [id, newTotal]);
+    res.json({ ok: true, total: newTotal });
+  } catch (e) { console.error("mark paid failed:", e && e.message); res.status(500).json({ error: "Couldn't update the order." }); }
 });
 
 // Create a Razorpay order (amount computed from trusted prices)

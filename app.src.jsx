@@ -36,14 +36,25 @@ const SEED = [
   { id:"p18", name:"Classic Embroidered Cap", price:699, mrp:1099, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&q=80", desc:"Structured 6-panel baseball cap with neat embroidery. Adjustable strap, one size fits most." },
   { id:"p19", name:"Insulated Steel Water Bottle (750ml)", price:849, mrp:1399, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Double-wall stainless steel bottle with a printed design. Keeps cold 24h, hot 12h." },
   { id:"p20", name:"Custom Phone Case — Your Design", price:699, mrp:1199, stock:100, category:"Accessories", img:"https://images.unsplash.com/photo-1601593346740-925612772716?w=600&q=80", desc:"Your photo or design on a durable anti-yellow clear case. Pick your phone model, upload your image — we print it and ship it to you. Prepaid only.", custom:true, sizes:PHONE_MODELS },
+  { id:"g1", name:"Mobile Gaming Triggers (L1/R1)", price:299, mrp:599, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=600&q=80", desc:"Ultra-sensitive L1/R1 shoulder triggers for claw-grip play. Clip on and go — no app, no Bluetooth, no charging. Compatible with BGMI, Free Fire, COD Mobile & PUBG Mobile." },
+  { id:"g2", name:"Anti-Sweat Finger Sleeves (2 Pairs)", price:249, mrp:499, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80", desc:"Silver-fibre thumb sleeves that kill sweat and sharpen touch accuracy through long matches. Breathable, washable, universal fit. 2 pairs (4 pieces)." },
+  { id:"g3", name:"Magnetic Phone Cooler", price:899, mrp:1599, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600&q=80", desc:"Semiconductor cooling fan that drops your phone's back-panel temperature in seconds — stops thermal throttling and frame drops in long sessions. Magnetic + clip mount." },
+  { id:"g4", name:"Mobile Gamepad Controller", price:1299, mrp:2299, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=600&q=80", desc:"Wireless grip controller with mappable triggers and dual joysticks for console-style mobile play. Telescopic fit, low-latency. Works with Android & iOS battle-royale titles." },
+  { id:"g5", name:"XL Gaming Desk Mat", price:699, mrp:1199, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1527814050087-3793815479db?w=600&q=80", desc:"900×400mm stitched-edge desk mat with a smooth, low-friction surface for pixel-precise aim — covers your whole keyboard-and-mouse setup. Original Vector Grid artwork." },
+  { id:"g-kit1", name:"BGMI Starter Kit", price:1199, mrp:1447, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&q=80", desc:"Everything a mobile gamer needs to go from casual to clutch — triggers for claw control, sleeves to kill sweat, and a cooler to stop throttling. One kit, one price.", bundleItems:"Mobile Gaming Triggers (L1/R1)\nAnti-Sweat Finger Sleeves (2 pairs)\nMagnetic Phone Cooler" },
+  { id:"g-kit2", name:"Pro Mobile Setup Pack", price:1999, mrp:2447, stock:50, category:"Gaming", img:"https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=600&q=80", desc:"The full competitive loadout — a console-grade gamepad, active cooling, and sweat-proof sleeves. Built for players who take ranked seriously.", bundleItems:"Mobile Gamepad Controller\nMagnetic Phone Cooler\nAnti-Sweat Finger Sleeves (2 pairs)" },
 ];
 const rupee = (n) => "₹" + Number(n||0).toLocaleString("en-IN");
 const COD_FEE = 0; // Cash-on-Delivery fee (must match server COD_FEE). 0 = disabled.
 const COD_MAX = 2000; // Cash on Delivery is only allowed for orders up to this total (₹). Must match server.
+const PREPAID_DISCOUNT_PCT = 5; // % off for paying online instead of COD. Must match server.
 const esc = (s) => String(s==null?"":s);
 const parseSizes = (s) => (typeof s==="string" ? s.split(",").map(x=>x.trim()).filter(Boolean) : (Array.isArray(s) ? s.filter(Boolean) : []));
 // Garment styles for custom products: "Regular Tee:799, Oversized Tee:999, Hoodie:1399" -> [{label,price}]
 const parseStyles = (s) => (typeof s==="string" ? s.split(",").map(part=>{ const i=part.lastIndexOf(":"); if(i<0) return null; const label=part.slice(0,i).trim(); const price=parseInt(part.slice(i+1).trim(),10); if(!label||!(price>0)) return null; return {label,price}; }).filter(Boolean) : []);
+// Bundle helpers: a product with non-empty bundleItems is a bundle (shows a "what's inside" list + savings vs MRP).
+const isBundle = (p) => !!(p && typeof p.bundleItems==="string" && p.bundleItems.trim());
+const bundleList = (p) => isBundle(p) ? p.bundleItems.split(/\r?\n|\|/).map(s=>s.trim()).filter(Boolean) : [];
 // Garment mockups for the custom-print product: the preview swaps to match the chosen style
 // (tee → tee photo, hoodie → hoodie photo, etc.). Replace these URLs with your real Qikink mockups.
 const GARMENT_IMAGES = [
@@ -56,6 +67,23 @@ const GARMENT_IMAGES = [
   { kw:["tee","t-shirt","shirt"], img:"https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80" },
 ];
 const garmentImage = (label, fallback) => { const l=String(label||"").toLowerCase(); for(const g of GARMENT_IMAGES){ if(g.kw.some(k=>l.includes(k))) return g.img; } return fallback; };
+// Serve a right-sized WebP/AVIF from image CDNs that support it. Uploaded (data:) images and local/other URLs pass through untouched — safe no-op.
+const optimizeImg = (url, w) => {
+  if (!url || typeof url !== "string" || url.startsWith("data:") || url.startsWith("/")) return url;
+  try {
+    const u = new URL(url);
+    if (u.hostname === "images.unsplash.com" || u.hostname.endsWith(".unsplash.com")) {
+      u.searchParams.set("auto", "format");   // auto-serves WebP/AVIF to supporting browsers
+      u.searchParams.set("fit", "crop");
+      if (w) u.searchParams.set("w", String(w));
+      u.searchParams.set("q", "72");
+      return u.toString();
+    }
+    return url;
+  } catch (e) { return url; }
+};
+// Canvas → smallest data URL: WebP when the browser can encode it, else JPEG fallback.
+const canvasOut = (cv, q) => { const webp = cv.toDataURL("image/webp", q); return webp.indexOf("data:image/webp") === 0 ? webp : cv.toDataURL("image/jpeg", q); };
 // True for the phone-case product, so its option list is shown as a "phone model" dropdown instead of size chips.
 const isPhoneCase = (p) => /\bphone\s*(case|cover)/i.test((p && p.name) || "");
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
@@ -269,12 +297,13 @@ function App(){
   const shipping=subtotal===0?0:(subtotal>=999?0:49);
   const total=subtotal+shipping;
 
-  const finishOrder=(form,paymentLabel,amount,orderId,codFee)=>{
-    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form, items:cartItems, subtotal, shipping, codFee:codFee||0 });
+  const finishOrder=(form,paymentLabel,amount,orderId,codFee,discount)=>{
+    setConfirmed({ id:orderId||("VG"+Date.now().toString().slice(-8)), total:amount, payment:paymentLabel, customer:form, items:cartItems, subtotal, shipping, codFee:codFee||0, discount:discount||0 });
     setCart({}); setCustomDesigns({}); setCheckout(false); setCartOpen(false);
   };
 
   const handlePlace=async(form)=>{
+    const prepaidDisc = form.pay==="COD" ? 0 : Math.round(subtotal * PREPAID_DISCOUNT_PCT / 100);
     const items=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design&&i.design.color?{color:i.design.color}:{}),...(i.design?{design:i.design}:{})}));
     const itemsLite=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design&&i.design.color?{color:i.design.color}:{})}));
     const ipAffirmed=cartItems.every(i=>!i.design || i.design.ipAffirmed===true);
@@ -284,7 +313,7 @@ function App(){
       try{
         const r=await fetch(API+"/api/place-order",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ cod:true, items, customer:form, ipAffirmed }) });
         const j=await r.json(); setPaying(false);
-        if(j.ok){ finishOrder(form,"COD",j.total!=null?j.total:(total+COD_FEE),j.orderId,COD_FEE); }
+        if(j.ok){ finishOrder(form,"COD",j.total!=null?j.total:(total+COD_FEE),j.orderId,COD_FEE,0); }
         else { alert(j.error||"Could not place the order. Please try again."); }
       }catch(e){ setPaying(false); alert("Couldn't place the order. Please try again."); }
       return;
@@ -311,7 +340,7 @@ function App(){
             razorpay_order_id:resp.razorpay_order_id, razorpay_payment_id:resp.razorpay_payment_id, razorpay_signature:resp.razorpay_signature, items, customer:form, ipAffirmed }) });
           const j=await r.json();
           setPaying(false);
-          if(j.ok){ finishOrder(form,"Paid online",paidAmount,j.orderId); }
+          if(j.ok){ finishOrder(form,"Paid online",paidAmount,j.orderId,0,prepaidDisc); }
           else { alert(j.error||"Payment could not be verified. If money was deducted it will be auto-refunded — please contact us."); }
         }catch(e){ setPaying(false); alert("Couldn't confirm your order, but your payment may have gone through. Please contact us and quote payment id: "+(resp&&resp.razorpay_payment_id?resp.razorpay_payment_id:"(unavailable)")); }
       },
@@ -482,12 +511,13 @@ function Store({products,onAdd,onQuick,onTrack}){
       </div>
     ) : (
     <div style={S.grid} className="vg-grid">
-      {shown.map(p=>{ const out=p.stock<=0; return (
+      {shown.map((p,gi)=>{ const out=p.stock<=0; return (
         <article key={p.id} style={S.prodCard} className="vg-card" onMouseMove={cardTilt} onMouseLeave={cardReset}>
           <button style={S.imgWrap} onClick={()=>onQuick(p)} aria-label={"View "+esc(p.name)}>
-            <img src={p.img} alt={esc(p.name)} style={S.img} loading="lazy" onError={(e)=>{e.currentTarget.style.opacity=0.25;}} />
+            <img src={optimizeImg(p.img,500)} alt={esc(p.name)} style={S.img} loading={gi<3?"eager":"lazy"} decoding="async" onError={(e)=>{e.currentTarget.style.opacity=0.25;}} />
             {out && <span style={S.soldOut}>Sold out</span>}
             {!out && p.mrp>p.price && <span style={S.discount}>{Math.round(100-(p.price/p.mrp)*100)}% off</span>}
+            {isBundle(p) && <span style={{position:"absolute",top:10,right:10,background:"linear-gradient(95deg,#E8920C,#F6B64C)",color:"#13100D",fontSize:11,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(232,130,12,.4)",letterSpacing:".03em"}}>🎮 BUNDLE</span>}
             {p.category && <span style={S.catTag}>{p.category}</span>}
           </button>
           <div style={{padding:"14px 16px 16px",display:"flex",flexDirection:"column",flex:1}}>
@@ -544,6 +574,7 @@ function SizeChart({onClose}){
 }
 function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const [reviews,setReviews]=useState(null);
+  const [styleImgs,setStyleImgs]=useState(null);
   const [name,setName]=useState(""); const [rating,setRating]=useState(0); const [comment,setComment]=useState("");
   const [posting,setPosting]=useState(false); const [msg,setMsg]=useState(""); const [showForm,setShowForm]=useState(false);
   const [notifyEmail,setNotifyEmail]=useState(""); const [notifyMsg,setNotifyMsg]=useState(""); const [notifying,setNotifying]=useState(false);
@@ -604,6 +635,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   };
   const loadReviews=async()=>{ try{ const r=await fetch(API+"/api/reviews?product="+encodeURIComponent(product.id)); const j=await r.json(); setReviews(j.reviews||[]); }catch(e){ setReviews([]); } };
   useEffect(()=>{ loadReviews(); },[]);
+  useEffect(()=>{ if(isCustom && styleOpts.length){ fetch(API+"/api/style-images?id="+encodeURIComponent(product.id)).then(r=>r.json()).then(m=>setStyleImgs(m&&typeof m==="object"?m:{})).catch(()=>setStyleImgs({})); } },[]);
   const post=async()=>{ setMsg("");
     if(!name.trim()){ setMsg("Please add your name."); return; }
     if(!(rating>=1&&rating<=5)){ setMsg("Please pick a star rating."); return; }
@@ -620,13 +652,23 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
     <button onClick={onClose} style={S.quickClose} aria-label="Close">✕</button>
     {sizeChartOpen && <SizeChart onClose={()=>setSizeChartOpen(false)} />}
     <div className="vg-two" style={{display:"grid",gridTemplateColumns:"1fr 1fr",minHeight:320}}>
-      <img src={isCustom && styleOpts.length ? garmentImage(selStyle, product.img) : product.img} alt={esc(product.name)} onError={(e)=>{ if(e.currentTarget.src!==product.img){ e.currentTarget.src=product.img; } else { e.currentTarget.style.opacity=0.25; } }} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+      <img src={optimizeImg(isCustom && styleOpts.length ? ((styleImgs&&styleImgs[selStyle])||garmentImage(selStyle, product.img)) : product.img, 900)} alt={esc(product.name)} decoding="async" onError={(e)=>{ if(e.currentTarget.src!==product.img){ e.currentTarget.src=product.img; } else { e.currentTarget.style.opacity=0.25; } }} style={{width:"100%",height:"100%",objectFit:"cover"}} />
       <div style={{padding:28}}>
         <button onClick={onClose} style={S.quickBack}>← Back to products</button>
         <h2 style={{...S.prodName,fontSize:22,margin:"10px 0 8px"}}>{esc(product.name)}</h2>
         {avg && <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><Stars value={avg} /><span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)"}}>{avg} · {reviews.length} review{reviews.length===1?"":"s"}</span></div>}
         <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(shownPrice)}</span>{!styleOpts.length && product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
+        {isBundle(product) && <div style={{marginTop:14,background:"rgba(232,130,12,.08)",border:"1px solid rgba(232,130,12,.25)",borderRadius:12,padding:"13px 15px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:9}}>
+            <span style={{fontSize:12.5,fontWeight:800,color:T.marigold,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>🎮 What's inside</span>
+            {product.mrp>product.price && <span style={{fontSize:12.5,fontWeight:800,color:"#34c77b",fontFamily:"var(--mono)"}}>You save {rupee(product.mrp-product.price)}</span>}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {bundleList(product).map((it,ix)=>(<div key={ix} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:13.5,color:T.inkSoft,lineHeight:1.45}}><span style={{color:T.marigold,fontWeight:800,flexShrink:0}}>✓</span><span>{esc(it)}</span></div>))}
+          </div>
+          {product.mrp>product.price && <p style={{fontSize:11.5,color:T.muted,margin:"10px 0 0",fontFamily:"var(--mono)"}}>Bought separately: {rupee(product.mrp)}</p>}
+        </div>}
         <p style={{fontFamily:"var(--mono)",fontSize:12,color:out?T.danger:(product.stock<10?T.marigold:T.teal),marginTop:14,fontWeight:product.stock>0&&product.stock<10?700:400}}>{out?"Out of stock":product.stock<10?("🔥 Only "+product.stock+" left — order soon!"):("In stock · "+product.stock+" available")}</p>
         {styleOpts.length>0 && <div style={{marginTop:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Choose your style{styleErr&&!selStyle?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please pick one</span>:""}</div>
@@ -732,7 +774,7 @@ function CartDrawer({items,subtotal,shipping,total,setQty,onClose,onCheckout}){ 
     <div style={{flex:1,overflowY:"auto",padding:"8px 20px"}}>
       {items.length===0 && <p style={{color:T.muted,marginTop:24}}>Your cart is empty.</p>}
       {items.map(i=>{ const max=(i.stock!=null&&i.stock>0)?Math.min(50,i.stock):50; const atMax=i.qty>=max; return (<div key={i.key} style={S.cartRow}>
-        <img src={i.design?i.design.image:i.img} alt="" style={S.cartThumb} />
+        <img src={i.design?i.design.image:optimizeImg(i.img,120)} alt="" style={S.cartThumb} loading="lazy" decoding="async" />
         <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,(i.design&&i.design.color)?esc(i.design.color):null,i.size?((isPhoneCase(i)?"Model: ":"Size: ")+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
           <div style={S.qtyRow}><button onClick={()=>setQty(i.key,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>{ if(!atMax) setQty(i.key,i.qty+1); }} disabled={atMax} style={{...S.qtyBtn,...(atMax?{opacity:.4,cursor:"not-allowed"}:{})}} aria-label="Increase">+</button></div>
           {atMax && i.stock!=null && i.stock>0 && i.stock<50 && <p style={{fontSize:11,color:T.muted,margin:"4px 0 0",fontFamily:"var(--mono)"}}>Only {i.stock} in stock</p>}
@@ -753,6 +795,9 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
   const hasCustom = items.some(i=>i.custom || i.design);
   const codAllowed = total <= COD_MAX && !hasCustom;
   useEffect(()=>{ if(!codAllowed && f.pay==="COD") setF(prev=>({...prev,pay:"Online"})); },[codAllowed]);
+  const prepaidDiscount = f.pay==="COD" ? 0 : Math.round(subtotal * PREPAID_DISCOUNT_PCT / 100);
+  const grandTotal = subtotal - prepaidDiscount + shipping + (f.pay==="COD"?COD_FEE:0);
+  const wouldSave = Math.round(subtotal * PREPAID_DISCOUNT_PCT / 100);
   const submit=()=>{ const e={};
     if(!f.name.trim()) e.name="Required";
     if(!/^[6-9]\d{9}$/.test(f.phone)) e.phone="Valid 10-digit mobile";
@@ -782,7 +827,8 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         <Field label="Address line 2"><input style={S.input} value={f.line2} onChange={up("line2")} maxLength={120} placeholder="Area, landmark" /></Field>
         <div style={S.two} className="vg-pair"><Field label="City" err={err.city}><input style={S.input} value={f.city} onChange={up("city")} maxLength={60} /></Field><Field label="Pincode" err={err.pincode}><input style={S.input} value={f.pincode} onChange={up("pincode")} maxLength={6} inputMode="numeric" placeholder="6 digits" /></Field></div>
         <Field label="State"><select style={S.input} value={f.state} onChange={up("state")}>{INDIAN_STATES.map(s=><option key={s}>{s}</option>)}</select></Field>
-        <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery",codAllowed?"Pay when it arrives":(hasCustom?"Not available for custom orders":"Not available over "+rupee(COD_MAX))]].map(([val,title,sub])=>{ const disabled=(val==="COD"&&!codAllowed); return (<button key={val} type="button" disabled={disabled} onClick={()=>{ if(!disabled) setF({...f,pay:val}); }} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{}),...(disabled?{opacity:.5,cursor:"not-allowed"}:{})}}><span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>); })}</div></Field>
+        <Field label="How would you like to pay?"><div className="vg-pay" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{[["Online","Pay online","UPI · Cards · Netbanking"],["COD","Cash on Delivery",codAllowed?"Pay when it arrives":(hasCustom?"Not available for custom orders":"Not available over "+rupee(COD_MAX))]].map(([val,title,sub])=>{ const disabled=(val==="COD"&&!codAllowed); return (<button key={val} type="button" disabled={disabled} onClick={()=>{ if(!disabled) setF({...f,pay:val}); }} style={{...S.payOpt,...(f.pay===val?S.payOptOn:{}),...(disabled?{opacity:.5,cursor:"not-allowed"}:{}),position:"relative"}}>{val==="Online"&&wouldSave>0&&<span style={{position:"absolute",top:-9,right:10,fontSize:10,fontWeight:800,fontFamily:"var(--mono)",letterSpacing:".03em",color:"#0c2a18",background:"#34c77b",padding:"2px 8px",borderRadius:999,boxShadow:"0 3px 10px rgba(52,199,123,.35)"}}>SAVE {PREPAID_DISCOUNT_PCT}%</span>}<span style={{...S.payRadio,...(f.pay===val?S.payRadioOn:{})}}>{f.pay===val?"✓":""}</span><span style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}><span style={S.payTitle}>{title}</span><span style={S.paySub}>{sub}</span></span></button>); })}</div></Field>
+        {f.pay==="COD" && codAllowed && wouldSave>0 && <p style={{fontSize:12,color:"#34c77b",margin:"8px 0 0",lineHeight:1.5,fontWeight:600}}>💸 Switch to <strong>Pay online</strong> and save {rupee(wouldSave)} ({PREPAID_DISCOUNT_PCT}% off) — plus faster dispatch.</p>}
         {!codAllowed && <p style={{fontSize:11.5,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>{hasCustom?"💳 Custom prints are prepaid only — please pay online. We start printing once payment is confirmed.":"💳 Orders above "+rupee(COD_MAX)+" are prepaid only (secure online payment). This keeps prices low for everyone."}</p>}
       </div>
       <div style={S.summary}>
@@ -794,14 +840,15 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         </div>))}
         <div style={{height:8}} />
         <Row label="Subtotal" value={rupee(subtotal)} /><Row label="Shipping" value={shipping===0?"Free":rupee(shipping)} />
+        {prepaidDiscount>0 && <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"6px 0",color:"#34c77b",fontWeight:600}}><span>Pay-online discount ({PREPAID_DISCOUNT_PCT}%)</span><span>−{rupee(prepaidDiscount)}</span></div>}
         {f.pay==="COD" && COD_FEE>0 && <Row label="COD fee" value={rupee(COD_FEE)} />}
-        <Row label="Total" value={rupee(total+(f.pay==="COD"?COD_FEE:0))} bold />
+        <Row label="Total" value={rupee(grandTotal)} bold />
         {f.pay==="COD" && COD_FEE>0 && <p style={{fontSize:11,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>A {rupee(COD_FEE)} fee applies to Cash on Delivery orders. Pay online to skip it.</p>}
         <div style={{margin:"12px 0 0",padding:"11px 13px",border:"1px solid "+T.line,borderRadius:10}}>
           <div style={{fontWeight:700,color:T.ink,fontSize:12.5,marginBottom:3}}>↩ Returns &amp; refunds</div>
           <p style={{margin:0,fontSize:11.5,color:T.muted,lineHeight:1.55}}>If your item arrives <strong style={{color:T.inkSoft}}>damaged, defective, or wrong</strong>, email us within {INFO.returnWindow} — you choose a <strong style={{color:T.inkSoft}}>refund</strong> or a <strong style={{color:T.inkSoft}}>replacement</strong>. Refunds are processed once the returned item reaches us. Full policy in the footer.</p>
         </div>
-        <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(total+COD_FEE):"Pay "+rupee(total))}</button>
+        <button onClick={submit} disabled={paying} style={{...S.primaryBtn,marginTop:16,...(paying?S.addBtnDisabled:{})}}>{paying?"Opening payment…":(f.pay==="COD"?"Place order · "+rupee(grandTotal):"Pay "+rupee(grandTotal))}</button>
         <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Online payments are processed securely by Razorpay. Your card details never touch this site.</p>
         <div style={S.coSecure}>
           <div style={S.coSecureRow}><span aria-hidden="true">🔒</span><span>Payments secured by <strong style={{color:T.ink}}>Razorpay</strong> — UPI, cards & netbanking. Your card details never touch this site.</span></div>
@@ -812,6 +859,7 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
   </div></Overlay>);
 }
 function Field({label,err,children}){ return <label style={{display:"block",marginBottom:12}}><span style={S.fieldLabel}>{label}{err && <span style={{color:T.danger,marginLeft:6}}>· {err}</span>}</span>{children}</label>; }
+function L({label,hint,children}){ return <label style={{display:"block",marginBottom:12}}><span style={{...S.fieldLabel,display:"block"}}>{label}{hint&&<span style={{color:T.muted,fontWeight:400}}> · {hint}</span>}</span>{children}</label>; }
 
 function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped","Delivered"]; const c=order.customer; const items=order.items||[]; return (
   <Overlay onClose={onClose}><div style={{...S.modal,maxWidth:580,textAlign:"center"}} className="vg-modal">
@@ -826,6 +874,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
       <div style={{height:1,background:T.line,margin:"8px 0"}} />
       {order.subtotal!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Subtotal</span><span>{rupee(order.subtotal)}</span></div>}
       {order.shipping!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Shipping</span><span>{order.shipping===0?"Free":rupee(order.shipping)}</span></div>}
+      {order.discount>0 && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"#34c77b",fontWeight:600,padding:"2px 0"}}><span>Pay-online saving</span><span>−{rupee(order.discount)}</span></div>}
       {order.codFee>0 && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>COD fee</span><span>{rupee(order.codFee)}</span></div>}
       <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink,padding:"6px 0 0"}}><span>Total</span><span>{rupee(order.total)}</span></div>
     </div>}
@@ -1082,7 +1131,7 @@ function AdminOrders({onBack}){
   };
   const seedDemo=async()=>{
     try{ const r=await fetch(API+"/api/admin/seed-demo",{method:"POST",headers:{"x-admin-key":key}}); const j=await r.json();
-      if(r.ok){ loadProds(key); alert(j.added>0?("Added "+j.added+" demo product(s): a full clothing range (tees, full-sleeve, sweatshirt, hoodies) plus the Custom Print product. Open your store to test them (Clothing / Custom categories), then delete any you don't want."):"The demo products are already added. Check the Clothing and Custom categories in your store."); }
+      if(r.ok){ loadProds(key); alert(j.added>0?("Added "+j.added+" demo product(s) — the full catalog: home decor, clothing, accessories, and the custom Print / Mug / Phone-case products. Open your store to test browsing, cart, checkout (try paying online for the 5% discount), and the custom design studio. Delete any you don't want."):"All demo products are already loaded. Open your store — they're live across every category."); }
       else alert(j.error||"Could not add demo products."); }catch(e){ alert("Could not add demo products. Please try again."); }
   };
   useEffect(()=>{ let saved=""; try{ saved=localStorage.getItem("vg_admin_key")||""; }catch(e){}
@@ -1205,7 +1254,7 @@ function AdminOrders({onBack}){
               <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{prods.length} product{prods.length===1?"":"s"}</span>
               <div style={{display:"flex",gap:10}}>
                 <button onClick={()=>loadProds(key)} style={S.linkBtn}>↻ Refresh</button>
-                <button onClick={seedDemo} style={{...S.linkBtn,fontSize:13}}>✨ Add demo clothing</button>
+                <button onClick={seedDemo} style={{...S.linkBtn,fontSize:13}}>✨ Load demo products</button>
                 <button onClick={()=>setEditing({_new:true,name:"",price:"",mrp:"",stock:"",category:"",img:"",descr:"",cost:"",supplier:"",supplier_url:"",active:true})} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 18px",fontSize:13.5}}>+ Add product</button>
               </div>
             </div>
@@ -1274,6 +1323,8 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     sizes:(product.sizes!=null?product.sizes:"")||"",
     styles:(product.styles!=null?product.styles:"")||"",
     styleCosts:(product.style_costs!=null?product.style_costs:"")||"",
+    styleImages:(product.style_images&&typeof product.style_images==="object"&&!Array.isArray(product.style_images))?product.style_images:{},
+    bundleItems:(product.bundle_items!=null?product.bundle_items:product.bundleItems)||"",
     custom:product.custom===true,
     active:product.active!==false,
   });
@@ -1288,7 +1339,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
         if(w>h&&w>max){ h=Math.round(h*max/w); w=max; } else if(h>=w&&h>max){ w=Math.round(w*max/h); h=max; }
         const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
         cv.getContext("2d").drawImage(im,0,0,w,h);
-        setF(prev=>({...prev,img:cv.toDataURL("image/jpeg",0.78)})); setMsg("");
+        setF(prev=>({...prev,img:canvasOut(cv,0.8)})); setMsg("");
       };
       im.onerror=()=>setMsg("Couldn't read that image. Try another photo.");
       im.src=reader.result;
@@ -1296,18 +1347,30 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     reader.readAsDataURL(file);
     e.target.value="";
   };
+  const setStyleImg=(label,url)=>{ setF(prev=>{ const si={...prev.styleImages}; if(url) si[label]=url; else delete si[label]; return {...prev,styleImages:si}; }); };
+  const onPickStyleImg=(label,e)=>{ const file=e.target.files&&e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{ const im=new Image();
+      im.onload=()=>{ const max=900; let w=im.width,h=im.height;
+        if(w>h&&w>max){ h=Math.round(h*max/w); w=max; } else if(h>=w&&h>max){ w=Math.round(w*max/h); h=max; }
+        const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(im,0,0,w,h);
+        setStyleImg(label,canvasOut(cv,0.82)); };
+      im.onerror=()=>{};
+      im.src=reader.result; };
+    reader.readAsDataURL(file); e.target.value="";
+  };
   const save=async()=>{ setMsg("");
     if(!f.name.trim()){ setMsg("Please enter a product name."); return; }
     if(f.price===""||isNaN(Number(f.price))||Number(f.price)<0){ setMsg("Please enter a valid price."); return; }
     setSaving(true);
     try{ const r=await fetch(API+"/api/admin/product-save",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({
         id:isNew?"":f.id, name:f.name, price:Number(f.price), mrp:Number(f.mrp)||0, stock:Number(f.stock)||0,
-        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, styles:f.styles, styleCosts:f.styleCosts, custom:f.custom, active:f.active })});
+        category:f.category, img:f.img, desc:f.desc, cost:f.cost===""?"":Number(f.cost), supplier:f.supplier, supplierUrl:f.supplierUrl, sizes:f.sizes, styles:f.styles, styleCosts:f.styleCosts, styleImages:f.styleImages, bundleItems:f.bundleItems, custom:f.custom, active:f.active })});
       const j=await r.json(); setSaving(false);
       if(r.ok) onSaved(); else setMsg(j.error||"Couldn't save the product.");
     }catch(e){ setSaving(false); setMsg("Something went wrong. Please try again."); }
   };
-  const L=({label,hint,children})=>(<label style={{display:"block",marginBottom:12}}><span style={{...S.fieldLabel,display:"block"}}>{label}{hint&&<span style={{color:T.muted,fontWeight:400}}> · {hint}</span>}</span>{children}</label>);
+
   return (<Overlay onClose={saving?()=>{}:onClose}><div style={{...S.modal,maxWidth:560,maxHeight:"90vh",overflowY:"auto"}} className="vg-modal">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
       <h2 style={S.modalTitle}>{isNew?"Add product":"Edit product"}</h2>
@@ -1324,6 +1387,26 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     </div>
     <L label="Sizes" hint="clothing only — comma-separated. Leave blank for non-clothing."><input style={S.input} value={f.sizes} onChange={up("sizes")} maxLength={120} placeholder="S,M,L,XL,XXL" /></L>
     <L label="Garment styles & prices" hint="custom only — Label:Price, comma-separated. Sets the price per garment. Leave blank to use the single price above."><input style={S.input} value={f.styles} onChange={up("styles")} maxLength={240} placeholder="Regular Tee:799, Oversized Tee:999, Hoodie:1399" /></L>
+    {parseStyles(f.styles).length>0 && <div style={{marginBottom:12}}>
+      <span style={{...S.fieldLabel,display:"block"}}>Style images<span style={{color:T.muted,fontWeight:400}}> · the preview photo shown when a customer picks each garment. Paste a link or upload — leave blank to use the built-in default.</span></span>
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:7}}>
+        {parseStyles(f.styles).map(st=>{ const cur=f.styleImages[st.label]||""; const uid="vg-style-up-"+st.label.replace(/[^a-zA-Z0-9]/g,"-"); return (
+          <div key={st.label} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,.02)",border:"1px solid "+T.line,borderRadius:10,padding:8}}>
+            <div style={{width:46,height:46,borderRadius:8,overflow:"hidden",flexShrink:0,background:T.bg||"#0f0d0a",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {cur ? <img src={cur} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /> : <span style={{fontSize:18,opacity:.4}}>👕</span>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:T.ink,marginBottom:4}}>{st.label}</div>
+              <input style={{...S.input,padding:"7px 10px",fontSize:12.5}} value={cur.startsWith("data:")?"":cur} onChange={e=>setStyleImg(st.label,e.target.value)} maxLength={500} placeholder={cur.startsWith("data:")?"✓ Photo uploaded — upload again to replace":"https://…  or upload →"} />
+            </div>
+            <input type="file" accept="image/*" id={uid} onChange={e=>onPickStyleImg(st.label,e)} style={{display:"none"}} />
+            <label htmlFor={uid} style={{fontSize:12,fontWeight:600,color:T.marigold,cursor:"pointer",whiteSpace:"nowrap"}}>Upload</label>
+            {cur && <button type="button" onClick={()=>setStyleImg(st.label,"")} style={{...S.linkBtn,fontSize:14,color:T.danger,padding:"0 2px"}} aria-label="Remove image">✕</button>}
+          </div>
+        ); })}
+      </div>
+      <p style={{fontSize:11,color:T.muted,margin:"7px 0 0",lineHeight:1.5}}>Images are auto-shrunk &amp; converted to WebP so your store stays fast.</p>
+    </div>}
     <label style={{display:"flex",alignItems:"flex-start",gap:8,margin:"0 0 12px",fontSize:13.5,color:T.inkSoft,cursor:"pointer",lineHeight:1.5}}>
       <input type="checkbox" checked={f.custom} onChange={e=>setF({...f,custom:e.target.checked})} style={{width:16,height:16,marginTop:2,accentColor:T.marigold,flexShrink:0}} />
       <span>Custom photo product · customer uploads their own image and it's <strong style={{color:T.inkSoft}}>prepaid only</strong>. Turn this on for "design your own" tees.</span>
@@ -1341,6 +1424,8 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     </div>
     {f.img && <div style={{width:90,height:90,borderRadius:10,overflow:"hidden",marginBottom:12,background:T.bg||"#0f0d0a"}}><img src={f.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /></div>}
     <L label="Description" hint="short, what makes it good"><textarea style={{...S.input,minHeight:64,resize:"vertical",fontFamily:"inherit"}} value={f.desc} onChange={up("desc")} maxLength={600} placeholder="Insulated 750ml bottle. Keeps cold 24h." /></L>
+    <L label="Bundle contents" hint="one item per line — fill this to make it a bundle (shows a 'What's inside' list + savings vs MRP). Leave blank for a normal product."><textarea style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit"}} value={f.bundleItems} onChange={up("bundleItems")} maxLength={600} placeholder={"Trigger Buttons\nFinger Sleeves (2 pairs)\nPhone Cooler"} /></L>
+    {f.bundleItems.trim() && <p style={{fontSize:11.5,color:T.marigold,margin:"-6px 0 12px",fontFamily:"var(--mono)",lineHeight:1.5}}>🎮 Shown as a bundle. Tip: set MRP to the total of the items' separate prices so the “you save” amount shows automatically.</p>}
     <div style={{borderTop:"1px solid "+T.line,margin:"6px 0 14px",paddingTop:14}}>
       <p style={{fontSize:11.5,color:T.muted,margin:"0 0 10px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Private · only you see this</p>
       <div style={S.two}>
@@ -1368,6 +1453,7 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
   const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(""); const [open,setOpen]=useState(false);
   const [fulfill,setFulfill]=useState(false); const [copied,setCopied]=useState("");
   const [confirmOpen,setConfirmOpen]=useState(false);
+  const [plBusy,setPlBusy]=useState(false); const [plUrl,setPlUrl]=useState(""); const [plErr,setPlErr]=useState(""); const [markBusy,setMarkBusy]=useState(false);
   const [askDel,setAskDel]=useState(false); const [deleting,setDeleting]=useState(false);
   const [designs,setDesigns]=useState(null);
   const [review,setReview]=useState(o.review_status||"none"); const [revBusy,setRevBusy]=useState(false);
@@ -1380,6 +1466,18 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
       const j=await r.json(); setRevBusy(false);
       if(r.ok){ setReview(st); onSaved&&onSaved(); } else { alert(j.error||"Could not update review status."); }
     }catch(e){ setRevBusy(false); alert("Could not update review status."); }
+  };
+  const genLink=async()=>{ setPlBusy(true); setPlErr("");
+    try{ const r=await fetch(API+"/api/admin/payment-link",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id})});
+      const j=await r.json(); setPlBusy(false);
+      if(r.ok&&j.url){ setPlUrl(j.url); } else { setPlErr(j.error||"Couldn't create the link."); }
+    }catch(e){ setPlBusy(false); setPlErr("Network error — try again."); }
+  };
+  const markPaid=async()=>{ if(!confirm("Mark this order as PAID (prepaid)? Do this only after the customer has actually paid the link.")) return; setMarkBusy(true);
+    try{ const r=await fetch(API+"/api/admin/mark-paid",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id})});
+      const j=await r.json(); setMarkBusy(false);
+      if(r.ok){ onSaved&&onSaved(); } else { alert(j.error||"Couldn't update the order."); }
+    }catch(e){ setMarkBusy(false); alert("Network error — try again."); }
   };
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
@@ -1492,6 +1590,25 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
         </div>
         <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>Tip: if they don't reply or confirm, hold the order or switch them to prepaid before shipping.</p>
       </div>}
+      <div style={{marginTop:14,paddingTop:14,borderTop:"1px dashed "+T.line}}>
+        <div style={{fontSize:11,color:"#34c77b",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:8}}>💸 Convert to prepaid (kills RTO risk)</div>
+        <p style={{fontSize:12,color:T.muted,margin:"0 0 10px",lineHeight:1.55}}>Send the customer a one-tap payment link with {PREPAID_DISCOUNT_PCT}% off. A prepaid order can't be refused at the door — this is your strongest defence against COD returns. Customer pays <strong style={{color:"#34c77b"}}>{rupee(Math.max(0,(o.subtotal||0)+(o.shipping||0)-Math.round((o.subtotal||0)*PREPAID_DISCOUNT_PCT/100)))}</strong> (saves {rupee(Math.round((o.subtotal||0)*PREPAID_DISCOUNT_PCT/100))}).</p>
+        {!plUrl
+          ? <button onClick={genLink} disabled={plBusy} style={{...S.addBtn,width:"auto",marginTop:0,padding:"9px 16px",fontSize:12.5,background:"#1f9e57",opacity:plBusy?0.6:1}}>{plBusy?"Creating link…":"Create prepaid payment link"}</button>
+          : <div style={{background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:12}}>
+              <div style={{fontSize:12.5,color:T.ink,wordBreak:"break-all",fontFamily:"var(--mono)",marginBottom:10}}>{plUrl}</div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                <button onClick={()=>copy(plUrl,"pl")} style={{...S.addBtn,width:"auto",marginTop:0,padding:"8px 14px",fontSize:12.5}}>{copied==="pl"?"✓ Copied":"Copy link"}</button>
+                <button onClick={()=>copy(`Hi ${o.name}, here's a secure link to pay for your Vector Grid order ${o.id} online and get ${PREPAID_DISCOUNT_PCT}% off: ${plUrl}`,"plmsg")} style={{...S.linkBtn,fontSize:12.5}}>{copied==="plmsg"?"✓ Copied message":"Copy message + link"}</button>
+                <a href={plUrl} target="_blank" rel="noopener noreferrer" style={{...S.linkBtn,fontSize:12.5,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>↗ Open</a>
+              </div>
+            </div>}
+        {plErr && <p style={{fontSize:12,color:"#e5685a",margin:"8px 0 0"}}>{plErr}</p>}
+        <div style={{marginTop:10}}>
+          <button onClick={markPaid} disabled={markBusy} style={{...S.linkBtn,fontSize:12.5,color:"#34c77b",fontWeight:600}}>{markBusy?"Updating…":"✓ Mark as paid (after they pay)"}</button>
+          <span style={{fontSize:11,color:T.muted,marginLeft:8}}>— flips this order to prepaid once payment lands.</span>
+        </div>
+      </div>
     </div>}
     {(o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(124,108,255,.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
