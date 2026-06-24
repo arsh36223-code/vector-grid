@@ -76,6 +76,8 @@ async function initDb() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_fee int DEFAULT 0`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_confirmed boolean DEFAULT false`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirm_token text`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS review_status text DEFAULT 'none'`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS ip_affirmed boolean DEFAULT false`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS orders_payment_id_uniq ON orders(payment_id) WHERE payment_id IS NOT NULL`);
   await pool.query(`CREATE TABLE IF NOT EXISTS reviews (
     id bigserial PRIMARY KEY,
@@ -209,14 +211,16 @@ if (pool) initDb().then(() => console.log("Database ready.")).catch((e) => conso
 
 async function saveOrder(o) {
   if (!pool) return;
-  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price, size: li.size || "", style: li.style || "", custom: li.custom || false, notes: li.notes || "" }));
+  const items = o.lineItems.map((li) => ({ name: li.name, qty: li.qty, price: li.price, size: li.size || "", style: li.style || "", color: li.color || "", custom: li.custom || false, notes: li.notes || "" }));
   const supply = o.lineItems.map((li) => ({ id: li.id, name: li.name, qty: li.qty, cost: li.cost, supplier: li.supplier, supplierUrl: li.supplierUrl }));
+  const hasCustom = o.lineItems.some((li) => li.custom);
   await pool.query(
-    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply,cod_fee,confirm_token)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed',$16,$17,$18) ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO orders (id,name,phone,email,line1,line2,city,state,pincode,items,subtotal,shipping,total,paid,payment_id,status,supply,cod_fee,confirm_token,review_status,ip_affirmed)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'Placed',$16,$17,$18,$19,$20) ON CONFLICT (id) DO NOTHING`,
     [o.id, o.customer.name, o.customer.phone, o.customer.email, o.customer.line1, o.customer.line2,
      o.customer.city, o.customer.state, o.customer.pincode, JSON.stringify(items),
-     o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply), o.codFee || 0, o.confirmToken || null]
+     o.subtotal, o.shipping, o.total, o.paid, o.paymentId, JSON.stringify(supply), o.codFee || 0, o.confirmToken || null,
+     hasCustom ? 'pending' : 'none', !!o.ipAffirmed]
   );
   // Persist any custom-design images in a side table (kept out of the orders row to keep order lists light).
   try {
@@ -248,6 +252,20 @@ function adminOk(req) {
 // Phone models offered for the custom phone case. Trim/extend to match exactly what your
 // POD supplier (Qikink) currently stocks — check your Qikink dashboard's phone-case model list.
 const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
+// ── COURIER PICKUP ADDRESS ──────────────────────────────────────────────
+// This is where the courier PICKS UP the parcel. For your dropship setup, set this to your
+// SUPPLIER's address (the place that stores & packs your décor stock). Edit here, or override
+// with env vars on Render (SHIP_PICKUP_*) so it stays out of your public repo.
+const PICKUP = {
+  name:    process.env.SHIP_PICKUP_NAME    || "Vector Grid",
+  phone:   process.env.SHIP_PICKUP_PHONE   || "9999999999",       // ← put your supplier's real 10-digit phone
+  email:   process.env.SHIP_PICKUP_EMAIL   || "orders@shopvectorgrid.com",
+  line1:   process.env.SHIP_PICKUP_LINE1   || "Supplier warehouse, address line 1",
+  line2:   process.env.SHIP_PICKUP_LINE2   || "",
+  city:    process.env.SHIP_PICKUP_CITY    || "Haridwar",
+  state:   process.env.SHIP_PICKUP_STATE   || "Uttarakhand",
+  pincode: process.env.SHIP_PICKUP_PIN     || "249403",
+};
 const PRODUCTS = [
   { id: "p1", name: "Minimalist Steel Water Bottle", price: 549, mrp: 899, stock: 42, category: "Drinkware",
     img: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80",
@@ -429,9 +447,10 @@ function computeOrder(items, cod, requireDesign) {
       }
       design = { image: img, notes: typeof d.notes === "string" ? d.notes.trim().slice(0, 500) : "" };
     }
+    const color = (isCustom && it.color != null) ? String(it.color).trim().slice(0, 40) : "";
     subtotal += unitPrice * qty;
     totalCost += unitCost * qty;
-    lineItems.push({ id: p.id, name: p.name, price: unitPrice, qty, size, style, custom: isCustom, notes: design ? design.notes : "", design, cost: unitCost, supplier: p.supplier, supplierUrl: p.supplierUrl });
+    lineItems.push({ id: p.id, name: p.name, price: unitPrice, qty, size, style, color, custom: isCustom, notes: design ? design.notes : "", design, cost: unitCost, supplier: p.supplier, supplierUrl: p.supplierUrl });
   }
   const shipping = shippingFor(subtotal);
   const codFee = cod === true ? COD_FEE : 0;
@@ -458,7 +477,7 @@ async function notifyOrder(order) {
   const c = order.customer;
   const lines = order.lineItems.map((li, i) =>
     li.custom
-      ? `- ${li.name}  x${li.qty}  [CUSTOM${li.style ? ": " + li.style.toUpperCase() : ""}${li.size ? ", " + li.size : ""}]\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
+      ? `- ${li.name}  x${li.qty}  [CUSTOM${li.style ? ": " + li.style.toUpperCase() : ""}${li.color ? ", " + li.color : ""}${li.size ? ", " + li.size : ""}]\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | print at: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}\n    >> customer's design attached as design-${order.id}-${i}.jpg${li.notes ? "\n    instructions: " + li.notes : ""}`
       : `- ${li.name}${li.style ? "  [" + li.style + "]" : ""}${li.size ? "  [size: " + li.size + "]" : ""}  x${li.qty}\n    sell ${rupee(li.price)} | your cost ${li.cost != null ? rupee(li.cost) : "-"} | supplier: ${li.supplier || "-"}${li.supplierUrl ? "\n    order from: " + li.supplierUrl : ""}`
   ).join("\n");
   // Build email attachments from any custom-design images.
@@ -476,6 +495,7 @@ async function notifyOrder(order) {
   const body = [
     `NEW ORDER ${order.id}  —  ${order.paid ? "PAID ONLINE" : "COD (collect on delivery)"}`,
     order.paymentId ? `Razorpay payment id: ${order.paymentId}` : "",
+    order.lineItems.some(li => li.custom) ? "** CUSTOM DESIGN: review the attached artwork for copyright/trademark before printing. Approve it in Manage Orders first. **" : "",
     "",
     "ITEMS TO SOURCE & SHIP:",
     lines,
@@ -833,6 +853,21 @@ app.post("/api/admin/order-delete", async (req, res) => {
   } catch (e) { console.error("order delete failed:", e && e.message); res.status(500).json({ error: "Delete failed." }); }
 });
 
+// Approve / reject a custom order's design (IP review) before you fulfil it on Qikink.
+app.post("/api/admin/order-review", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  const id = String((req.body && req.body.orderId) || "").trim().toUpperCase();
+  const status = String((req.body && req.body.status) || "").trim();
+  if (!id) return res.status(400).json({ error: "Missing order id." });
+  if (!["approved", "rejected", "pending"].includes(status)) return res.status(400).json({ error: "Invalid review status." });
+  try {
+    const r = await pool.query("UPDATE orders SET review_status=$1, updated_at=now() WHERE id=$2", [status, id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Order not found." });
+    res.json({ ok: true });
+  } catch (e) { console.error("order review failed:", e && e.message); res.status(500).json({ error: "Update failed." }); }
+});
+
 // Create a Razorpay order (amount computed from trusted prices)
 app.post("/api/create-order", async (req, res) => {
   if (!razorpay) return res.status(503).json({ error: "Payments are not set up yet." });
@@ -854,6 +889,7 @@ app.post("/api/place-order", async (req, res) => {
     const calc = computeOrder(b.items, b.cod === true, true);
     if (calc.error) return res.status(400).json({ error: calc.error });
     if (b.cod === true && calc.lineItems.some(li => li.custom)) return res.status(400).json({ error: "Custom prints are prepaid only. Please choose online payment." });
+    if (calc.lineItems.some(li => li.custom) && b.ipAffirmed !== true) return res.status(400).json({ error: "Please confirm you own the rights to your custom design to continue." });
     const customer = sanitizeCustomer(b.customer);
     if (customer.error) return res.status(400).json({ error: customer.error });
 
@@ -890,7 +926,7 @@ app.post("/api/place-order", async (req, res) => {
       }
     }
 
-    const order = { id: "VG" + Date.now().toString().slice(-8) + crypto.randomBytes(4).toString("hex").toUpperCase(), ...calc, customer, paid, paymentId, confirmToken: crypto.randomBytes(16).toString("hex") };
+    const order = { id: "VG" + Date.now().toString().slice(-8) + crypto.randomBytes(4).toString("hex").toUpperCase(), ...calc, customer, paid, paymentId, ipAffirmed: b.ipAffirmed === true, confirmToken: crypto.randomBytes(16).toString("hex") };
     try { await saveOrder(order); } catch (e) { console.error("save failed:", e && e.message); }
     // Respond immediately so the customer isn't kept waiting; email sends in the background.
     res.json({ ok: true, orderId: order.id, total: order.total });
@@ -1040,10 +1076,94 @@ app.get("/api/admin/orders", async (req, res) => {
   if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
   try {
     const r = await pool.query(
-      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,supply,subtotal,shipping,cod_fee,total,paid,payment_id,status,customer_confirmed,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,name,phone,email,line1,line2,city,state,pincode,items,supply,subtotal,shipping,cod_fee,total,paid,payment_id,status,customer_confirmed,review_status,ip_affirmed,tracking_url,tracking_carrier,created_at FROM orders ORDER BY created_at DESC LIMIT 100"
     );
-    res.json({ orders: r.rows });
+    res.json({ orders: r.rows, shipFrom: PICKUP });
   } catch (e) { console.error("admin list failed:", e && e.message); res.status(500).json({ error: "Could not load orders." }); }
+});
+
+/* ── OPTIONAL: one-click Shiprocket booking ──────────────────────────────
+   Books the parcel pickup → delivery straight from the order. This is OFF until you set
+   three env vars on Render: SHIPROCKET_EMAIL, SHIPROCKET_PASSWORD (use a dedicated API user
+   from Shiprocket → Settings → API, not your main login), and SHIPROCKET_PICKUP (the exact
+   nickname of the pickup location you registered in Shiprocket = your supplier's address).
+   Until then the admin panel falls back to a copy-paste shipment slip, which always works. */
+let _srToken = null, _srTokenAt = 0;
+async function shiprocketToken() {
+  const email = process.env.SHIPROCKET_EMAIL, password = process.env.SHIPROCKET_PASSWORD;
+  if (!email || !password) return null;
+  if (_srToken && (Date.now() - _srTokenAt) < 9 * 24 * 3600 * 1000) return _srToken;
+  const r = await fetch("https://apiv2.shiprocket.in/v1/external/auth/login", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.token) throw new Error(j.message || "Shiprocket login failed — check SHIPROCKET_EMAIL/PASSWORD.");
+  _srToken = j.token; _srTokenAt = Date.now();
+  return _srToken;
+}
+async function shiprocketCreate(order, dims) {
+  const token = await shiprocketToken();
+  if (!token) return { notConfigured: true };
+  let items = [];
+  try { items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || "[]"); } catch (e) { items = []; }
+  // This parcel ships from your supplier and carries only the NON-custom items.
+  // Custom (Qikink) items are prepaid-only and shipped separately by Qikink.
+  const ship = items.filter(it => !it.custom);
+  const order_items = ship.map(it => ({
+    name: String(it.name || "Item").slice(0, 80),
+    sku: String(it.id || it.name || "SKU").slice(0, 40),
+    units: Math.max(1, Number(it.qty) || 1),
+    selling_price: Math.max(0, Number(it.price) || 0),
+  }));
+  const goodsValue = ship.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+  // For COD the courier collects the full amount the customer agreed to pay (goods + shipping = order total).
+  // For prepaid nothing is collected, so sub_total is just the declared goods value of this parcel.
+  const subTotal = order.paid ? goodsValue : Math.max(0, Number(order.total) || goodsValue);
+  const payload = {
+    order_id: order.id,
+    order_date: new Date(order.created_at || Date.now()).toISOString().slice(0, 16).replace("T", " "),
+    pickup_location: process.env.SHIPROCKET_PICKUP || "Primary",
+    billing_customer_name: order.name || "",
+    billing_last_name: "",
+    billing_address: order.line1 || "",
+    billing_address_2: order.line2 || "",
+    billing_city: order.city || "",
+    billing_pincode: order.pincode || "",
+    billing_state: order.state || "",
+    billing_country: "India",
+    billing_email: order.email || "",
+    billing_phone: order.phone || "",
+    shipping_is_billing: true,
+    order_items,
+    payment_method: order.paid ? "Prepaid" : "COD",
+    sub_total: subTotal,
+    length: Math.max(1, Number(dims.length) || 25),
+    breadth: Math.max(1, Number(dims.breadth) || 20),
+    height: Math.max(1, Number(dims.height) || 8),
+    weight: Math.max(0.1, Number(dims.weight) || 0.5),
+  };
+  const r = await fetch("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", {
+    method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.message || (j.errors ? JSON.stringify(j.errors) : "Shiprocket rejected the order — check your pickup nickname and address."));
+  return { ok: true, shipmentId: j.shipment_id, scOrderId: j.order_id, status: j.status };
+}
+app.post("/api/admin/ship-create", async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Database not connected." });
+  if (!adminOk(req)) return res.status(401).json({ error: "Wrong admin key." });
+  if (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD) return res.json({ notConfigured: true });
+  const b = req.body || {};
+  const oid = String(b.orderId || "").trim().toUpperCase().slice(0, 40);
+  if (!oid) return res.status(400).json({ error: "Missing order id." });
+  try {
+    const r = await pool.query("SELECT * FROM orders WHERE id=$1", [oid]);
+    if (!r.rows.length) return res.status(404).json({ error: "Order not found." });
+    const out = await shiprocketCreate(r.rows[0], { weight: b.weightKg, length: b.length, breadth: b.breadth, height: b.height });
+    res.json(out);
+  } catch (e) { console.error("ship-create failed:", e && e.message); res.status(502).json({ error: (e && e.message) || "Courier booking failed." }); }
 });
 
 // ---- Seller: fetch the custom-design image(s) for one order (kept out of the order list to keep it light) ----

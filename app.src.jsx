@@ -5,6 +5,15 @@ const T = { paper:"#13100D", card:"#1C1814", ink:"#F3EFE8", inkSoft:"#B9B0A3", m
 const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh","Andaman & Nicobar"];
 // Phone models offered for the custom phone case (keep in sync with the server's list).
 const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
+// Garment colours offered for custom tees/hoodies/sweatshirts. Qikink lists 30+ tee colours and fewer for
+// hoodies — trim/extend this per garment against your Qikink dashboard. {name} reaches the seller; {hex} is the swatch + preview tint.
+const GARMENT_COLORS = [
+  {name:"White",hex:"#F4F2ED"},{name:"Black",hex:"#1A1A1A"},{name:"Navy Blue",hex:"#22314F"},{name:"Royal Blue",hex:"#2A4FA0"},
+  {name:"Red",hex:"#C62828"},{name:"Maroon",hex:"#5E1F2A"},{name:"Bottle Green",hex:"#15463B"},{name:"Olive Green",hex:"#5B5A2E"},
+  {name:"Grey Melange",hex:"#B7B7B2"},{name:"Charcoal Melange",hex:"#454443"},{name:"Golden Yellow",hex:"#F2B807"},{name:"Mustard",hex:"#C8932B"},
+  {name:"Sky Blue",hex:"#86C5E0"},{name:"Purple",hex:"#5E3B91"},{name:"Coffee Brown",hex:"#4A342A"},{name:"Beige",hex:"#D8C7A8"},
+];
+const MUG_COLORS = [{name:"White",hex:"#F2F1EC"},{name:"Black (inner & handle)",hex:"#1A1A1A"}];
 const SEED = [
   { id:"p1", name:"Minimalist Steel Water Bottle", price:549, mrp:899, stock:42, category:"Drinkware", img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&q=80", desc:"Insulated 750ml bottle. Keeps cold 24h, hot 12h." },
   { id:"p2", name:"Linen Cushion Cover (Set of 2)", price:699, mrp:1199, stock:30, category:"Home", img:"https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80", desc:"16x16 inch, washed linen, hidden zip." },
@@ -57,6 +66,57 @@ function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
 function StarPicker({value,onChange}){ return (<span style={{display:"inline-flex",gap:4}}>
   {[1,2,3,4,5].map(n=>(<button key={n} type="button" onClick={()=>onChange(n)} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:26,lineHeight:1,color:n<=value?"#F3A23E":"rgba(255,255,255,.25)"}} aria-label={n+" star"}>★</button>))}
 </span>); }
+// Trust + "how it works" reassurance shown on custom (prepaid) products, where buyers hesitate most.
+function CustomTrust({product,phoneCase}){
+  const noun = phoneCase ? "your phone case" : /\bmug\b/i.test((product&&product.name)||"") ? "your mug" : "your garment";
+  const step=(icon,title,sub)=>(<div style={{flex:"1 1 120px",minWidth:118}}>
+    <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
+    <div style={{fontSize:12.5,fontWeight:700,color:T.ink,marginBottom:2}}>{title}</div>
+    <div style={{fontSize:11,color:T.muted,lineHeight:1.45}}>{sub}</div></div>);
+  const badge=(icon,title,sub)=>(<div style={{flex:"1 1 150px",minWidth:140,display:"flex",gap:8,alignItems:"flex-start"}}>
+    <span style={{fontSize:15,lineHeight:1.3}}>{icon}</span>
+    <div><div style={{fontSize:12,fontWeight:700,color:T.inkSoft}}>{title}</div><div style={{fontSize:11,color:T.muted,lineHeight:1.4}}>{sub}</div></div></div>);
+  return (<div style={{marginTop:16,border:"1px solid "+T.line,borderRadius:14,padding:"14px 16px",background:"rgba(255,255,255,.02)"}}>
+    <div style={{fontSize:11,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em",color:T.marigold,marginBottom:10}}>How your custom order works</div>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:13}}>
+      {step("🎨","Upload your design","Add your photo or art — exactly what gets printed.")}
+      {step("🖨️","We print it","Made to order on "+noun+", checked before dispatch.")}
+      {step("📦","Delivered to you","Dispatched in a few business days, tracked across India.")}
+    </div>
+    <div style={{height:1,background:T.line,margin:"0 0 13px"}} />
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      {badge("🔒","Secure payment","Checkout protected by Razorpay.")}
+      {badge("✅","Quality promise","Arrives damaged or faulty? We reprint or refund.")}
+      {badge("🇮🇳","Made in India","Printed locally, shipped pan-India.")}
+      {badge("💬","Real human support","Message us anytime about your order.")}
+    </div>
+  </div>);
+}
+// Live design preview: shows the customer's uploaded art on a demo product, draggable + resizable.
+// Uses a crisp SVG tee for garments (never a broken image); overlays on the product photo for mug/case.
+function DesignMockup({kind, bg, design, pos, setPos, size, shirtColor}){
+  const ref = React.useRef(null);
+  const dragging = React.useRef(false);
+  const onMove = (cx, cy) => { const el = ref.current; if (!el) return; const r = el.getBoundingClientRect(); const x = ((cx - r.left) / r.width) * 100, y = ((cy - r.top) / r.height) * 100; setPos({ x: Math.max(12, Math.min(88, x)), y: Math.max(12, Math.min(88, y)) }); };
+  return (
+    <div ref={ref}
+      onPointerMove={e => { if (dragging.current) { e.preventDefault(); onMove(e.clientX, e.clientY); } }}
+      onPointerUp={e => { dragging.current = false; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {} }}
+      onPointerLeave={() => { dragging.current = false; }}
+      style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", borderRadius: 16, overflow: "hidden", border: "1px solid " + T.line, background: kind === "tee" ? "radial-gradient(135% 135% at 50% 22%, #efede9, #c9c6c0)" : T.card, touchAction: "none", userSelect: "none" }}>
+      {kind === "tee"
+        ? <svg viewBox="0 0 200 200" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden="true">
+            <path d="M60,40 L80,40 Q100,55 120,40 L140,40 L176,57 L160,85 L141,75 L141,172 L59,172 L59,75 L40,85 L24,57 Z" fill={shirtColor || "#f3f1ec"} stroke="rgba(0,0,0,.2)" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M80,40 Q100,55 120,40" fill="none" stroke="rgba(0,0,0,.18)" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        : <img src={bg} alt="" draggable={false} onError={e => { e.currentTarget.style.opacity = 0.3; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+      {design && <img src={design} alt="your design" draggable={false}
+        onPointerDown={e => { e.stopPropagation(); dragging.current = true; try { ref.current.setPointerCapture(e.pointerId); } catch (_) {} }}
+        style={{ position: "absolute", left: pos.x + "%", top: pos.y + "%", width: size + "%", transform: "translate(-50%,-50%)", cursor: "grab", touchAction: "none", filter: "drop-shadow(0 3px 8px rgba(0,0,0,.32))" }} />}
+      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", fontSize: 10, color: "#fff", background: "rgba(0,0,0,.5)", padding: "4px 10px", borderRadius: 20, fontFamily: "var(--mono)", whiteSpace: "nowrap", pointerEvents: "none" }}>{design ? "drag to move · slider to resize" : "your preview appears here"}</div>
+    </div>
+  );
+}
 function cardTilt(e){
   if(window.matchMedia && (window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
   const el=e.currentTarget, r=el.getBoundingClientRect();
@@ -86,6 +146,7 @@ const POLICIES = {
     "All products, prices, and availability are subject to change without notice. We make every effort to display products and prices accurately; in case of an error, we may cancel and refund any affected order.",
     "When you place an order you confirm that the details you provide (name, contact, delivery address) are accurate. You are responsible for keeping these correct.",
     `Online payments are processed securely by our payment partner, Razorpay. ${INFO.legalName} does not store your card or banking details.`,
+    `Custom designs: when you upload artwork for a custom-printed product, you confirm that you own it or hold the legal right to use and reproduce it, and that it does not infringe any copyright, trademark, publicity or other right. You are solely responsible for the content you upload, and you agree to indemnify and hold ${INFO.legalName} harmless against any claim, loss or cost arising from it. We may refuse or cancel and refund any custom order whose artwork we believe may be infringing or unlawful, at our sole discretion.`,
     `To the extent permitted by law, ${INFO.legalName} is not liable for indirect or consequential losses arising from use of this site beyond the value of the order placed.`,
     `These terms are governed by the laws of India, and disputes are subject to the jurisdiction of courts in ${INFO.jurisdiction}.`,
   ]},
@@ -98,7 +159,8 @@ const POLICIES = {
   ]},
   refund: { title: "Refund & Cancellation Policy", paras: [
     `Orders can be cancelled before they are shipped. To cancel, contact us at ${INFO.email} with your order number as soon as possible.`,
-    `A refund or return is available only if the product arrives damaged or defective, or the wrong item was sent because of a mistake on our side. In that case, email us within ${INFO.returnWindow} of delivery with a clear photo or a short unboxing video.`,
+    `A refund or return is available only if the product arrives damaged or defective, or the wrong item was sent because of a mistake on our side. In that case, email us within ${INFO.returnWindow} of delivery with your order number.`,
+    `A clear, continuous unboxing video is compulsory for every damage, defect, or wrong-item claim. Start recording before the parcel is opened, show the sealed package and the shipping label, and keep filming without any cuts or pauses through the entire unboxing. This video is the only way we can verify the issue and raise a claim with the courier, so requests submitted without it cannot be accepted.`,
     `If your issue qualifies, you choose one of two options: (1) return the item for a refund, or (2) get a replacement of the same item (subject to availability). If you choose a refund, the amount is processed once the returned item has been received back at our end. This applies to prepaid orders as well.`,
     `Returns for any other reason are not automatically accepted and may be rejected. If you have a genuine reason (for example a sizing issue), email us within ${INFO.returnWindow} with a clear explanation and we will review your request case by case. If it is approved, we will confirm any return shipping cost or deduction before you send the item back. Requests without a valid reason, or made after the ${INFO.returnWindow} window, cannot be accepted.`,
     `For clothing, please check the size chart on the product page before ordering — size-related returns are reviewed case by case, so choosing the right size first avoids disappointment.`,
@@ -213,13 +275,14 @@ function App(){
   };
 
   const handlePlace=async(form)=>{
-    const items=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design?{design:i.design}:{})}));
-    const itemsLite=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{})}));
+    const items=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design&&i.design.color?{color:i.design.color}:{}),...(i.design?{design:i.design}:{})}));
+    const itemsLite=cartItems.map(i=>({id:i.id,qty:i.qty,size:i.size||"",...(i.design&&i.design.style?{style:i.design.style}:{}),...(i.design&&i.design.color?{color:i.design.color}:{})}));
+    const ipAffirmed=cartItems.every(i=>!i.design || i.design.ipAffirmed===true);
     // ---- Cash on delivery: record order + notify seller ----
     if(form.pay==="COD"){
       setPaying(true);
       try{
-        const r=await fetch(API+"/api/place-order",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ cod:true, items, customer:form }) });
+        const r=await fetch(API+"/api/place-order",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ cod:true, items, customer:form, ipAffirmed }) });
         const j=await r.json(); setPaying(false);
         if(j.ok){ finishOrder(form,"COD",j.total!=null?j.total:(total+COD_FEE),j.orderId,COD_FEE); }
         else { alert(j.error||"Could not place the order. Please try again."); }
@@ -245,7 +308,7 @@ function App(){
         try{
           // verify payment AND record the order in one secure step
           const r=await fetch(API+"/api/place-order",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
-            razorpay_order_id:resp.razorpay_order_id, razorpay_payment_id:resp.razorpay_payment_id, razorpay_signature:resp.razorpay_signature, items, customer:form }) });
+            razorpay_order_id:resp.razorpay_order_id, razorpay_payment_id:resp.razorpay_payment_id, razorpay_signature:resp.razorpay_signature, items, customer:form, ipAffirmed }) });
           const j=await r.json();
           setPaying(false);
           if(j.ok){ finishOrder(form,"Paid online",paidAmount,j.orderId); }
@@ -498,7 +561,17 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
   const shownPrice=curStyle?curStyle.price:product.price;
   const [customImg,setCustomImg]=useState("");
   const [customNotes,setCustomNotes]=useState("");
+  const customNoun = phoneCase ? "phone case" : /\bmug\b/i.test(product.name||"") ? "mug" : "tee";
+  const mockKind = (isCustom && !phoneCase && !/\bmug\b/i.test(product.name||"")) ? "tee" : "image";
+  const dft = phoneCase ? {x:50,y:50,s:55} : /\bmug\b/i.test(product.name||"") ? {x:50,y:50,s:42} : {x:50,y:52,s:30};
+  const [dPos,setDPos]=useState(()=>({x:dft.x,y:dft.y}));
+  const [dSize,setDSize]=useState(()=>dft.s);
+  const colorOpts = isCustom ? (phoneCase ? [] : /\bmug\b/i.test(product.name||"") ? MUG_COLORS : GARMENT_COLORS) : [];
+  const [selColor,setSelColor]=useState(()=> colorOpts[0] ? colorOpts[0].name : "");
+  const selColorHex = (colorOpts.find(c=>c.name===selColor)||{}).hex;
   const [imgErr,setImgErr]=useState(false);
+  const [agreed,setAgreed]=useState(false);
+  const [agreedErr,setAgreedErr]=useState(false);
   const onPickCustom=(e)=>{ const file=e.target.files&&e.target.files[0]; if(!file) return;
     if(!file.type.startsWith("image/")){ setImgErr(true); return; }
     const reader=new FileReader();
@@ -561,18 +634,35 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
             {styleOpts.map(st=>(<button key={st.label} onClick={()=>{setSelStyle(st.label);setStyleErr(false);}} style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2,padding:"9px 14px",borderRadius:12,cursor:"pointer",border:"1.5px solid "+(selStyle===st.label?T.marigold:T.line),background:selStyle===st.label?T.marigold:"transparent",color:selStyle===st.label?"#13100D":T.ink}}><span style={{fontSize:13.5,fontWeight:700}}>{esc(st.label)}</span><span style={{fontFamily:"var(--mono)",fontSize:12,opacity:.85}}>{rupee(st.price)}</span></button>))}
           </div>
         </div>}
-        {isCustom && <div style={{marginTop:16}}>
-          <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Upload your photo / design{imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please add an image</span>:""}</div>
+        {colorOpts.length>0 && <div style={{marginTop:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Colour<span style={{color:T.muted,fontWeight:600}}> · {esc(selColor)}</span></div>
+          <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+            {colorOpts.map(c=>(<button key={c.name} onClick={()=>setSelColor(c.name)} title={c.name} aria-label={c.name} style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",background:c.hex,border:"1.5px solid "+(selColor===c.name?T.marigold:"rgba(255,255,255,.28)"),boxShadow:selColor===c.name?"0 0 0 3px rgba(243,162,62,.3)":"none",padding:0}} />))}
+          </div>
+        </div>}
+        {isCustom && <div style={{marginTop:18}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:14,fontWeight:800,color:T.ink,letterSpacing:"-.01em"}}>🎨 Design studio</span>
+            <span style={{fontSize:10.5,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".06em",color:"#13100D",background:T.marigold,padding:"2px 8px",borderRadius:20,fontWeight:700}}>live preview</span>
+            {imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,fontSize:12}}>· please add an image</span>:""}
+          </div>
           <input type="file" accept="image/*" id={"vg-custom-up-"+product.id} onChange={onPickCustom} style={{display:"none"}} />
           {!customImg
-            ? <label htmlFor={"vg-custom-up-"+product.id} style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:12,padding:"22px 14px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13}}>📷 Tap to upload your image<br/><span style={{fontSize:11,color:T.muted}}>JPG or PNG — this is what we print on your product</span></label>
-            : <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <img src={customImg} alt="your design" style={{width:72,height:72,objectFit:"cover",borderRadius:10,border:"1px solid "+T.line}} />
-                <label htmlFor={"vg-custom-up-"+product.id} style={{...S.linkBtn,fontSize:12.5,cursor:"pointer"}}>Change photo</label>
-                <button onClick={()=>setCustomImg("")} style={{...S.linkBtn,fontSize:12.5,color:T.danger}}>Remove</button>
+            ? <label htmlFor={"vg-custom-up-"+product.id} style={{display:"block",border:"1.5px dashed "+T.line,borderRadius:14,padding:"34px 16px",textAlign:"center",cursor:"pointer",color:T.inkSoft,fontSize:13.5,background:"rgba(255,255,255,.015)"}}>📷 Tap to upload your design<br/><span style={{fontSize:11.5,color:T.muted}}>JPG or PNG — watch it land on your {customNoun} instantly</span></label>
+            : <div>
+                <DesignMockup kind={mockKind} bg={product.img} design={customImg} pos={dPos} setPos={setDPos} size={dSize} shirtColor={selColorHex} />
+                <div style={{display:"flex",alignItems:"center",gap:10,marginTop:12}}>
+                  <span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",minWidth:30}}>Size</span>
+                  <input type="range" min={12} max={78} value={dSize} onChange={e=>setDSize(Number(e.target.value))} style={{flex:1,accentColor:T.marigold,cursor:"pointer"}} aria-label="Resize design" />
+                </div>
+                <div style={{display:"flex",gap:16,marginTop:8,flexWrap:"wrap"}}>
+                  <label htmlFor={"vg-custom-up-"+product.id} style={{...S.linkBtn,fontSize:12.5,cursor:"pointer"}}>↻ Change design</label>
+                  <button onClick={()=>{setDPos({x:dft.x,y:dft.y});setDSize(dft.s);}} style={{...S.linkBtn,fontSize:12.5}}>⊹ Reset placement</button>
+                  <button onClick={()=>setCustomImg("")} style={{...S.linkBtn,fontSize:12.5,color:T.danger}}>✕ Remove</button>
+                </div>
               </div>}
-          <textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} maxLength={500} placeholder="Any instructions? e.g. center the photo, add the name 'Aarav' underneath, plain white background" style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit",marginTop:10}} />
-          <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>💳 Custom prints are prepaid only. We print your design and ship it to you.</p>
+          <textarea value={customNotes} onChange={e=>setCustomNotes(e.target.value)} maxLength={500} placeholder="Any instructions? e.g. center the photo, add the name 'Aarav' underneath, plain white background" style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit",marginTop:12}} />
+          <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>This preview shows roughly how it'll look. 💳 Custom prints are prepaid — we print your design and ship it to you.</p>
         </div>}
         {opts.length>0 && <div style={{marginTop:16}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -589,8 +679,13 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
               </div>}
           {phoneCase && <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>Don't see your model? Message us — we add new models regularly.</p>}
         </div>}
+        {isCustom && <CustomTrust product={product} phoneCase={phoneCase} />}
+        {isCustom && <label style={{display:"flex",gap:10,alignItems:"flex-start",marginTop:14,cursor:"pointer",fontSize:12,color:T.inkSoft,lineHeight:1.55,background:agreedErr&&!agreed?"rgba(229,104,90,.08)":"rgba(255,255,255,.015)",border:"1px solid "+(agreedErr&&!agreed?"#e5685a":T.line),borderRadius:12,padding:"12px 13px"}}>
+          <input type="checkbox" checked={agreed} onChange={e=>{ setAgreed(e.target.checked); if(e.target.checked) setAgreedErr(false); }} style={{marginTop:1,width:17,height:17,flexShrink:0,accentColor:T.marigold,cursor:"pointer"}} />
+          <span>I confirm I <strong style={{color:T.ink}}>own this design or have the legal right to use it</strong>, that it doesn't infringe anyone's copyright, trademark or other rights, and I take full responsibility for the artwork I upload.{agreedErr&&!agreed?<span style={{color:"#e5685a",display:"block",marginTop:4,fontWeight:600}}>Please tick this box to continue.</span>:""}</span>
+        </label>}
         {(opts.length>0 || isCustom)
-          ? <button onClick={()=>{ if(out)return; if(styleOpts.length>0 && !selStyle){ setStyleErr(true); return; } if(isCustom && !customImg){ setImgErr(true); return; } if(opts.length>0 && !selSize){ setSizeErr(true); return; } onAdd(selSize, isCustom?{image:customImg,notes:customNotes,style:selStyle,price:curStyle?curStyle.price:product.price}:null); }} disabled={out} style={{...S.addBtn,marginTop:18,...(out?S.addBtnDisabled:{})}}>{out?"Unavailable":(isCustom?"Add custom print to cart":"Add to cart")}</button>
+          ? <button onClick={()=>{ if(out)return; if(styleOpts.length>0 && !selStyle){ setStyleErr(true); return; } if(isCustom && !customImg){ setImgErr(true); return; } if(opts.length>0 && !selSize){ setSizeErr(true); return; } if(isCustom && !agreed){ setAgreedErr(true); return; } onAdd(selSize, isCustom?{image:customImg,notes:customNotes,style:selStyle,color:selColor,ipAffirmed:true,price:curStyle?curStyle.price:product.price}:null); }} disabled={out} style={{...S.addBtn,marginTop:14,...(out?S.addBtnDisabled:{})}}>{out?"Unavailable":(isCustom?"Add custom print to cart":"Add to cart")}</button>
           : <AddButton onAdd={onAdd} out={out} full={true} label={{add:"Add to cart",out:"Unavailable"}} />}
         <button onClick={doShare} style={{width:"100%",marginTop:10,padding:"11px 16px",fontSize:14,fontWeight:600,color:T.inkSoft,background:"transparent",border:"1px solid "+T.line,borderRadius:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>{shared?("✓ "+shared):"🔗 Share this product"}</button>
         {out && <div style={{marginTop:14,background:T.tint,border:"1px solid "+T.line,borderRadius:12,padding:14}}>
@@ -638,7 +733,7 @@ function CartDrawer({items,subtotal,shipping,total,setQty,onClose,onCheckout}){ 
       {items.length===0 && <p style={{color:T.muted,marginTop:24}}>Your cart is empty.</p>}
       {items.map(i=>{ const max=(i.stock!=null&&i.stock>0)?Math.min(50,i.stock):50; const atMax=i.qty>=max; return (<div key={i.key} style={S.cartRow}>
         <img src={i.design?i.design.image:i.img} alt="" style={S.cartThumb} />
-        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,i.size?((isPhoneCase(i)?"Model: ":"Size: ")+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
+        <div style={{flex:1}}><p style={S.cartName}>{esc(i.name)}</p>{i.design && <p style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",margin:"2px 0 0",fontWeight:700}}>🎨 Custom design</p>}{((i.design&&i.design.style)||i.size) && <p style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",margin:"2px 0 0"}}>{[(i.design&&i.design.style)?esc(i.design.style):null,(i.design&&i.design.color)?esc(i.design.color):null,i.size?((isPhoneCase(i)?"Model: ":"Size: ")+esc(i.size)):null].filter(Boolean).join("  ·  ")}</p>}<p style={S.cartPrice}>{rupee(i.price)}</p>
           <div style={S.qtyRow}><button onClick={()=>setQty(i.key,i.qty-1)} style={S.qtyBtn} aria-label="Decrease">−</button><span style={S.qtyNum}>{i.qty}</span><button onClick={()=>{ if(!atMax) setQty(i.key,i.qty+1); }} disabled={atMax} style={{...S.qtyBtn,...(atMax?{opacity:.4,cursor:"not-allowed"}:{})}} aria-label="Increase">+</button></div>
           {atMax && i.stock!=null && i.stock>0 && i.stock<50 && <p style={{fontSize:11,color:T.muted,margin:"4px 0 0",fontFamily:"var(--mono)"}}>Only {i.stock} in stock</p>}
         </div><span style={S.cartLine}>{rupee(i.price*i.qty)}</span>
@@ -694,7 +789,7 @@ function Checkout({items,total,shipping,subtotal,paying,onBack,onPlace}){
         <h3 style={S.summaryTitle}>Order summary</h3>
         <p style={{fontSize:12,color:T.muted,margin:"-6px 0 12px",fontFamily:"var(--mono)"}}>{items.reduce((n,i)=>n+i.qty,0)} item{items.reduce((n,i)=>n+i.qty,0)===1?"":"s"} · {items.length} product{items.length===1?"":"s"}</p>
         {items.map(i=>(<div key={i.key} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,padding:"7px 0",color:T.inkSoft,borderBottom:"1px solid "+T.line}}>
-          <span style={{flex:1}}>{esc(i.name)}{i.design?<span style={{color:T.marigold}}> · 🎨 custom</span>:""}{(i.design&&i.design.style)?<span style={{color:T.muted}}> · {esc(i.design.style)}</span>:""}{i.size?<span style={{color:T.muted}}> · {esc(i.size)}</span>:""}<br/><span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>{rupee(i.price)} × {i.qty}</span></span>
+          <span style={{flex:1}}>{esc(i.name)}{i.design?<span style={{color:T.marigold}}> · 🎨 custom</span>:""}{(i.design&&i.design.style)?<span style={{color:T.muted}}> · {esc(i.design.style)}</span>:""}{(i.design&&i.design.color)?<span style={{color:T.muted}}> · {esc(i.design.color)}</span>:""}{i.size?<span style={{color:T.muted}}> · {esc(i.size)}</span>:""}<br/><span style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)"}}>{rupee(i.price)} × {i.qty}</span></span>
           <span style={{fontWeight:600,color:T.ink}}>{rupee(i.price*i.qty)}</span>
         </div>))}
         <div style={{height:8}} />
@@ -727,7 +822,7 @@ function Confirmation({order,onClose}){ const steps=["Placed","Packed","Shipped"
     <div style={S.stepper}>{steps.map((s,idx)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:idx===0?T.teal:T.line,color:idx===0?"#fff":T.muted}}>{idx+1}</div><span style={{fontSize:11,color:idx===0?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{idx<steps.length-1 && <div style={S.stepLine} />}</React.Fragment>))}</div>
     {items.length>0 && <div style={{textAlign:"left",background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
       <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
-      {items.map((i,ix)=>(<div key={i.key||i.id||ix} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)}{i.design?" · 🎨 custom":""}{(i.design&&i.design.style)?" · "+esc(i.design.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty}</span></span><span style={{color:T.ink}}>{rupee(i.price*i.qty)}</span></div>))}
+      {items.map((i,ix)=>(<div key={i.key||i.id||ix} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"5px 0",color:T.inkSoft}}><span>{esc(i.name)}{i.design?" · 🎨 custom":""}{(i.design&&i.design.style)?" · "+esc(i.design.style):""}{(i.design&&i.design.color)?" · "+esc(i.design.color):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty}</span></span><span style={{color:T.ink}}>{rupee(i.price*i.qty)}</span></div>))}
       <div style={{height:1,background:T.line,margin:"8px 0"}} />
       {order.subtotal!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Subtotal</span><span>{rupee(order.subtotal)}</span></div>}
       {order.shipping!=null && <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"2px 0"}}><span>Shipping</span><span>{order.shipping===0?"Free":rupee(order.shipping)}</span></div>}
@@ -805,7 +900,7 @@ function TrackOrder({onBack}){
           : <div style={S.stepper}>{steps.map((s,i)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:i<=idx?T.teal:T.line,color:i<=idx?"#fff":T.muted}}>{i<=idx?"✓":i+1}</div><span style={{fontSize:11,color:i<=idx?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{i<steps.length-1 && <div style={{...S.stepLine,background:i<idx?T.teal:T.line}} />}</React.Fragment>))}</div>}
         {items.length>0 && <div style={{textAlign:"left",background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
           <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
-          {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+          {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.color?" · "+esc(i.color):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
           <div style={{height:1,background:T.line,margin:"8px 0"}} />
           <div style={{display:"flex",justifyContent:"space-between",fontSize:14,fontWeight:700,color:T.ink}}><span>Total</span><span>{rupee(res.total)}</span></div>
         </div>}
@@ -949,10 +1044,11 @@ function AdminOrders({onBack}){
   const [tab,setTab]=useState("orders"); const [reviews,setReviews]=useState([]); const [revBusy,setRevBusy]=useState(false);
   const [prods,setProds]=useState([]); const [prodBusy,setProdBusy]=useState(false); const [editing,setEditing]=useState(null);
   const [support,setSupport]=useState([]); const [supBusy,setSupBusy]=useState(false);
+  const [shipFrom,setShipFrom]=useState(null);
   const load=async(k,opts)=>{ setErr(""); setBusy(true);
     try{ const r=await fetch(API+"/api/admin/orders",{headers:{"x-admin-key":k}});
       const j=await r.json(); setBusy(false);
-      if(r.ok){ setOrders(j.orders||[]); setAuthed(true); setKey(k);
+      if(r.ok){ setOrders(j.orders||[]); setShipFrom(j.shipFrom||null); setAuthed(true); setKey(k);
         if(opts&&opts.remember){ try{ localStorage.setItem("vg_admin_key",k); }catch(e){} }
         loadReviews(k); loadProds(k); loadSupport(k);
       } else { setErr(j.error||"That key didn't work. Please check and try again."); setAuthed(false);
@@ -1103,7 +1199,7 @@ function AdminOrders({onBack}){
             <button onClick={()=>load(key,{remember})} style={S.linkBtn}>↻ Refresh</button>
           </div>
           {orders.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>📦</div><p style={{color:T.inkSoft,margin:0}}>No orders yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>When customers buy, their orders appear here.</p></div>}
-          <div style={{display:"grid",gap:14}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} prods={prods} onSaved={()=>load(key,{remember})} />)}</div>
+          <div style={{display:"grid",gap:14}}>{orders.map(o=><AdminRow key={o.id} o={o} adminKey={key} prods={prods} shipFrom={shipFrom} onSaved={()=>load(key,{remember})} />)}</div>
           </div>) : tab==="products" ? (<div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,gap:10,flexWrap:"wrap"}}>
               <span style={{color:T.inkSoft,fontSize:13,fontFamily:"var(--mono)"}}>{prods.length} product{prods.length===1?"":"s"}</span>
@@ -1265,7 +1361,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
     </div>
   </div></Overlay>);
 }
-function AdminRow({o,adminKey,prods,onSaved}){
+function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
   const [status,setStatus]=useState(o.status||"Placed");
   const [carrier,setCarrier]=useState(o.tracking_carrier||"");
   const [url,setUrl]=useState(o.tracking_url||"");
@@ -1274,7 +1370,17 @@ function AdminRow({o,adminKey,prods,onSaved}){
   const [confirmOpen,setConfirmOpen]=useState(false);
   const [askDel,setAskDel]=useState(false); const [deleting,setDeleting]=useState(false);
   const [designs,setDesigns]=useState(null);
+  const [review,setReview]=useState(o.review_status||"none"); const [revBusy,setRevBusy]=useState(false);
+  const [shipOpen,setShipOpen]=useState(false);
+  const [wkg,setWkg]=useState("0.5"); const [slen,setSlen]=useState("25"); const [sbre,setSbre]=useState("20"); const [shgt,setShgt]=useState("8");
+  const [booking,setBooking]=useState(false); const [bookRes,setBookRes]=useState(null);
   const loadDesigns=async()=>{ try{ const r=await fetch(API+"/api/admin/order-designs?orderId="+encodeURIComponent(o.id),{headers:{"x-admin-key":adminKey}}); const j=await r.json(); setDesigns(Array.isArray(j.designs)?j.designs:[]); }catch(e){ setDesigns([]); } };
+  const setRev=async(st)=>{ setRevBusy(true);
+    try{ const r=await fetch(API+"/api/admin/order-review",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status:st})});
+      const j=await r.json(); setRevBusy(false);
+      if(r.ok){ setReview(st); onSaved&&onSaved(); } else { alert(j.error||"Could not update review status."); }
+    }catch(e){ setRevBusy(false); alert("Could not update review status."); }
+  };
   const save=async()=>{ setSaving(true); setMsg("");
     try{ const r=await fetch(API+"/api/admin/update",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,status,trackingCarrier:carrier,trackingUrl:url})});
       const j=await r.json(); setSaving(false);
@@ -1309,6 +1415,20 @@ function AdminRow({o,adminKey,prods,onSaved}){
   const fullOrderText=`Order ${o.id}\nShip to:\n${addressText}\n\nItems:\n`+items.map(i=>`- ${i.name}${i.style?" - "+i.style:""}${i.size?" ["+i.size+"]":""} x${i.qty||1}`).join("\n");
   const itemSummary=items.map(i=>`${i.name}${i.style?" - "+i.style:""}${i.size?" ("+i.size+")":""} x${i.qty||1}`).join(", ");
   const confirmMsg=`Hi ${o.name}, this is Vector Grid 👋\n\nPlease confirm your Cash on Delivery order:\n• Order ID: ${o.id}\n• Items: ${itemSummary}\n• Amount to pay on delivery: ${rupee(o.total)}\n• Delivery address: ${o.line1}${o.line2?", "+o.line2:""}, ${o.city}, ${o.state} - ${o.pincode}\n\nReply YES to confirm and we'll ship it out. Thank you for shopping with us!`;
+  const sf=shipFrom||{};
+  const shipFromText=sf.line1?`${sf.name}\n${sf.line1}${sf.line2?", "+sf.line2:""}\n${sf.city}, ${sf.state} - ${sf.pincode}\nPhone: ${sf.phone}`:"";
+  const shipItems=items.filter(i=>!i.custom);
+  const shipGoods=shipItems.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+  const payLine=o.paid?"PREPAID — customer already paid online, collect nothing on delivery":("COD — courier collects "+rupee(o.total)+" from the customer");
+  const shipManifest=`SHIPMENT  ·  Order ${o.id}\n\nPICK UP FROM (your supplier):\n${shipFromText||"[Set your pickup/supplier address in server config]"}\n\nDELIVER TO (customer):\n${addressText}\n\nPayment: ${payLine}\nDeclared value: ${rupee(shipGoods)}\nWeight: ${wkg} kg    Box: ${slen} × ${sbre} × ${shgt} cm\n\nContents:\n`+shipItems.map(i=>`- ${i.name}${i.style?" - "+i.style:""}${i.size?" ["+i.size+"]":""} x${i.qty||1}`).join("\n");
+  const bookCourier=async()=>{ setBooking(true); setBookRes(null);
+    try{ const r=await fetch(API+"/api/admin/ship-create",{method:"POST",headers:{"Content-Type":"application/json","x-admin-key":adminKey},body:JSON.stringify({orderId:o.id,weightKg:Number(wkg),length:Number(slen),breadth:Number(sbre),height:Number(shgt)})});
+      const j=await r.json(); setBooking(false);
+      if(j.notConfigured){ setBookRes({type:"info",text:"One-click booking isn't switched on yet. Use “Copy shipment” below and paste it into your Shiprocket/NimbusPost dashboard — that always works. (To enable one-click: add your SHIPROCKET_ env vars on Render.)"}); }
+      else if(r.ok&&j.ok){ setBookRes({type:"ok",text:"✓ Booked in Shiprocket — Shipment #"+(j.shipmentId||"?")+". Now open Shiprocket, assign a courier, and schedule the pickup from your supplier's address."}); }
+      else { setBookRes({type:"err",text:(j.error||"Couldn't book automatically.")+" — use “Copy shipment” and book it manually."}); }
+    }catch(e){ setBooking(false); setBookRes({type:"err",text:"Network error — use “Copy shipment” and book it manually."}); }
+  };
   const dt=o.created_at?new Date(o.created_at):null;
   const dstr=dt?dt.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
   // per-order product cost + gross profit (before shipping/fees)
@@ -1323,6 +1443,7 @@ function AdminRow({o,adminKey,prods,onSaved}){
           <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:999,color:bc[0],background:bc[1],border:bc[1]==="transparent"?"1px solid "+T.line:"none",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{o.status||"Placed"}</span>
           <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.paid?"rgba(31,158,87,.15)":"rgba(232,130,12,.15)",color:o.paid?"#34c77b":T.marigold,fontFamily:"var(--mono)",fontWeight:600}}>{o.paid?"PAID ONLINE":"COD"}</span>
           {o.status!=="Cancelled" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.customer_confirmed?"rgba(31,158,87,.15)":"rgba(229,104,90,.15)",color:o.customer_confirmed?"#34c77b":"#e5685a",fontFamily:"var(--mono)",fontWeight:600}}>{o.customer_confirmed?"✓ CONFIRMED":"⏳ AWAITING CONFIRM"}</span>}
+          {review!=="none" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:review==="approved"?"rgba(31,158,87,.15)":review==="rejected"?"rgba(229,104,90,.18)":"rgba(232,130,12,.18)",color:review==="approved"?"#34c77b":review==="rejected"?"#e5685a":T.marigold,fontFamily:"var(--mono)",fontWeight:700}}>{review==="approved"?"✓ DESIGN OK":review==="rejected"?"✕ REJECTED":"⚠ REVIEW DESIGN"}</span>}
         </div>
         <div style={{fontSize:13,color:T.inkSoft,marginTop:7,lineHeight:1.6}}>
           <strong style={{color:T.ink}}>{esc(o.name)}</strong> · 📱 {esc(o.phone)}{o.email?" · ✉ "+esc(o.email):""}<br/>
@@ -1335,10 +1456,24 @@ function AdminRow({o,adminKey,prods,onSaved}){
         {dstr && <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",marginTop:2}}>{dstr}</div>}
       </div>
     </div>
+    {review!=="none" && <div style={{borderTop:"1px solid "+T.line,padding:"12px 18px",background:review==="rejected"?"rgba(229,104,90,.10)":review==="approved"?"rgba(31,158,87,.07)":"rgba(232,130,12,.10)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{fontSize:12.5,color:T.inkSoft,minWidth:200,flex:1}}>
+          {review==="pending" && <span>⚠ <strong style={{color:T.ink}}>Design review needed.</strong> Open the design below and check it doesn't use copyrighted or branded artwork before you send it to Qikink.</span>}
+          {review==="approved" && <span style={{color:"#34c77b",fontWeight:600}}>✓ Design approved — cleared to fulfil on Qikink.</span>}
+          {review==="rejected" && <span style={{color:"#e5685a",fontWeight:600}}>✕ Design rejected — do not fulfil. Refund the customer.</span>}
+          <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",marginTop:4}}>{o.ip_affirmed?"✓ Customer confirmed they own the rights":"⚠ No rights confirmation on file"}</div>
+        </div>
+        <div style={{display:"flex",gap:8,flexShrink:0}}>
+          {review!=="approved" && <button disabled={revBusy} onClick={()=>setRev("approved")} style={{padding:"7px 14px",fontSize:12.5,fontWeight:700,borderRadius:9,border:"none",cursor:"pointer",background:"#1f9e57",color:"#fff",opacity:revBusy?0.6:1}}>Approve</button>}
+          {review!=="rejected" && <button disabled={revBusy} onClick={()=>setRev("rejected")} style={{padding:"7px 14px",fontSize:12.5,fontWeight:700,borderRadius:9,border:"1px solid #e5685a",cursor:"pointer",background:"transparent",color:"#e5685a",opacity:revBusy?0.6:1}}>Reject</button>}
+        </div>
+      </div>
+    </div>}
     {items.length>0 && <div style={{padding:"0 18px 14px"}}>
       <button onClick={()=>setOpen(!open)} style={{...S.linkBtn,fontSize:12.5}}>{open?"▾ Hide items":"▸ "+items.reduce((n,i)=>n+(i.qty||1),0)+" item"+(items.reduce((n,i)=>n+(i.qty||1),0)===1?"":"s")}</button>
       {open && <div style={{marginTop:8,background:T.bg||"#0f0d0a",borderRadius:10,padding:"10px 12px"}}>
-        {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
+        {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.color?" · "+esc(i.color):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
       </div>}
     </div>}
     {(!o.paid && o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(232,130,12,.07)"}}>
@@ -1390,6 +1525,40 @@ function AdminRow({o,adminKey,prods,onSaved}){
             <button onClick={()=>copy(fullOrderText,"order")} style={{...S.linkBtn,fontSize:12.5}}>{copied==="order"?"✓ Copied":"Copy full order"}</button>
           </div>
         </div>
+      </div>}
+    </div>}
+    {(o.status!=="Cancelled" && items.some(i=>!i.custom)) && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(31,158,87,.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <div style={{fontSize:11,color:"#34c77b",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>🚚 Book courier pickup (ship it yourself)</div>
+        <button onClick={()=>setShipOpen(!shipOpen)} style={{...S.linkBtn,fontSize:12.5,color:"#34c77b"}}>{shipOpen?"▾ Hide":"▸ Show"}</button>
+      </div>
+      {shipOpen && <div style={{marginTop:12}}>
+        <p style={{fontSize:12,color:T.muted,margin:"0 0 12px",lineHeight:1.55}}>Books a parcel from <strong style={{color:T.inkSoft}}>your supplier's address → this customer</strong>. Set the weight and box size, then book in one click (if connected), or copy the slip into your courier dashboard.{items.some(i=>i.custom)?" Note: any custom (Qikink) items in this order ship separately from Qikink — don't include them here.":""}</p>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}}>
+          <div style={{flex:"1 1 220px",background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:"10px 12px"}}>
+            <div style={{fontSize:10.5,color:T.muted,fontFamily:"var(--mono)",textTransform:"uppercase",marginBottom:5}}>Pick up from (supplier)</div>
+            <pre style={{margin:0,fontFamily:"inherit",fontSize:12.5,color:T.ink,whiteSpace:"pre-wrap",lineHeight:1.5}}>{shipFromText||"⚠ Set your pickup (supplier) address in the server config (PICKUP)."}</pre>
+          </div>
+          <div style={{flex:"1 1 220px",background:T.card,border:"1px solid "+T.line,borderRadius:10,padding:"10px 12px"}}>
+            <div style={{fontSize:10.5,color:T.muted,fontFamily:"var(--mono)",textTransform:"uppercase",marginBottom:5}}>Deliver to (customer)</div>
+            <pre style={{margin:0,fontFamily:"inherit",fontSize:12.5,color:T.ink,whiteSpace:"pre-wrap",lineHeight:1.5}}>{addressText}</pre>
+          </div>
+        </div>
+        <div style={{background:o.paid?"rgba(31,158,87,.1)":"rgba(232,130,12,.1)",border:"1px solid "+T.line,borderRadius:10,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:T.inkSoft,lineHeight:1.5}}>
+          {o.paid?"✅ Prepaid — collect nothing on delivery.":("💵 COD — courier must collect "+rupee(o.total)+" from the customer.")} <span style={{color:T.muted}}>· Declared value {rupee(shipGoods)}</span>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+          <label style={{flex:"1 1 70px",fontSize:11,color:T.muted}}>Weight (kg)<input style={{...S.input,marginTop:4}} value={wkg} onChange={e=>setWkg(e.target.value)} inputMode="decimal" /></label>
+          <label style={{flex:"1 1 70px",fontSize:11,color:T.muted}}>Length (cm)<input style={{...S.input,marginTop:4}} value={slen} onChange={e=>setSlen(e.target.value)} inputMode="numeric" /></label>
+          <label style={{flex:"1 1 70px",fontSize:11,color:T.muted}}>Breadth (cm)<input style={{...S.input,marginTop:4}} value={sbre} onChange={e=>setSbre(e.target.value)} inputMode="numeric" /></label>
+          <label style={{flex:"1 1 70px",fontSize:11,color:T.muted}}>Height (cm)<input style={{...S.input,marginTop:4}} value={shgt} onChange={e=>setShgt(e.target.value)} inputMode="numeric" /></label>
+        </div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          <button onClick={bookCourier} disabled={booking} style={{...S.addBtn,width:"auto",marginTop:0,padding:"10px 18px",fontSize:13}}>{booking?"Booking…":"🚚 Book pickup in Shiprocket"}</button>
+          <button onClick={()=>copy(shipManifest,"ship")} style={{...S.linkBtn,fontSize:12.5}}>{copied==="ship"?"✓ Copied":"📋 Copy shipment"}</button>
+        </div>
+        {bookRes && <div style={{marginTop:10,fontSize:12.5,lineHeight:1.55,padding:"10px 12px",borderRadius:10,background:bookRes.type==="ok"?"rgba(31,158,87,.12)":bookRes.type==="err"?"rgba(229,104,90,.12)":"rgba(124,108,255,.1)",color:bookRes.type==="ok"?"#34c77b":bookRes.type==="err"?"#e5685a":"#a99dff",border:"1px solid "+T.line}}>{bookRes.text}</div>}
+        <p style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.5}}>After booking, download the label from Shiprocket and send it to your supplier to stick on the box. Enter the <strong style={{color:T.inkSoft}}>actual packed weight</strong> — couriers bill whichever is higher: actual, or volumetric (L×B×H ÷ 5000).</p>
       </div>}
     </div>}
     <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(255,255,255,.015)"}}>
