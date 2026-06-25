@@ -559,6 +559,12 @@ async function notifyOrder(order) {
   const body = [
     `NEW ORDER ${order.id}  —  ${order.paid ? "PAID ONLINE" : "COD (collect on delivery)"}`,
     order.paymentId ? `Razorpay payment id: ${order.paymentId}` : "",
+    !order.paid ? `💡 COD ORDER → CONVERT TO PREPAID (kills RTO / return risk):
+   Cash-on-Delivery is the #1 cause of returns in India. To convert this order:
+   1) Open your admin → Manage Orders → order ${order.id}
+   2) Tap "Convert to prepaid (kills RTO risk)" to create a Razorpay payment link
+   3) Send the link to the customer on WhatsApp / SMS: ${c.phone}
+   If they pay online, RTO risk is gone and a ${PREPAID_DISCOUNT_PCT}% prepaid discount is applied automatically.` : "",
     order.lineItems.some(li => li.custom) ? "** CUSTOM DESIGN: review the attached artwork for copyright/trademark before printing. Approve it in Manage Orders first. **" : "",
     "",
     "ITEMS TO SOURCE & SHIP:",
