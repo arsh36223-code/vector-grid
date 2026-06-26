@@ -5,16 +5,17 @@ const {
 } = React;
 const API = "";
 const T = {
-  paper: "#13100D",
-  card: "#1C1814",
-  ink: "#F3EFE8",
-  inkSoft: "#B9B0A3",
-  muted: "#8A8175",
-  line: "#2F2922",
-  marigold: "#EF901E",
-  marigoldDark: "#C96A00",
-  teal: "#2CBBA9",
-  tint: "#221A11",
+  paper: "#11161B",
+  card: "#19212A",
+  bg: "#0C1014",
+  ink: "#E9E7DF",
+  inkSoft: "#A6AEB0",
+  muted: "#7C8794",
+  line: "#2A333D",
+  marigold: "#7f8b52",
+  marigoldDark: "#5f6b3c",
+  teal: "#4E93AD",
+  tint: "#19222B",
   danger: "#E5685A"
 };
 const INDIAN_STATES = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu & Kashmir", "Ladakh", "Puducherry", "Chandigarh", "Andaman & Nicobar"];
@@ -54,10 +55,10 @@ const GARMENT_COLORS = [{
   hex: "#454443"
 }, {
   name: "Golden Yellow",
-  hex: "#F2B807"
+  hex: "#7f8b52"
 }, {
   name: "Mustard",
-  hex: "#C8932B"
+  hex: "#7c8a44"
 }, {
   name: "Sky Blue",
   hex: "#86C5E0"
@@ -66,7 +67,7 @@ const GARMENT_COLORS = [{
   hex: "#5E3B91"
 }, {
   name: "Coffee Brown",
-  hex: "#4A342A"
+  hex: "#2a333d"
 }, {
   name: "Beige",
   hex: "#D8C7A8"
@@ -438,7 +439,7 @@ function Stars({
     key: n,
     style: {
       fontSize: sz,
-      color: n <= Math.round(v) ? "#F3A23E" : "rgba(255,255,255,.22)"
+      color: n <= Math.round(v) ? "#7f8b52" : "rgba(255,255,255,.22)"
     }
   }, "★")));
 }
@@ -462,7 +463,7 @@ function StarPicker({
       padding: 2,
       fontSize: 26,
       lineHeight: 1,
-      color: n <= value ? "#F3A23E" : "rgba(255,255,255,.25)"
+      color: n <= value ? "#7f8b52" : "rgba(255,255,255,.25)"
     },
     "aria-label": n + " star"
   }, "★")));
@@ -1230,7 +1231,7 @@ function Hero({
       raf = 0,
       t = 0;
     const isMobile = window.matchMedia && window.matchMedia("(max-width:760px)").matches || window.matchMedia && window.matchMedia("(hover: none)").matches;
-    const COLORS = ["#E8820C", "#F3A23E", "#27B3A3"];
+    const COLORS = ["#7f8b52", "#7f8b52", "#4889a1"];
     let pts = [];
     function size() {
       const r = cv.getBoundingClientRect();
@@ -1261,10 +1262,10 @@ function Hero({
     function frame() {
       t += 0.004;
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#161310";
+      ctx.fillStyle = "#11171d";
       ctx.fillRect(0, 0, w, h);
-      orb(w * (0.30 + Math.sin(t) * 0.05), h * (0.42 + Math.cos(t * 0.8) * 0.06), Math.max(w, h) * 0.45, "#E8820C", "2e");
-      orb(w * (0.74 + Math.cos(t * 0.7) * 0.05), h * (0.62 + Math.sin(t) * 0.05), Math.max(w, h) * 0.40, "#27B3A3", "26");
+      orb(w * (0.30 + Math.sin(t) * 0.05), h * (0.42 + Math.cos(t * 0.8) * 0.06), Math.max(w, h) * 0.45, "#7f8b52", "2e");
+      orb(w * (0.74 + Math.cos(t * 0.7) * 0.05), h * (0.62 + Math.sin(t) * 0.05), Math.max(w, h) * 0.40, "#4889a1", "26");
       for (const p of pts) {
         p.x += p.vx;
         p.y += p.vy;
@@ -1302,10 +1303,10 @@ function Hero({
     }
     function still() {
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#161310";
+      ctx.fillStyle = "#11171d";
       ctx.fillRect(0, 0, w, h);
-      orb(w * 0.32, h * 0.42, Math.max(w, h) * 0.45, "#E8820C", "2e");
-      orb(w * 0.74, h * 0.6, Math.max(w, h) * 0.4, "#27B3A3", "26");
+      orb(w * 0.32, h * 0.42, Math.max(w, h) * 0.45, "#7f8b52", "2e");
+      orb(w * 0.74, h * 0.6, Math.max(w, h) * 0.4, "#4889a1", "26");
       for (const p of pts) {
         ctx.fillStyle = p.c;
         ctx.beginPath();
@@ -1398,7 +1399,7 @@ function AddButton({
       ...base,
       ...(out ? S.addBtnDisabled : {}),
       ...(done ? {
-        background: "linear-gradient(95deg,#1f9e57,#27B3A3)",
+        background: "linear-gradient(95deg,#1f9e57,#4889a1)",
         color: "#fff",
         borderColor: "transparent"
       } : {})
@@ -1456,7 +1457,7 @@ function Store({
       fontWeight: 700,
       fontSize: 13,
       letterSpacing: ".08em",
-      color: t === "✦" ? "#13100D" : "#13100D"
+      color: t === "✦" ? "#11161b" : "#11161b"
     }
   }, t)))))), /*#__PURE__*/React.createElement("main", {
     style: S.main,
@@ -1587,14 +1588,14 @@ function Store({
         position: "absolute",
         top: 10,
         right: 10,
-        background: "linear-gradient(95deg,#E8920C,#F6B64C)",
-        color: "#13100D",
+        background: "linear-gradient(95deg,#7f8b52,#9dad63)",
+        color: "#11161b",
         fontSize: 11,
         fontWeight: 800,
         padding: "5px 11px",
         borderRadius: 999,
         fontFamily: "var(--mono)",
-        boxShadow: "0 4px 14px rgba(232,130,12,.4)",
+        boxShadow: "0 4px 14px rgba(127,139,82,.4)",
         letterSpacing: ".03em"
       }
     }, "🎮 BUNDLE"), p.category && /*#__PURE__*/React.createElement("span", {
@@ -1748,7 +1749,7 @@ function SizeChart({
       cursor: "pointer",
       border: "1px solid " + (tab === k ? T.marigold : T.line),
       background: tab === k ? T.marigold : "transparent",
-      color: tab === k ? "#13100D" : T.ink
+      color: tab === k ? "#11161b" : T.ink
     }
   }, l))), /*#__PURE__*/React.createElement("table", {
     style: {
@@ -2110,8 +2111,8 @@ function QuickView({
   }, esc(product.desc)), isBundle(product) && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 14,
-      background: "rgba(232,130,12,.08)",
-      border: "1px solid rgba(232,130,12,.25)",
+      background: "rgba(127,139,82,.08)",
+      border: "1px solid rgba(127,139,82,.25)",
       borderRadius: 12,
       padding: "13px 15px"
     }
@@ -2217,7 +2218,7 @@ function QuickView({
       cursor: "pointer",
       border: "1.5px solid " + (selStyle === st.label ? T.marigold : T.line),
       background: selStyle === st.label ? T.marigold : "transparent",
-      color: selStyle === st.label ? "#13100D" : T.ink
+      color: selStyle === st.label ? "#11161b" : T.ink
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -2291,7 +2292,7 @@ function QuickView({
       fontFamily: "var(--mono)",
       textTransform: "uppercase",
       letterSpacing: ".06em",
-      color: "#13100D",
+      color: "#11161b",
       background: T.marigold,
       padding: "2px 8px",
       borderRadius: 20,
@@ -2490,7 +2491,7 @@ function QuickView({
       cursor: "pointer",
       border: "1.5px solid " + (selSize === sz ? T.marigold : T.line),
       background: selSize === sz ? T.marigold : "transparent",
-      color: selSize === sz ? "#13100D" : T.ink
+      color: selSize === sz ? "#11161b" : T.ink
     }
   }, sz))), phoneCase && /*#__PURE__*/React.createElement("p", {
     style: {
@@ -3861,7 +3862,7 @@ function TrackOrder({
     })))), items.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "left",
-        background: T.bg || "#0f0d0a",
+        background: T.bg || "#0c1014",
         border: "1px solid " + T.line,
         borderRadius: 12,
         padding: 16,
@@ -4192,7 +4193,7 @@ function HelpCenter({
     }
   }, "Use a different order")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: T.bg || "#0f0d0a",
+      background: T.bg || "#0c1014",
       border: "1px solid " + T.line,
       borderRadius: 14,
       padding: 16,
@@ -4407,7 +4408,7 @@ function AdminSupportThread({
     }
   }, open ? "▲" : "▼")), open && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: T.bg || "#0f0d0a",
+      background: T.bg || "#0c1014",
       border: "1px solid " + T.line,
       borderRadius: 12,
       padding: 14,
@@ -5084,7 +5085,7 @@ function AdminOrders({
       style: {
         height: "100%",
         width: Math.round(qty / maxQty * 100) + "%",
-        background: "linear-gradient(90deg,#F3A23E,#27B3A3)"
+        background: "linear-gradient(90deg,#7f8b52,#4889a1)"
       }
     }))))), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -5130,7 +5131,7 @@ function AdminOrders({
         width: "100%",
         height: Math.round(d.n / maxDay * 60) + "px",
         minHeight: d.n ? 4 : 2,
-        background: d.n ? "linear-gradient(180deg,#F3A23E,#E8820C)" : T.tint,
+        background: d.n ? "linear-gradient(180deg,#7f8b52,#7f8b52)" : T.tint,
         borderRadius: "4px 4px 0 0"
       }
     }), /*#__PURE__*/React.createElement("div", {
@@ -5305,7 +5306,7 @@ function AdminOrders({
         borderRadius: 10,
         overflow: "hidden",
         flexShrink: 0,
-        background: T.bg || "#0f0d0a"
+        background: T.bg || "#0c1014"
       }
     }, p.img && /*#__PURE__*/React.createElement("img", {
       src: p.img,
@@ -5349,7 +5350,7 @@ function AdminOrders({
         fontSize: 10.5,
         padding: "2px 8px",
         borderRadius: 999,
-        background: oos ? "rgba(232,130,12,.15)" : "rgba(31,158,87,.15)",
+        background: oos ? "rgba(127,139,82,.15)" : "rgba(31,158,87,.15)",
         color: oos ? T.marigold : "#34c77b",
         fontFamily: "var(--mono)",
         fontWeight: 600
@@ -5857,7 +5858,7 @@ function ProductEditor({
         borderRadius: 8,
         overflow: "hidden",
         flexShrink: 0,
-        background: T.bg || "#0f0d0a",
+        background: T.bg || "#0c1014",
         display: "flex",
         alignItems: "center",
         justifyContent: "center"
@@ -6051,7 +6052,7 @@ function ProductEditor({
       borderRadius: 10,
       overflow: "hidden",
       marginBottom: 12,
-      background: T.bg || "#0f0d0a"
+      background: T.bg || "#0c1014"
     }
   }, /*#__PURE__*/React.createElement("img", {
     src: f.img,
@@ -6564,7 +6565,7 @@ function AdminRow({
       fontSize: 11.5,
       padding: "3px 9px",
       borderRadius: 999,
-      background: o.paid ? "rgba(31,158,87,.15)" : "rgba(232,130,12,.15)",
+      background: o.paid ? "rgba(31,158,87,.15)" : "rgba(127,139,82,.15)",
       color: o.paid ? "#34c77b" : T.marigold,
       fontFamily: "var(--mono)",
       fontWeight: 600
@@ -6584,7 +6585,7 @@ function AdminRow({
       fontSize: 11.5,
       padding: "3px 9px",
       borderRadius: 999,
-      background: review === "approved" ? "rgba(31,158,87,.15)" : review === "rejected" ? "rgba(229,104,90,.18)" : "rgba(232,130,12,.18)",
+      background: review === "approved" ? "rgba(31,158,87,.15)" : review === "rejected" ? "rgba(229,104,90,.18)" : "rgba(127,139,82,.18)",
       color: review === "approved" ? "#34c77b" : review === "rejected" ? "#e5685a" : T.marigold,
       fontFamily: "var(--mono)",
       fontWeight: 700
@@ -6630,7 +6631,7 @@ function AdminRow({
     style: {
       borderTop: "1px solid " + T.line,
       padding: "12px 18px",
-      background: review === "rejected" ? "rgba(229,104,90,.10)" : review === "approved" ? "rgba(31,158,87,.07)" : "rgba(232,130,12,.10)"
+      background: review === "rejected" ? "rgba(229,104,90,.10)" : review === "approved" ? "rgba(31,158,87,.07)" : "rgba(127,139,82,.10)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6715,7 +6716,7 @@ function AdminRow({
   }, open ? "▾ Hide items" : "▸ " + items.reduce((n, i) => n + (i.qty || 1), 0) + " item" + (items.reduce((n, i) => n + (i.qty || 1), 0) === 1 ? "" : "s")), open && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
-      background: T.bg || "#0f0d0a",
+      background: T.bg || "#0c1014",
       borderRadius: 10,
       padding: "10px 12px"
     }
@@ -6741,7 +6742,7 @@ function AdminRow({
     style: {
       borderTop: "1px solid " + T.line,
       padding: "14px 18px",
-      background: "rgba(232,130,12,.07)"
+      background: "rgba(127,139,82,.07)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7256,7 +7257,7 @@ function AdminRow({
     }
   }, addressText))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: o.paid ? "rgba(31,158,87,.1)" : "rgba(232,130,12,.1)",
+      background: o.paid ? "rgba(31,158,87,.1)" : "rgba(127,139,82,.1)",
       border: "1px solid " + T.line,
       borderRadius: 10,
       padding: "9px 12px",
@@ -7650,7 +7651,7 @@ const S = {
     position: "absolute",
     top: -6,
     right: -6,
-    background: "#0F0C09",
+    background: "#0a0e12",
     color: "#fff",
     borderRadius: 999,
     fontSize: 11,
@@ -7700,7 +7701,7 @@ const S = {
     display: "flex",
     alignItems: "center",
     overflow: "hidden",
-    background: "#161310"
+    background: "#11171d"
   },
   heroCanvas: {
     position: "absolute",
@@ -7728,7 +7729,7 @@ const S = {
     fontSize: 12,
     letterSpacing: ".12em",
     textTransform: "uppercase",
-    color: "#F3A23E",
+    color: "#7f8b52",
     margin: "0 0 16px"
   },
   heroTitle: {
@@ -7742,7 +7743,7 @@ const S = {
     textShadow: "0 2px 40px rgba(0,0,0,.45)"
   },
   heroAccent: {
-    background: "linear-gradient(90deg,#F3A23E,#E8820C 55%,#27B3A3)",
+    background: "linear-gradient(90deg,#7f8b52,#7f8b52 55%,#4889a1)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
@@ -7769,13 +7770,13 @@ const S = {
   },
   heroPrimary: {
     border: "none",
-    background: "linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",
+    background: "linear-gradient(95deg,#7f8b52,#7f8b52 60%,#4889a1)",
     color: "#fff",
     fontWeight: 800,
     fontSize: 15,
     borderRadius: 999,
     padding: "14px 28px",
-    boxShadow: "0 12px 34px rgba(232,130,12,.45)",
+    boxShadow: "0 12px 34px rgba(127,139,82,.45)",
     letterSpacing: ".01em"
   },
   heroGhost: {
@@ -7815,7 +7816,7 @@ const S = {
   marquee: {
     overflow: "hidden",
     whiteSpace: "nowrap",
-    background: "linear-gradient(90deg,#F3A23E,#E8820C 50%,#27B3A3)",
+    background: "linear-gradient(90deg,#7f8b52,#7f8b52 50%,#4889a1)",
     padding: "11px 0"
   },
   marqueeTrack: {
@@ -7832,7 +7833,7 @@ const S = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    background: "linear-gradient(180deg,#221C16,#191510)",
+    background: "linear-gradient(180deg,#161d24,#131a20)",
     border: "1px solid rgba(255,255,255,.08)",
     borderRadius: 16,
     padding: "14px 16px"
@@ -7872,7 +7873,7 @@ const S = {
     marginTop: 56,
     padding: "clamp(32px,5vw,56px)",
     borderRadius: 24,
-    background: "radial-gradient(120% 140% at 15% 10%, rgba(232,130,12,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#221C16,#191510)",
+    background: "radial-gradient(120% 140% at 15% 10%, rgba(127,139,82,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#161d24,#131a20)",
     border: "1px solid rgba(255,255,255,.08)"
   },
   aboutInner: {
@@ -7883,7 +7884,7 @@ const S = {
     fontSize: 12,
     letterSpacing: ".12em",
     textTransform: "uppercase",
-    color: "#F3A23E",
+    color: "#7f8b52",
     margin: "0 0 14px"
   },
   aboutTitle: {
@@ -8015,7 +8016,7 @@ const S = {
   },
   chipOn: {
     borderColor: "transparent",
-    background: "linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",
+    background: "linear-gradient(95deg,#7f8b52,#7f8b52 60%,#4889a1)",
     color: "#fff"
   },
   countText: {
@@ -8052,7 +8053,7 @@ const S = {
     gap: 20
   },
   prodCard: {
-    background: "linear-gradient(180deg,#221C16,#191510)",
+    background: "linear-gradient(180deg,#161d24,#131a20)",
     border: "1px solid rgba(255,255,255,.07)",
     borderRadius: 18,
     overflow: "hidden",
@@ -8090,7 +8091,7 @@ const S = {
     position: "absolute",
     top: 10,
     left: 10,
-    background: "linear-gradient(95deg,#27B3A3,#1f9e8c)",
+    background: "linear-gradient(95deg,#4889a1,#1f9e8c)",
     color: "#fff",
     fontSize: 12,
     fontWeight: 800,
@@ -8149,7 +8150,7 @@ const S = {
   drawerScrim: {
     position: "fixed",
     inset: 0,
-    background: "rgba(6,5,3,.55)",
+    background: "rgba(5,7,10,.55)",
     zIndex: 50,
     display: "flex",
     justifyContent: "flex-end"
@@ -8236,7 +8237,7 @@ const S = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(6,5,3,.6)",
+    background: "rgba(5,7,10,.6)",
     zIndex: 60,
     display: "flex",
     alignItems: "center",
@@ -8299,7 +8300,7 @@ const S = {
   payChipOn: {
     borderColor: T.teal,
     color: T.teal,
-    background: "rgba(44,187,169,.14)"
+    background: "rgba(78,147,173,.14)"
   },
   payOpt: {
     display: "flex",
@@ -8314,7 +8315,7 @@ const S = {
   },
   payOptOn: {
     borderColor: T.teal,
-    background: "rgba(44,187,169,.12)"
+    background: "rgba(78,147,173,.12)"
   },
   payRadio: {
     flex: "0 0 auto",

@@ -610,9 +610,9 @@ function emailHeader() {
 }
 function emailFooter() {
   const site = process.env.SITE_URL || "https://shopvectorgrid.com";
-  return `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e6e2da">
-    <p style="margin:0 0 10px"><a href="${INSTAGRAM_URL}" style="color:#E8820C;text-decoration:none;font-size:13px;font-weight:bold">📸 Follow us on Instagram ${INSTAGRAM_HANDLE}</a></p>
-    <p style="color:#aaa;font-size:12px;margin:0;line-height:1.6">Vector Grid · Ships pan-India<br/><a href="${site}" style="color:#E8820C;text-decoration:none">${site.replace(/^https?:\/\//,"")}</a></p>
+  return `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #dfe3e1">
+    <p style="margin:0 0 10px"><a href="${INSTAGRAM_URL}" style="color:#5F6B3C;text-decoration:none;font-size:13px;font-weight:bold">📸 Follow us on Instagram ${INSTAGRAM_HANDLE}</a></p>
+    <p style="color:#aaa;font-size:12px;margin:0;line-height:1.6">Vector Grid · Ships pan-India<br/><a href="${site}" style="color:#5F6B3C;text-decoration:none">${site.replace(/^https?:\/\//,"")}</a></p>
   </div>`;
 }
 function emailShell(innerHtml) {
@@ -645,7 +645,7 @@ async function notifyReviewRequest(orderRow) {
     "Thank you for shopping with Vector Grid!",
     "— Team Vector Grid",
   ].join("\n");
-  const itemsHtml = prods.map(p => `<tr><td style="padding:9px 0;color:#444;font-size:14px">${eh(p.name)}</td><td style="padding:9px 0;text-align:right"><a href="${rateLink(p)}" style="background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:13px;padding:8px 16px;border-radius:999px;display:inline-block">★ Rate this</a></td></tr>`).join("");
+  const itemsHtml = prods.map(p => `<tr><td style="padding:9px 0;color:#444;font-size:14px">${eh(p.name)}</td><td style="padding:9px 0;text-align:right"><a href="${rateLink(p)}" style="background:#7F8B52;color:#fff;text-decoration:none;font-weight:bold;font-size:13px;padding:8px 16px;border-radius:999px;display:inline-block">★ Rate this</a></td></tr>`).join("");
   const html = emailShell(`
     <h2 style="color:#111;margin:0 0 6px">How was your order, ${eh(orderRow.name || "")}?</h2>
     <p style="color:#555;line-height:1.5;margin:0 0 18px">Your order <strong>${eh(orderRow.id)}</strong> has been delivered — we hope you love it! Could you take 30 seconds to rate what you received? It really helps us keep improving.</p>
@@ -670,7 +670,7 @@ async function notifyRestock(productId, productName) {
   for (const row of r.rows) {
     const html = emailShell(`<h2 style="color:#111;margin:0 0 10px">Good news — it's back! 🎉</h2>
       <p style="color:#555;line-height:1.6;margin:0 0 18px"><strong>${eh(productName)}</strong> is back in stock at Vector Grid. Grab it before it sells out again!</p>
-      <div style="text-align:center;margin:20px 0"><a href="${site}" style="display:inline-block;background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:13px 28px;border-radius:999px">Shop now</a></div>`);
+      <div style="text-align:center;margin:20px 0"><a href="${site}" style="display:inline-block;background:#7F8B52;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:13px 28px;border-radius:999px">Shop now</a></div>`);
     try {
       await sendMail(row.email, `${productName} is back in stock!`, `Good news! ${productName} is back in stock at Vector Grid. Shop now: ${site}`, ORDER_TO, html);
     } catch (e) { console.error("restock mail failed:", e && e.message); }
@@ -684,6 +684,27 @@ async function notifyBuyer(order) {
   if (!RESEND_API_KEY || !c.email) return;
   const site = process.env.SITE_URL || "https://vector-grid.onrender.com";
   const confirmUrl = `${site}/api/confirm?o=${encodeURIComponent(order.id)}&t=${encodeURIComponent(order.confirmToken || "")}`;
+  // COD orders: create a self-service "upgrade to prepaid & save X%" payment link the customer can pay straight from this email.
+  // When they pay, Razorpay redirects to /api/prepaid-done which verifies the payment and flips the order to prepaid automatically.
+  let upgradeUrl = "", upDiscount = 0, upAmount = 0;
+  if (!order.paid && razorpay) {
+    try {
+      upDiscount = Math.round(Number(order.subtotal || 0) * PREPAID_DISCOUNT_PCT / 100);
+      upAmount = Math.max(1, Number(order.subtotal || 0) + Number(order.shipping || 0) - upDiscount);
+      const link = await razorpay.paymentLink.create({
+        amount: upAmount * 100, currency: "INR", accept_partial: false,
+        reference_id: order.id + "-" + Date.now().toString(36),
+        description: `Order ${order.id} — pay online & save ${PREPAID_DISCOUNT_PCT}%`,
+        customer: { name: c.name || "", contact: c.phone ? ("+91" + String(c.phone).replace(/\D/g, "").slice(-10)) : undefined, email: c.email || undefined },
+        notify: { sms: false, email: false }, // we send our own branded email instead
+        reminder_enable: true,
+        notes: { orderId: order.id },
+        callback_url: `${site}/api/prepaid-done`,
+        callback_method: "get",
+      });
+      upgradeUrl = link.short_url;
+    } catch (e) { console.error("upgrade link failed:", e && (e.error && e.error.description || e.message)); upgradeUrl = ""; }
+  }
   const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const items = order.lineItems.map(li => `- ${li.name} x${li.qty} — ${rupee(li.price * li.qty)}`).join("\n");
   const body = [
@@ -695,6 +716,7 @@ async function notifyBuyer(order) {
     "",
     `Order ID: ${order.id}`,
     `Payment: ${order.paid ? "Paid online" : "Cash on Delivery"}`,
+    ...(upgradeUrl ? ["", `💸 SAVE ${PREPAID_DISCOUNT_PCT}%: Switch to paying online instead of COD. Pay ${rupee(upAmount)} now (you save ${rupee(upDiscount)}) and we'll ship it faster: ${upgradeUrl}`] : []),
     "",
     "Items:",
     items,
@@ -720,17 +742,22 @@ async function notifyBuyer(order) {
     <h2 style="color:#111;margin:0 0 6px">Hi ${eh(c.name)}, please confirm your order</h2>
     <p style="color:#555;line-height:1.5;margin:0 0 18px">Thanks for your order with <strong>Vector Grid</strong>! We've received it and just need you to confirm you're ready to receive it before we ship.</p>
     <div style="text-align:center;margin:22px 0">
-      <a href="${confirmUrl}" style="display:inline-block;background:#E8820C;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:999px">✅ Yes, confirm my order</a>
+      <a href="${confirmUrl}" style="display:inline-block;background:#7F8B52;color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:999px">✅ Yes, confirm my order</a>
     </div>
     <p style="color:#888;font-size:12px;text-align:center;margin:0 0 22px">If the button doesn't work, copy this link:<br>${confirmUrl}</p>
-    <div style="background:#f6f4f0;border-radius:10px;padding:16px">
+    ${upgradeUrl ? `<div style="background:#ecfdf3;border:1px solid #abebc6;border-radius:12px;padding:18px;margin:0 0 18px;text-align:center">
+      <p style="margin:0 0 4px;color:#0a7d3c;font-weight:bold;font-size:15px">💸 Prefer to save ${PREPAID_DISCOUNT_PCT}%?</p>
+      <p style="margin:0 0 14px;color:#444;font-size:13px;line-height:1.5">Switch from Cash on Delivery to paying online and get <strong>${PREPAID_DISCOUNT_PCT}% off</strong>. Pay just <strong>${rupee(upAmount)}</strong> now instead of ${rupee(order.total)} on delivery — and we'll ship it faster.</p>
+      <a href="${upgradeUrl}" style="display:inline-block;background:#0a7d3c;color:#fff;text-decoration:none;font-weight:bold;font-size:15px;padding:13px 28px;border-radius:999px">Pay online &amp; save ${rupee(upDiscount)}</a>
+    </div>` : ""}
+    <div style="background:#f1f4f3;border-radius:10px;padding:16px">
       <p style="margin:0 0 8px;color:#111;font-weight:bold">Order ${eh(order.id)} — ${order.paid ? "Paid online" : "Cash on Delivery"}</p>
       <table style="width:100%;font-size:14px;border-collapse:collapse">${itemsHtml}
         <tr><td style="padding-top:8px;color:#555;border-top:1px solid #ddd">Total</td><td style="padding-top:8px;text-align:right;font-weight:bold;border-top:1px solid #ddd">${rupee(order.total)}${order.paid ? "" : " (pay on delivery)"}</td></tr>
       </table>
       <p style="margin:12px 0 0;color:#555;font-size:13px">Delivering to: ${eh(c.line1)}${c.line2 ? ", " + eh(c.line2) : ""}, ${eh(c.city)}, ${eh(c.state)} - ${eh(c.pincode)}</p>
     </div>
-    <p style="color:#888;font-size:13px;line-height:1.5;margin:18px 0 0">Once you confirm, we'll pack and ship your order. Track anytime at <a href="${site}" style="color:#E8820C">${site.replace(/^https?:\/\//,"")}</a> using Order ID ${eh(order.id)} and your phone number.</p>`);
+    <p style="color:#888;font-size:13px;line-height:1.5;margin:18px 0 0">Once you confirm, we'll pack and ship your order. Track anytime at <a href="${site}" style="color:#5F6B3C">${site.replace(/^https?:\/\//,"")}</a> using Order ID ${eh(order.id)} and your phone number.</p>`);
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
@@ -738,7 +765,7 @@ async function notifyBuyer(order) {
       from: ORDER_FROM,
       to: [c.email],
       reply_to: ORDER_TO,
-      subject: `Please confirm your Vector Grid order ${order.id}`,
+      subject: upgradeUrl ? `Confirm your Vector Grid order ${order.id} — or pay online & save ${PREPAID_DISCOUNT_PCT}%` : `Please confirm your Vector Grid order ${order.id}`,
       text: body,
       html: html,
     }),
@@ -999,6 +1026,58 @@ app.post("/api/admin/mark-paid", async (req, res) => {
   } catch (e) { console.error("mark paid failed:", e && e.message); res.status(500).json({ error: "Couldn't update the order." }); }
 });
 
+// PUBLIC callback: Razorpay redirects the customer here after they pay the "upgrade to prepaid" link from their email.
+// Security: the Razorpay signature is verified, and the link is re-fetched server-side to confirm it's truly paid before
+// the order is flipped to prepaid. No order can be marked paid without a real, verified payment.
+app.get("/api/prepaid-done", async (req, res) => {
+  const page = (heading, sub, ok) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${heading}</title></head>
+    <body style="font-family:Arial,Helvetica,sans-serif;background:#11161b;color:#e9e7df;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px">
+      <div style="max-width:460px;text-align:center;background:#19212a;border:1px solid #2a333d;border-radius:16px;padding:32px">
+        <div style="font-size:46px;line-height:1;margin-bottom:10px">${ok ? "✅" : "⚠️"}</div>
+        <h1 style="margin:0 0 10px;font-size:22px;color:#fff">${heading}</h1>
+        <p style="margin:0 0 22px;color:#a6aeb0;line-height:1.6;font-size:15px">${sub}</p>
+        <a href="${process.env.SITE_URL || "https://shopvectorgrid.com"}" style="display:inline-block;background:#7F8B52;color:#11161b;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 26px;border-radius:999px">Back to Vector Grid</a>
+      </div></body></html>`;
+  try {
+    if (!pool) return res.status(503).send(page("Briefly unavailable", "Our store is momentarily unavailable. If you were charged, your payment is safe — please contact us and we'll confirm your order.", false));
+    if (!razorpay || !KEY_SECRET) return res.status(503).send(page("Payments unavailable", "Online payment isn't set up right now.", false));
+    const q = req.query || {};
+    const pid = String(q.razorpay_payment_id || "");
+    const plid = String(q.razorpay_payment_link_id || "");
+    const pref = String(q.razorpay_payment_link_reference_id || "");
+    const pstatus = String(q.razorpay_payment_link_status || "");
+    const sig = String(q.razorpay_signature || "");
+    if (!plid || !sig) return res.status(400).send(page("Incomplete link", "This payment link looks incomplete. If money was deducted, please contact us with your order ID.", false));
+    // 1) Verify the Razorpay payment-link signature (proves this redirect is genuine and untampered).
+    const expected = crypto.createHmac("sha256", KEY_SECRET).update(plid + "|" + pref + "|" + pstatus + "|" + pid).digest("hex");
+    const A = Buffer.from(expected), B = Buffer.from(sig);
+    if (A.length !== B.length || !crypto.timingSafeEqual(A, B)) return res.status(400).send(page("Couldn't verify payment", "We couldn't automatically verify this payment. If money was deducted, contact us with your order ID and we'll confirm it manually.", false));
+    if (pstatus !== "paid") return res.send(page("Payment not completed", "It looks like the payment wasn't completed, so your order is still Cash on Delivery. You can try the link again from your confirmation email.", false));
+    // 2) Re-fetch the link server-side to read our order id from notes and double-confirm it is really paid.
+    let orderId = "";
+    try {
+      const link = await razorpay.paymentLink.fetch(plid);
+      if (link && link.status !== "paid") return res.send(page("Payment not completed", "This payment isn't showing as completed yet. If you were charged, contact us with your order ID.", false));
+      orderId = (link && link.notes && link.notes.orderId) ? String(link.notes.orderId) : "";
+    } catch (e) { orderId = pref.replace(/-[a-z0-9]+$/i, ""); } // fallback: derive from reference_id
+    orderId = orderId.trim().toUpperCase();
+    if (!orderId) return res.status(400).send(page("Order not found", "We couldn't match this payment to an order. Please contact us with your order ID.", false));
+    // 3) Flip the order to prepaid (idempotent) and apply the pay-online discount — recomputed server-side.
+    const r = await pool.query("SELECT subtotal,shipping,paid FROM orders WHERE id=$1", [orderId]);
+    if (r.rowCount === 0) return res.status(404).send(page("Order not found", "We couldn't find that order. If you were charged, please contact us.", false));
+    if (r.rows[0].paid) return res.send(page("You're all set 🎉", `Order ${orderId} is already marked paid — we'll ship it soon. Thank you!`, true));
+    const discount = Math.round(Number(r.rows[0].subtotal || 0) * PREPAID_DISCOUNT_PCT / 100);
+    const newTotal = Math.max(0, Number(r.rows[0].subtotal || 0) + Number(r.rows[0].shipping || 0) - discount);
+    await pool.query("UPDATE orders SET paid=true, cod_fee=0, total=$2, payment_id=$3, customer_confirmed=true, updated_at=now() WHERE id=$1", [orderId, newTotal, pid || null]);
+    // Let the seller know RTO risk is gone and it's safe to ship (best-effort).
+    sendMail(ORDER_TO, `💰 Order ${orderId} upgraded to PREPAID`, `Good news — the customer paid online for order ${orderId}. RTO risk is gone (₹${newTotal} received, ${PREPAID_DISCOUNT_PCT}% discount applied). Safe to ship.`).catch(() => {});
+    return res.send(page("Payment successful 🎉", `Thanks! Order ${orderId} is now prepaid and your ${PREPAID_DISCOUNT_PCT}% discount has been applied. We'll pack and ship it shortly.`, true));
+  } catch (e) {
+    console.error("prepaid-done failed:", e && e.message);
+    return res.status(500).send(page("Something went wrong", "We hit an error confirming your payment. If money was deducted, please contact us with your order ID and we'll fix it.", false));
+  }
+});
+
 // Create a Razorpay order (amount computed from trusted prices)
 app.post("/api/create-order", async (req, res) => {
   if (!razorpay) return res.status(503).json({ error: "Payments are not set up yet." });
@@ -1090,11 +1169,11 @@ app.post("/api/track", async (req, res) => {
 
 // ---- Customer clicks the "confirm my order" button in their email ----
 function confirmPage(title, message, ok) {
-  const accent = ok ? "#1f9e57" : "#E8820C";
+  const accent = ok ? "#1f9e57" : "#7F8B52";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title>
-  <style>body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#13100D;color:#F3EFE8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-  .card{background:#1C1814;border:1px solid #2F2922;border-radius:18px;padding:34px 28px;max-width:420px;text-align:center}
-  .ic{font-size:48px;margin-bottom:8px}.t{font-size:22px;font-weight:700;margin:0 0 10px}.m{color:#B9B0A3;line-height:1.55;font-size:15px;margin:0 0 20px}
+  <style>body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#11161b;color:#e9e7df;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .card{background:#19212a;border:1px solid #2a333d;border-radius:18px;padding:34px 28px;max-width:420px;text-align:center}
+  .ic{font-size:48px;margin-bottom:8px}.t{font-size:22px;font-weight:700;margin:0 0 10px}.m{color:#99a09f;line-height:1.55;font-size:15px;margin:0 0 20px}
   .b{display:inline-block;background:${accent};color:#fff;text-decoration:none;font-weight:700;padding:12px 26px;border-radius:999px;font-size:15px}</style></head>
   <body><div class="card"><div class="ic">${ok ? "✅" : "ℹ️"}</div><h1 class="t">${title}</h1><p class="m">${message}</p>
   <a class="b" href="${process.env.SITE_URL || "/"}">Continue shopping</a></div></body></html>`;
@@ -1422,7 +1501,7 @@ app.post("/api/admin/support-reply", async (req, res) => {
       const eh = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const inner = `<h2 style="color:#111;margin:0 0 10px">Hi ${eh(o.name)}, you have a reply</h2>
         <p style="color:#555;line-height:1.6;margin:0 0 12px">About your order <strong>${eh(o.id)}</strong>:</p>
-        <p style="color:#222;line-height:1.6;margin:0 0 14px;padding:12px 14px;background:#f5f3ef;border-radius:8px">${eh(body)}</p>
+        <p style="color:#222;line-height:1.6;margin:0 0 14px;padding:12px 14px;background:#f1f4f3;border-radius:8px">${eh(body)}</p>
         <p style="color:#888;font-size:13px;line-height:1.6;margin:0">To reply, open our Help Center and enter your order ID and phone number.</p>`;
       const text = `Hi ${o.name},\n\nYou have a reply about order ${o.id}:\n\n"${body}"\n\nTo continue the conversation, open our Help Center and enter your order ID and phone number.\n\n— Team Vector Grid`;
       try { await sendMail(o.email, `Reply about your order ${o.id} — Vector Grid`, text, ORDER_TO, emailShell(inner)); } catch (e) { console.error("support reply email failed:", e && e.message); }

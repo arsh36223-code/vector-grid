@@ -1,7 +1,7 @@
 const { useState, useEffect, useMemo } = React;
 const API = "";
 
-const T = { paper:"#13100D", card:"#1C1814", ink:"#F3EFE8", inkSoft:"#B9B0A3", muted:"#8A8175", line:"#2F2922", marigold:"#EF901E", marigoldDark:"#C96A00", teal:"#2CBBA9", tint:"#221A11", danger:"#E5685A" };
+const T = { paper:"#11161B", card:"#19212A", bg:"#0C1014", ink:"#E9E7DF", inkSoft:"#A6AEB0", muted:"#7C8794", line:"#2A333D", marigold:"#7f8b52", marigoldDark:"#5f6b3c", teal:"#4E93AD", tint:"#19222B", danger:"#E5685A" };
 const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh","Puducherry","Chandigarh","Andaman & Nicobar"];
 // Phone models offered for the custom phone case (keep in sync with the server's list).
 const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,iPhone 15 Pro Max,iPhone 15 Pro,iPhone 15 Plus,iPhone 15,iPhone 14 Pro Max,iPhone 14 Pro,iPhone 14 Plus,iPhone 14,iPhone 13 Pro Max,iPhone 13 Pro,iPhone 13,iPhone 13 mini,iPhone 12 Pro Max,iPhone 12 Pro,iPhone 12,iPhone 11 Pro Max,iPhone 11 Pro,iPhone 11,iPhone SE 2022,Samsung Galaxy S24 Ultra,Samsung Galaxy S24 Plus,Samsung Galaxy S24,Samsung Galaxy S23 Ultra,Samsung Galaxy S23,Samsung Galaxy S22,Samsung Galaxy A55,Samsung Galaxy A54,Samsung Galaxy A35,OnePlus 12,OnePlus 11,OnePlus Nord 3,Nothing Phone 2,Nothing Phone 2a,Google Pixel 8 Pro,Google Pixel 8";
@@ -10,8 +10,8 @@ const PHONE_MODELS = "iPhone 16 Pro Max,iPhone 16 Pro,iPhone 16 Plus,iPhone 16,i
 const GARMENT_COLORS = [
   {name:"White",hex:"#F4F2ED"},{name:"Black",hex:"#1A1A1A"},{name:"Navy Blue",hex:"#22314F"},{name:"Royal Blue",hex:"#2A4FA0"},
   {name:"Red",hex:"#C62828"},{name:"Maroon",hex:"#5E1F2A"},{name:"Bottle Green",hex:"#15463B"},{name:"Olive Green",hex:"#5B5A2E"},
-  {name:"Grey Melange",hex:"#B7B7B2"},{name:"Charcoal Melange",hex:"#454443"},{name:"Golden Yellow",hex:"#F2B807"},{name:"Mustard",hex:"#C8932B"},
-  {name:"Sky Blue",hex:"#86C5E0"},{name:"Purple",hex:"#5E3B91"},{name:"Coffee Brown",hex:"#4A342A"},{name:"Beige",hex:"#D8C7A8"},
+  {name:"Grey Melange",hex:"#B7B7B2"},{name:"Charcoal Melange",hex:"#454443"},{name:"Golden Yellow",hex:"#7f8b52"},{name:"Mustard",hex:"#7c8a44"},
+  {name:"Sky Blue",hex:"#86C5E0"},{name:"Purple",hex:"#5E3B91"},{name:"Coffee Brown",hex:"#2a333d"},{name:"Beige",hex:"#D8C7A8"},
 ];
 const MUG_COLORS = [{name:"White",hex:"#F2F1EC"},{name:"Black (inner & handle)",hex:"#1A1A1A"}];
 const SEED = [
@@ -88,11 +88,11 @@ const canvasOut = (cv, q) => { const webp = cv.toDataURL("image/webp", q); retur
 const isPhoneCase = (p) => /\bphone\s*(case|cover)/i.test((p && p.name) || "");
 function Stars({value,size}){ const v=Number(value)||0; const sz=size||14;
   return (<span style={{display:"inline-flex",gap:1,lineHeight:1}} aria-label={v+" out of 5"}>
-    {[1,2,3,4,5].map(n=>(<span key={n} style={{fontSize:sz,color:n<=Math.round(v)?"#F3A23E":"rgba(255,255,255,.22)"}}>★</span>))}
+    {[1,2,3,4,5].map(n=>(<span key={n} style={{fontSize:sz,color:n<=Math.round(v)?"#7f8b52":"rgba(255,255,255,.22)"}}>★</span>))}
   </span>);
 }
 function StarPicker({value,onChange}){ return (<span style={{display:"inline-flex",gap:4}}>
-  {[1,2,3,4,5].map(n=>(<button key={n} type="button" onClick={()=>onChange(n)} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:26,lineHeight:1,color:n<=value?"#F3A23E":"rgba(255,255,255,.25)"}} aria-label={n+" star"}>★</button>))}
+  {[1,2,3,4,5].map(n=>(<button key={n} type="button" onClick={()=>onChange(n)} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:26,lineHeight:1,color:n<=value?"#7f8b52":"rgba(255,255,255,.25)"}} aria-label={n+" star"}>★</button>))}
 </span>); }
 // Trust + "how it works" reassurance shown on custom (prepaid) products, where buyers hesitate most.
 function CustomTrust({product,phoneCase}){
@@ -387,7 +387,7 @@ function Hero({onShop,onTrack}){
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx=cv.getContext("2d"); let w=0,h=0,dpr=Math.min(window.devicePixelRatio||1,2),raf=0,t=0;
     const isMobile = (window.matchMedia && window.matchMedia("(max-width:760px)").matches) || (window.matchMedia && window.matchMedia("(hover: none)").matches);
-    const COLORS=["#E8820C","#F3A23E","#27B3A3"];
+    const COLORS=["#7f8b52","#7f8b52","#4889a1"];
     let pts=[];
     function size(){ const r=cv.getBoundingClientRect(); w=r.width; h=r.height; cv.width=w*dpr; cv.height=h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
       const n=isMobile ? Math.max(14,Math.min(24,Math.round(w/22))) : Math.max(28,Math.min(70,Math.round(w/16)));
@@ -396,16 +396,16 @@ function Hero({onShop,onTrack}){
     function orb(cx,cy,rad,col,a){ const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,col+a); g.addColorStop(1,"#00000000"); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
     function frame(){ t+=0.004;
       ctx.clearRect(0,0,w,h);
-      ctx.fillStyle="#161310"; ctx.fillRect(0,0,w,h);
-      orb(w*(0.30+Math.sin(t)*0.05), h*(0.42+Math.cos(t*0.8)*0.06), Math.max(w,h)*0.45, "#E8820C","2e");
-      orb(w*(0.74+Math.cos(t*0.7)*0.05), h*(0.62+Math.sin(t)*0.05), Math.max(w,h)*0.40, "#27B3A3","26");
+      ctx.fillStyle="#11171d"; ctx.fillRect(0,0,w,h);
+      orb(w*(0.30+Math.sin(t)*0.05), h*(0.42+Math.cos(t*0.8)*0.06), Math.max(w,h)*0.45, "#7f8b52","2e");
+      orb(w*(0.74+Math.cos(t*0.7)*0.05), h*(0.62+Math.sin(t)*0.05), Math.max(w,h)*0.40, "#4889a1","26");
       for(const p of pts){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1; }
       if(!isMobile){ for(let i=0;i<pts.length;i++){ for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j]; const dx=a.x-b.x,dy=a.y-b.y; const d=dx*dx+dy*dy; if(d<11000){ ctx.strokeStyle="rgba(243,162,62,"+(0.10*(1-d/11000))+")"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); } } } }
       for(const p of pts){ ctx.fillStyle=p.c; ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
       ctx.globalAlpha=1;
       raf=requestAnimationFrame(frame);
     }
-    function still(){ ctx.clearRect(0,0,w,h); ctx.fillStyle="#161310"; ctx.fillRect(0,0,w,h); orb(w*0.32,h*0.42,Math.max(w,h)*0.45,"#E8820C","2e"); orb(w*0.74,h*0.6,Math.max(w,h)*0.4,"#27B3A3","26"); for(const p of pts){ ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); } }
+    function still(){ ctx.clearRect(0,0,w,h); ctx.fillStyle="#11171d"; ctx.fillRect(0,0,w,h); orb(w*0.32,h*0.42,Math.max(w,h)*0.45,"#7f8b52","2e"); orb(w*0.74,h*0.6,Math.max(w,h)*0.4,"#4889a1","26"); for(const p of pts){ ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); } }
     size(); if(reduce){ still(); } else { frame(); }
     const onR=()=>{ size(); if(reduce) still(); };
     window.addEventListener("resize",onR);
@@ -435,7 +435,7 @@ function AddButton({onAdd,out,full,label}){
   const click=()=>{ if(out||done) return; onAdd(); setDone(true); setTimeout(()=>setDone(false),1100); };
   const base=full?{...S.addBtn,marginTop:18}:S.addBtn;
   return (<button disabled={out} onClick={click} className={done?"vg-added":""}
-    style={{...base,...(out?S.addBtnDisabled:{}),...(done?{background:"linear-gradient(95deg,#1f9e57,#27B3A3)",color:"#fff",borderColor:"transparent"}:{})}}>
+    style={{...base,...(out?S.addBtnDisabled:{}),...(done?{background:"linear-gradient(95deg,#1f9e57,#4889a1)",color:"#fff",borderColor:"transparent"}:{})}}>
     {out?(label&&label.out||"Sold out"):done?"Added ✓":(label&&label.add||"Add to cart")}
   </button>);
 }
@@ -463,7 +463,7 @@ function Store({products,onAdd,onQuick,onTrack}){
     <div style={S.marquee} className="vg-marquee" aria-hidden="true">
       <div style={S.marqueeTrack} className="vg-marquee-track">
         {Array.from({length:2}).map((_,k)=>(<span key={k} style={{display:"inline-flex"}}>
-          {["FREE SHIPPING OVER ₹999","✦","CASH ON DELIVERY","✦","7-DAY RETURNS ON FAULTY ITEMS","✦","SHIPS TO EVERY PINCODE","✦","SECURE RAZORPAY CHECKOUT","✦","HANDPICKED GOODS","✦"].map((t,i)=>(<span key={i} style={{padding:"0 18px",fontFamily:"var(--mono)",fontWeight:700,fontSize:13,letterSpacing:".08em",color:t==="✦"?"#13100D":"#13100D"}}>{t}</span>))}
+          {["FREE SHIPPING OVER ₹999","✦","CASH ON DELIVERY","✦","7-DAY RETURNS ON FAULTY ITEMS","✦","SHIPS TO EVERY PINCODE","✦","SECURE RAZORPAY CHECKOUT","✦","HANDPICKED GOODS","✦"].map((t,i)=>(<span key={i} style={{padding:"0 18px",fontFamily:"var(--mono)",fontWeight:700,fontSize:13,letterSpacing:".08em",color:t==="✦"?"#11161b":"#11161b"}}>{t}</span>))}
         </span>))}
       </div>
     </div>
@@ -517,7 +517,7 @@ function Store({products,onAdd,onQuick,onTrack}){
             <img src={optimizeImg(p.img,500)} alt={esc(p.name)} style={S.img} loading={gi<3?"eager":"lazy"} decoding="async" onError={(e)=>{e.currentTarget.style.opacity=0.25;}} />
             {out && <span style={S.soldOut}>Sold out</span>}
             {!out && p.mrp>p.price && <span style={S.discount}>{Math.round(100-(p.price/p.mrp)*100)}% off</span>}
-            {isBundle(p) && <span style={{position:"absolute",top:10,right:10,background:"linear-gradient(95deg,#E8920C,#F6B64C)",color:"#13100D",fontSize:11,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(232,130,12,.4)",letterSpacing:".03em"}}>🎮 BUNDLE</span>}
+            {isBundle(p) && <span style={{position:"absolute",top:10,right:10,background:"linear-gradient(95deg,#7f8b52,#9dad63)",color:"#11161b",fontSize:11,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(127,139,82,.4)",letterSpacing:".03em"}}>🎮 BUNDLE</span>}
             {p.category && <span style={S.catTag}>{p.category}</span>}
           </button>
           <div style={{padding:"14px 16px 16px",display:"flex",flexDirection:"column",flex:1}}>
@@ -562,7 +562,7 @@ function SizeChart({onClose}){
       <h2 style={S.modalTitle}>Size guide</h2><button onClick={onClose} style={S.linkBtn}>✕ Close</button>
     </div>
     <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-      {tabs.map(([k,l])=>(<button key={k} onClick={()=>setTab(k)} style={{padding:"7px 13px",borderRadius:999,fontWeight:700,fontSize:13,cursor:"pointer",border:"1px solid "+(tab===k?T.marigold:T.line),background:tab===k?T.marigold:"transparent",color:tab===k?"#13100D":T.ink}}>{l}</button>))}
+      {tabs.map(([k,l])=>(<button key={k} onClick={()=>setTab(k)} style={{padding:"7px 13px",borderRadius:999,fontWeight:700,fontSize:13,cursor:"pointer",border:"1px solid "+(tab===k?T.marigold:T.line),background:tab===k?T.marigold:"transparent",color:tab===k?"#11161b":T.ink}}>{l}</button>))}
     </div>
     <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:14}}>
       <thead><tr>{["Size","Chest (in)","Length (in)"].map(h=>(<th key={h} style={{textAlign:h==="Size"?"left":"center",padding:"9px 10px",borderBottom:"1px solid "+T.line,color:T.muted,fontSize:11,textTransform:"uppercase",letterSpacing:".05em"}}>{h}</th>))}</tr></thead>
@@ -659,7 +659,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         {avg && <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}><Stars value={avg} /><span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)"}}>{avg} · {reviews.length} review{reviews.length===1?"":"s"}</span></div>}
         <div style={S.priceRow}><span style={{...S.price,fontSize:22}}>{rupee(shownPrice)}</span>{!styleOpts.length && product.mrp>product.price && <span style={S.mrp}>{rupee(product.mrp)}</span>}</div>
         <p style={{...S.prodDesc,marginTop:12,fontSize:14,lineHeight:1.6}}>{esc(product.desc)}</p>
-        {isBundle(product) && <div style={{marginTop:14,background:"rgba(232,130,12,.08)",border:"1px solid rgba(232,130,12,.25)",borderRadius:12,padding:"13px 15px"}}>
+        {isBundle(product) && <div style={{marginTop:14,background:"rgba(127,139,82,.08)",border:"1px solid rgba(127,139,82,.25)",borderRadius:12,padding:"13px 15px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:9}}>
             <span style={{fontSize:12.5,fontWeight:800,color:T.marigold,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>🎮 What's inside</span>
             {product.mrp>product.price && <span style={{fontSize:12.5,fontWeight:800,color:"#34c77b",fontFamily:"var(--mono)"}}>You save {rupee(product.mrp-product.price)}</span>}
@@ -673,7 +673,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         {styleOpts.length>0 && <div style={{marginTop:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.ink,marginBottom:8}}>Choose your style{styleErr&&!selStyle?<span style={{color:T.danger,fontWeight:400,marginLeft:6,fontSize:12}}>· please pick one</span>:""}</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {styleOpts.map(st=>(<button key={st.label} onClick={()=>{setSelStyle(st.label);setStyleErr(false);}} style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2,padding:"9px 14px",borderRadius:12,cursor:"pointer",border:"1.5px solid "+(selStyle===st.label?T.marigold:T.line),background:selStyle===st.label?T.marigold:"transparent",color:selStyle===st.label?"#13100D":T.ink}}><span style={{fontSize:13.5,fontWeight:700}}>{esc(st.label)}</span><span style={{fontFamily:"var(--mono)",fontSize:12,opacity:.85}}>{rupee(st.price)}</span></button>))}
+            {styleOpts.map(st=>(<button key={st.label} onClick={()=>{setSelStyle(st.label);setStyleErr(false);}} style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2,padding:"9px 14px",borderRadius:12,cursor:"pointer",border:"1.5px solid "+(selStyle===st.label?T.marigold:T.line),background:selStyle===st.label?T.marigold:"transparent",color:selStyle===st.label?"#11161b":T.ink}}><span style={{fontSize:13.5,fontWeight:700}}>{esc(st.label)}</span><span style={{fontFamily:"var(--mono)",fontSize:12,opacity:.85}}>{rupee(st.price)}</span></button>))}
           </div>
         </div>}
         {colorOpts.length>0 && <div style={{marginTop:16}}>
@@ -685,7 +685,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
         {isCustom && <div style={{marginTop:18}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             <span style={{fontSize:14,fontWeight:800,color:T.ink,letterSpacing:"-.01em"}}>🎨 Design studio</span>
-            <span style={{fontSize:10.5,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".06em",color:"#13100D",background:T.marigold,padding:"2px 8px",borderRadius:20,fontWeight:700}}>live preview</span>
+            <span style={{fontSize:10.5,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".06em",color:"#11161b",background:T.marigold,padding:"2px 8px",borderRadius:20,fontWeight:700}}>live preview</span>
             {imgErr&&!customImg?<span style={{color:T.danger,fontWeight:400,fontSize:12}}>· please add an image</span>:""}
           </div>
           <input type="file" accept="image/*" id={"vg-custom-up-"+product.id} onChange={onPickCustom} style={{display:"none"}} />
@@ -717,7 +717,7 @@ function QuickView({product,onClose,onAdd}){ const out=product.stock<=0;
                 {opts.map(sz=>(<option key={sz} value={sz}>{sz}</option>))}
               </select>
             : <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {opts.map(sz=>(<button key={sz} onClick={()=>{setSelSize(sz);setSizeErr(false);}} style={{minWidth:46,padding:"9px 12px",borderRadius:10,fontFamily:"var(--mono)",fontWeight:700,fontSize:14,cursor:"pointer",border:"1.5px solid "+(selSize===sz?T.marigold:T.line),background:selSize===sz?T.marigold:"transparent",color:selSize===sz?"#13100D":T.ink}}>{sz}</button>))}
+                {opts.map(sz=>(<button key={sz} onClick={()=>{setSelSize(sz);setSizeErr(false);}} style={{minWidth:46,padding:"9px 12px",borderRadius:10,fontFamily:"var(--mono)",fontWeight:700,fontSize:14,cursor:"pointer",border:"1.5px solid "+(selSize===sz?T.marigold:T.line),background:selSize===sz?T.marigold:"transparent",color:selSize===sz?"#11161b":T.ink}}>{sz}</button>))}
               </div>}
           {phoneCase && <p style={{fontSize:11.5,color:T.muted,margin:"8px 0 0",lineHeight:1.5}}>Don't see your model? Message us — we add new models regularly.</p>}
         </div>}
@@ -947,7 +947,7 @@ function TrackOrder({onBack}){
         {cancelled
           ? <p style={{color:T.danger,marginTop:16,fontWeight:600}}>This order was cancelled. Contact us if you need help.</p>
           : <div style={S.stepper}>{steps.map((s,i)=>(<React.Fragment key={s}><div style={{textAlign:"center"}}><div style={{...S.stepDot,background:i<=idx?T.teal:T.line,color:i<=idx?"#fff":T.muted}}>{i<=idx?"✓":i+1}</div><span style={{fontSize:11,color:i<=idx?T.ink:T.muted,fontFamily:"var(--mono)"}}>{s}</span></div>{i<steps.length-1 && <div style={{...S.stepLine,background:i<idx?T.teal:T.line}} />}</React.Fragment>))}</div>}
-        {items.length>0 && <div style={{textAlign:"left",background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
+        {items.length>0 && <div style={{textAlign:"left",background:T.bg||"#0c1014",border:"1px solid "+T.line,borderRadius:12,padding:16,marginTop:18}}>
           <p style={{fontSize:12,color:T.muted,margin:"0 0 8px",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>Order details</p>
           {items.map((i,idx2)=>(<div key={idx2} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0",color:T.inkSoft}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.color?" · "+esc(i.color):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)",fontSize:11}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
           <div style={{height:1,background:T.line,margin:"8px 0"}} />
@@ -1028,7 +1028,7 @@ function HelpCenter({onBack}){
           <div><strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(thread.order.id)}</strong><span style={{fontSize:12,color:T.inkSoft,marginLeft:10,fontFamily:"var(--mono)"}}>{esc(thread.order.status||"Placed")} · {rupee(thread.order.total)}</span></div>
           <button onClick={()=>{ setThread(null); setMsg(""); setErr(""); }} style={{...S.linkBtn,fontSize:12.5}}>Use a different order</button>
         </div>
-        <div style={{background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:14,padding:16,minHeight:200,maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{background:T.bg||"#0c1014",border:"1px solid "+T.line,borderRadius:14,padding:16,minHeight:200,maxHeight:380,overflowY:"auto",display:"flex",flexDirection:"column",gap:10}}>
           {(!thread.messages||thread.messages.length===0)
             ? <p style={{color:T.muted,fontSize:13.5,textAlign:"center",margin:"auto",lineHeight:1.6,maxWidth:320}}>👋 Describe your issue or request below and we'll get back to you here. You'll also receive our reply by email.</p>
             : thread.messages.map(m=>{ const mine=m.sender==="customer"; return (
@@ -1070,7 +1070,7 @@ function AdminSupportThread({thread,adminKey,onReplied}){
       <span style={{fontSize:12,color:T.muted,fontFamily:"var(--mono)",flexShrink:0}}>{open?"▲":"▼"}</span>
     </div>
     {open && <>
-      <div style={{background:T.bg||"#0f0d0a",border:"1px solid "+T.line,borderRadius:12,padding:14,margin:"12px 0",display:"flex",flexDirection:"column",gap:9,maxHeight:300,overflowY:"auto"}}>
+      <div style={{background:T.bg||"#0c1014",border:"1px solid "+T.line,borderRadius:12,padding:14,margin:"12px 0",display:"flex",flexDirection:"column",gap:9,maxHeight:300,overflowY:"auto"}}>
         {thread.messages.map(m=>{ const seller=m.sender==="seller"; return (
           <div key={m.id} style={{alignSelf:seller?"flex-end":"flex-start",maxWidth:"85%"}}>
             <div style={{fontSize:10,color:T.muted,fontFamily:"var(--mono)",margin:seller?"0 4px 2px 0":"0 0 2px 4px",textAlign:seller?"right":"left"}}>{seller?"You":esc(thread.name)} · {new Date(m.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
@@ -1227,7 +1227,7 @@ function AdminOrders({onBack}){
                 {top.length===0 ? <p style={{fontSize:13,color:T.muted,margin:0}}>No sales yet.</p> : top.map(([name,qty])=>(
                   <div key={name} style={{marginBottom:9}}>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,marginBottom:3}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%"}}>{esc(name)}</span><span style={{color:T.ink,fontWeight:600}}>{qty}</span></div>
-                    <div style={{height:6,background:T.tint,borderRadius:999,overflow:"hidden"}}><div style={{height:"100%",width:Math.round(qty/maxQty*100)+"%",background:"linear-gradient(90deg,#F3A23E,#27B3A3)"}} /></div>
+                    <div style={{height:6,background:T.tint,borderRadius:999,overflow:"hidden"}}><div style={{height:"100%",width:Math.round(qty/maxQty*100)+"%",background:"linear-gradient(90deg,#7f8b52,#4889a1)"}} /></div>
                   </div>
                 ))}
               </div>
@@ -1236,7 +1236,7 @@ function AdminOrders({onBack}){
                 <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90}}>
                   {days.map((d,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                     <div style={{fontSize:11,color:T.ink,fontWeight:600,fontFamily:"var(--mono)"}}>{d.n||""}</div>
-                    <div style={{width:"100%",height:Math.round((d.n/maxDay)*60)+"px",minHeight:d.n?4:2,background:d.n?"linear-gradient(180deg,#F3A23E,#E8820C)":T.tint,borderRadius:"4px 4px 0 0"}} />
+                    <div style={{width:"100%",height:Math.round((d.n/maxDay)*60)+"px",minHeight:d.n?4:2,background:d.n?"linear-gradient(180deg,#7f8b52,#7f8b52)":T.tint,borderRadius:"4px 4px 0 0"}} />
                     <div style={{fontSize:9.5,color:T.muted,fontFamily:"var(--mono)",whiteSpace:"nowrap",transform:"scale(.85)"}}>{d.key.split(" ")[0]}</div>
                   </div>))}
                 </div>
@@ -1262,12 +1262,12 @@ function AdminOrders({onBack}){
             {!prodBusy && prods.length===0 && <div style={{textAlign:"center",padding:"48px 20px",background:T.card,border:"1px dashed "+T.line,borderRadius:16}}><div style={{fontSize:32,marginBottom:8}}>🛍️</div><p style={{color:T.inkSoft,margin:0}}>No products yet.</p><p style={{color:T.muted,fontSize:13,marginTop:4}}>Click “Add product” to create your first one.</p></div>}
             <div style={{display:"grid",gap:12}}>{prods.map(p=>{ const oos=p.stock<=0; return (
               <div key={p.id} style={{background:T.card,border:"1px solid "+T.line,borderRadius:12,padding:14,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-                <div style={{width:56,height:56,borderRadius:10,overflow:"hidden",flexShrink:0,background:T.bg||"#0f0d0a"}}>{p.img && <img src={p.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} />}</div>
+                <div style={{width:56,height:56,borderRadius:10,overflow:"hidden",flexShrink:0,background:T.bg||"#0c1014"}}>{p.img && <img src={p.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} />}</div>
                 <div style={{flex:1,minWidth:160}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                     <strong style={{fontSize:14,color:T.ink}}>{esc(p.name)}</strong>
                     {p.active===false && <span style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:"rgba(255,255,255,.06)",color:T.muted,fontFamily:"var(--mono)"}}>HIDDEN</span>}
-                    <span style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:oos?"rgba(232,130,12,.15)":"rgba(31,158,87,.15)",color:oos?T.marigold:"#34c77b",fontFamily:"var(--mono)",fontWeight:600}}>{oos?"OUT OF STOCK":p.stock+" in stock"}</span>
+                    <span style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:oos?"rgba(127,139,82,.15)":"rgba(31,158,87,.15)",color:oos?T.marigold:"#34c77b",fontFamily:"var(--mono)",fontWeight:600}}>{oos?"OUT OF STOCK":p.stock+" in stock"}</span>
                   </div>
                   <div style={{fontSize:12.5,color:T.inkSoft,marginTop:4,fontFamily:"var(--mono)"}}>{rupee(p.price)}{p.mrp>p.price?" · MRP "+rupee(p.mrp):""}{p.category?" · "+esc(p.category):""}{p.cost!=null?" · cost "+rupee(p.cost):""}</div>
                 </div>
@@ -1392,7 +1392,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
       <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:7}}>
         {parseStyles(f.styles).map(st=>{ const cur=f.styleImages[st.label]||""; const uid="vg-style-up-"+st.label.replace(/[^a-zA-Z0-9]/g,"-"); return (
           <div key={st.label} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,.02)",border:"1px solid "+T.line,borderRadius:10,padding:8}}>
-            <div style={{width:46,height:46,borderRadius:8,overflow:"hidden",flexShrink:0,background:T.bg||"#0f0d0a",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:46,height:46,borderRadius:8,overflow:"hidden",flexShrink:0,background:T.bg||"#0c1014",display:"flex",alignItems:"center",justifyContent:"center"}}>
               {cur ? <img src={cur} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /> : <span style={{fontSize:18,opacity:.4}}>👕</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
@@ -1422,7 +1422,7 @@ function ProductEditor({product,adminKey,onClose,onSaved}){
       </div>
       <p style={{fontSize:11,color:T.muted,margin:"6px 0 0",lineHeight:1.5}}>Photos are auto-shrunk so your store loads fast.</p>
     </div>
-    {f.img && <div style={{width:90,height:90,borderRadius:10,overflow:"hidden",marginBottom:12,background:T.bg||"#0f0d0a"}}><img src={f.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /></div>}
+    {f.img && <div style={{width:90,height:90,borderRadius:10,overflow:"hidden",marginBottom:12,background:T.bg||"#0c1014"}}><img src={f.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.currentTarget.style.opacity=0.2;}} /></div>}
     <L label="Description" hint="short, what makes it good"><textarea style={{...S.input,minHeight:64,resize:"vertical",fontFamily:"inherit"}} value={f.desc} onChange={up("desc")} maxLength={600} placeholder="Insulated 750ml bottle. Keeps cold 24h." /></L>
     <L label="Bundle contents" hint="one item per line — fill this to make it a bundle (shows a 'What's inside' list + savings vs MRP). Leave blank for a normal product."><textarea style={{...S.input,minHeight:60,resize:"vertical",fontFamily:"inherit"}} value={f.bundleItems} onChange={up("bundleItems")} maxLength={600} placeholder={"Trigger Buttons\nFinger Sleeves (2 pairs)\nPhone Cooler"} /></L>
     {f.bundleItems.trim() && <p style={{fontSize:11.5,color:T.marigold,margin:"-6px 0 12px",fontFamily:"var(--mono)",lineHeight:1.5}}>🎮 Shown as a bundle. Tip: set MRP to the total of the items' separate prices so the “you save” amount shows automatically.</p>}
@@ -1539,9 +1539,9 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <strong style={{fontFamily:"var(--mono)",fontSize:14,color:T.ink}}>{esc(o.id)}</strong>
           <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:999,color:bc[0],background:bc[1],border:bc[1]==="transparent"?"1px solid "+T.line:"none",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"}}>{o.status||"Placed"}</span>
-          <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.paid?"rgba(31,158,87,.15)":"rgba(232,130,12,.15)",color:o.paid?"#34c77b":T.marigold,fontFamily:"var(--mono)",fontWeight:600}}>{o.paid?"PAID ONLINE":"COD"}</span>
+          <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.paid?"rgba(31,158,87,.15)":"rgba(127,139,82,.15)",color:o.paid?"#34c77b":T.marigold,fontFamily:"var(--mono)",fontWeight:600}}>{o.paid?"PAID ONLINE":"COD"}</span>
           {o.status!=="Cancelled" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:o.customer_confirmed?"rgba(31,158,87,.15)":"rgba(229,104,90,.15)",color:o.customer_confirmed?"#34c77b":"#e5685a",fontFamily:"var(--mono)",fontWeight:600}}>{o.customer_confirmed?"✓ CONFIRMED":"⏳ AWAITING CONFIRM"}</span>}
-          {review!=="none" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:review==="approved"?"rgba(31,158,87,.15)":review==="rejected"?"rgba(229,104,90,.18)":"rgba(232,130,12,.18)",color:review==="approved"?"#34c77b":review==="rejected"?"#e5685a":T.marigold,fontFamily:"var(--mono)",fontWeight:700}}>{review==="approved"?"✓ DESIGN OK":review==="rejected"?"✕ REJECTED":"⚠ REVIEW DESIGN"}</span>}
+          {review!=="none" && <span style={{fontSize:11.5,padding:"3px 9px",borderRadius:999,background:review==="approved"?"rgba(31,158,87,.15)":review==="rejected"?"rgba(229,104,90,.18)":"rgba(127,139,82,.18)",color:review==="approved"?"#34c77b":review==="rejected"?"#e5685a":T.marigold,fontFamily:"var(--mono)",fontWeight:700}}>{review==="approved"?"✓ DESIGN OK":review==="rejected"?"✕ REJECTED":"⚠ REVIEW DESIGN"}</span>}
         </div>
         <div style={{fontSize:13,color:T.inkSoft,marginTop:7,lineHeight:1.6}}>
           <strong style={{color:T.ink}}>{esc(o.name)}</strong> · 📱 {esc(o.phone)}{o.email?" · ✉ "+esc(o.email):""}<br/>
@@ -1554,7 +1554,7 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
         {dstr && <div style={{fontSize:11,color:T.muted,fontFamily:"var(--mono)",marginTop:2}}>{dstr}</div>}
       </div>
     </div>
-    {review!=="none" && <div style={{borderTop:"1px solid "+T.line,padding:"12px 18px",background:review==="rejected"?"rgba(229,104,90,.10)":review==="approved"?"rgba(31,158,87,.07)":"rgba(232,130,12,.10)"}}>
+    {review!=="none" && <div style={{borderTop:"1px solid "+T.line,padding:"12px 18px",background:review==="rejected"?"rgba(229,104,90,.10)":review==="approved"?"rgba(31,158,87,.07)":"rgba(127,139,82,.10)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <div style={{fontSize:12.5,color:T.inkSoft,minWidth:200,flex:1}}>
           {review==="pending" && <span>⚠ <strong style={{color:T.ink}}>Design review needed.</strong> Open the design below and check it doesn't use copyrighted or branded artwork before you send it to Qikink.</span>}
@@ -1570,11 +1570,11 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
     </div>}
     {items.length>0 && <div style={{padding:"0 18px 14px"}}>
       <button onClick={()=>setOpen(!open)} style={{...S.linkBtn,fontSize:12.5}}>{open?"▾ Hide items":"▸ "+items.reduce((n,i)=>n+(i.qty||1),0)+" item"+(items.reduce((n,i)=>n+(i.qty||1),0)===1?"":"s")}</button>
-      {open && <div style={{marginTop:8,background:T.bg||"#0f0d0a",borderRadius:10,padding:"10px 12px"}}>
+      {open && <div style={{marginTop:8,background:T.bg||"#0c1014",borderRadius:10,padding:"10px 12px"}}>
         {items.map((i,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:T.inkSoft,padding:"3px 0"}}><span>{esc(i.name||"Item")}{i.custom?" · 🎨 custom":""}{i.style?" · "+esc(i.style):""}{i.color?" · "+esc(i.color):""}{i.size?" · "+esc(i.size):""} <span style={{color:T.muted,fontFamily:"var(--mono)"}}>× {i.qty||1}</span></span><span style={{color:T.ink}}>{rupee((i.price||0)*(i.qty||1))}</span></div>))}
       </div>}
     </div>}
-    {(!o.paid && o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(232,130,12,.07)"}}>
+    {(!o.paid && o.status!=="Cancelled") && <div style={{borderTop:"1px solid "+T.line,padding:"14px 18px",background:"rgba(127,139,82,.07)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
         <div style={{fontSize:11,color:T.marigold,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".05em"}}>📞 Confirm COD order before shipping</div>
         <button onClick={()=>setConfirmOpen(!confirmOpen)} style={{...S.linkBtn,fontSize:12.5,color:T.marigold}}>{confirmOpen?"▾ Hide":"▸ Show"}</button>
@@ -1661,7 +1661,7 @@ function AdminRow({o,adminKey,prods,shipFrom,onSaved}){
             <pre style={{margin:0,fontFamily:"inherit",fontSize:12.5,color:T.ink,whiteSpace:"pre-wrap",lineHeight:1.5}}>{addressText}</pre>
           </div>
         </div>
-        <div style={{background:o.paid?"rgba(31,158,87,.1)":"rgba(232,130,12,.1)",border:"1px solid "+T.line,borderRadius:10,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:T.inkSoft,lineHeight:1.5}}>
+        <div style={{background:o.paid?"rgba(31,158,87,.1)":"rgba(127,139,82,.1)",border:"1px solid "+T.line,borderRadius:10,padding:"9px 12px",marginBottom:12,fontSize:12.5,color:T.inkSoft,lineHeight:1.5}}>
           {o.paid?"✅ Prepaid — collect nothing on delivery.":("💵 COD — courier must collect "+rupee(o.total)+" from the customer.")} <span style={{color:T.muted}}>· Declared value {rupee(shipGoods)}</span>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
@@ -1729,34 +1729,34 @@ const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var
   trackLink:{border:"none",background:"transparent",color:T.ink,fontWeight:600,fontSize:13,padding:"6px 4px"},
   quickClose:{position:"absolute",top:12,right:12,zIndex:5,border:"none",background:"rgba(26,22,18,.6)",color:"#fff",width:34,height:34,borderRadius:999,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(4px)"},
   quickBack:{border:"none",background:"transparent",color:T.teal,fontWeight:600,fontSize:13,padding:0,marginBottom:2},
-  cartBtn:{position:"relative",border:"none",background:T.marigold,color:"#fff",borderRadius:999,padding:"8px 18px",fontSize:13,fontWeight:700}, cartBadge:{position:"absolute",top:-6,right:-6,background:"#0F0C09",color:"#fff",borderRadius:999,fontSize:11,minWidth:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 4px"},
+  cartBtn:{position:"relative",border:"none",background:T.marigold,color:"#fff",borderRadius:999,padding:"8px 18px",fontSize:13,fontWeight:700}, cartBadge:{position:"absolute",top:-6,right:-6,background:"#0a0e12",color:"#fff",borderRadius:999,fontSize:11,minWidth:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 4px"},
   main:{maxWidth:1100,margin:"0 auto",padding:"0 22px 60px"}, hero:{padding:"38px 0 18px",maxWidth:660}, eyebrow:{fontFamily:"var(--mono)",fontSize:12,color:T.teal,textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}, heroH1:{fontFamily:"var(--display)",fontSize:"clamp(30px,5vw,50px)",lineHeight:1.04,fontWeight:700,letterSpacing:"-.02em",margin:0}, heroSub:{fontSize:15.5,color:T.inkSoft,marginTop:16,maxWidth:460,lineHeight:1.5},
-  heroWrap:{position:"relative",width:"100%",minHeight:"clamp(440px,76vh,640px)",display:"flex",alignItems:"center",overflow:"hidden",background:"#161310"},
+  heroWrap:{position:"relative",width:"100%",minHeight:"clamp(440px,76vh,640px)",display:"flex",alignItems:"center",overflow:"hidden",background:"#11171d"},
   heroCanvas:{position:"absolute",inset:0,width:"100%",height:"100%",display:"block"},
   heroOverlay:{position:"absolute",inset:0,background:"radial-gradient(120% 90% at 50% 28%, rgba(22,19,16,0) 35%, rgba(22,19,16,.5) 100%)",pointerEvents:"none"},
   heroContent:{position:"relative",zIndex:2,maxWidth:1100,width:"100%",margin:"0 auto",padding:"0 24px"},
-  heroEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#F3A23E",margin:"0 0 16px"},
+  heroEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#7f8b52",margin:"0 0 16px"},
   heroTitle:{fontFamily:"var(--display)",fontWeight:700,fontSize:"clamp(40px,8vw,82px)",lineHeight:.98,letterSpacing:"-.025em",color:"#FBFAF6",margin:0,textShadow:"0 2px 40px rgba(0,0,0,.45)"},
-  heroAccent:{background:"linear-gradient(90deg,#F3A23E,#E8820C 55%,#27B3A3)",WebkitBackgroundClip:"text",backgroundClip:"text",color:"transparent",fontStyle:"italic"},
+  heroAccent:{background:"linear-gradient(90deg,#7f8b52,#7f8b52 55%,#4889a1)",WebkitBackgroundClip:"text",backgroundClip:"text",color:"transparent",fontStyle:"italic"},
   heroLede:{color:"rgba(251,250,246,.74)",fontSize:"clamp(15px,1.6vw,18px)",lineHeight:1.55,maxWidth:520,margin:"22px 0 30px"},
   heroProof:{marginTop:22,fontFamily:"var(--mono)",fontSize:12.5,color:"rgba(251,250,246,.6)",letterSpacing:".02em"},
   heroBtns:{display:"flex",gap:12,flexWrap:"wrap"},
-  heroPrimary:{border:"none",background:"linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",color:"#fff",fontWeight:800,fontSize:15,borderRadius:999,padding:"14px 28px",boxShadow:"0 12px 34px rgba(232,130,12,.45)",letterSpacing:".01em"},
+  heroPrimary:{border:"none",background:"linear-gradient(95deg,#7f8b52,#7f8b52 60%,#4889a1)",color:"#fff",fontWeight:800,fontSize:15,borderRadius:999,padding:"14px 28px",boxShadow:"0 12px 34px rgba(127,139,82,.45)",letterSpacing:".01em"},
   heroGhost:{border:"1.5px solid rgba(251,250,246,.3)",background:"rgba(251,250,246,.04)",color:"#FBFAF6",fontWeight:600,fontSize:15,borderRadius:999,padding:"13px 24px"},
   heroScroll:{position:"absolute",bottom:18,left:"50%",transform:"translateX(-50%)",zIndex:2,border:"1px solid rgba(251,250,246,.25)",background:"rgba(251,250,246,.06)",color:"#FBFAF6",borderRadius:999,width:38,height:38,fontSize:16},
   trustBar:{display:"flex",flexWrap:"wrap",gap:"8px 18px",alignItems:"center",padding:"12px 16px",background:T.tint,border:"1px solid "+T.line,borderRadius:12,marginBottom:22},
-  marquee:{overflow:"hidden",whiteSpace:"nowrap",background:"linear-gradient(90deg,#F3A23E,#E8820C 50%,#27B3A3)",padding:"11px 0"},
+  marquee:{overflow:"hidden",whiteSpace:"nowrap",background:"linear-gradient(90deg,#7f8b52,#7f8b52 50%,#4889a1)",padding:"11px 0"},
   marqueeTrack:{display:"inline-flex",whiteSpace:"nowrap"},
   featRow:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,margin:"26px 0 8px"},
-  featCard:{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,padding:"14px 16px"},
+  featCard:{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(180deg,#161d24,#131a20)",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,padding:"14px 16px"},
   featIcon:{fontSize:24,flexShrink:0},
   featTitle:{fontSize:14,fontWeight:700,color:T.ink}, featSub:{fontSize:11.5,color:T.muted,marginTop:2,fontFamily:"var(--mono)"},
   shopHead:{margin:"30px 0 14px"},
   shopHeadTitle:{fontFamily:"var(--display)",fontSize:"clamp(26px,4vw,38px)",fontWeight:700,letterSpacing:"-.02em",margin:0,color:T.ink},
   shopHeadSub:{fontSize:14,color:T.inkSoft,marginTop:6},
-  aboutBand:{marginTop:56,padding:"clamp(32px,5vw,56px)",borderRadius:24,background:"radial-gradient(120% 140% at 15% 10%, rgba(232,130,12,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.08)"},
+  aboutBand:{marginTop:56,padding:"clamp(32px,5vw,56px)",borderRadius:24,background:"radial-gradient(120% 140% at 15% 10%, rgba(127,139,82,.14), transparent 55%), radial-gradient(120% 140% at 90% 90%, rgba(39,179,163,.14), transparent 55%), linear-gradient(180deg,#161d24,#131a20)",border:"1px solid rgba(255,255,255,.08)"},
   aboutInner:{maxWidth:680},
-  aboutEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#F3A23E",margin:"0 0 14px"},
+  aboutEyebrow:{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".12em",textTransform:"uppercase",color:"#7f8b52",margin:"0 0 14px"},
   aboutTitle:{fontFamily:"var(--display)",fontSize:"clamp(26px,4.4vw,42px)",fontWeight:700,letterSpacing:"-.02em",lineHeight:1.08,margin:0,color:T.ink},
   aboutText:{fontSize:"clamp(14px,1.5vw,16px)",color:T.inkSoft,lineHeight:1.65,margin:"18px 0 0",maxWidth:600},
   aboutStats:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginTop:28},
@@ -1764,16 +1764,16 @@ const S={ page:{minHeight:"100vh",background:T.paper,color:T.ink,fontFamily:"var
   trustItem:{display:"inline-flex",alignItems:"center",gap:7,fontFamily:"var(--mono)",fontSize:12,color:T.inkSoft}, trustIcon:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:20,height:20,borderRadius:6,background:T.card,color:T.marigold,fontSize:11.5,fontWeight:700},
   toolbar:{display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap"}, searchWrap:{position:"relative",flex:"1 1 260px",display:"flex",alignItems:"center"}, searchIcon:{position:"absolute",left:14,fontSize:18,color:T.muted,pointerEvents:"none"}, searchInput:{width:"100%",border:"1px solid "+T.line,borderRadius:999,padding:"11px 38px",fontSize:14.5,background:T.card,color:T.ink,fontFamily:"var(--body)"}, searchClear:{position:"absolute",right:12,border:"none",background:"transparent",color:T.muted,fontSize:13},
   sortWrap:{display:"inline-flex",alignItems:"center",gap:8}, sortLabel:{fontFamily:"var(--mono)",fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".06em"}, sortSelect:{border:"1px solid "+T.line,borderRadius:999,padding:"9px 14px",fontSize:13.5,background:T.card,color:T.ink,fontFamily:"var(--body)",fontWeight:600},
-  chipsRow:{display:"flex",gap:9,marginBottom:14,overflowX:"auto",paddingBottom:4}, chip:{flex:"0 0 auto",border:"1.5px solid "+T.line,background:T.card,color:T.inkSoft,borderRadius:999,padding:"8px 16px",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}, chipOn:{borderColor:"transparent",background:"linear-gradient(95deg,#F3A23E,#E8820C 60%,#27B3A3)",color:"#fff"},
+  chipsRow:{display:"flex",gap:9,marginBottom:14,overflowX:"auto",paddingBottom:4}, chip:{flex:"0 0 auto",border:"1.5px solid "+T.line,background:T.card,color:T.inkSoft,borderRadius:999,padding:"8px 16px",fontSize:13,fontWeight:600,whiteSpace:"nowrap"}, chipOn:{borderColor:"transparent",background:"linear-gradient(95deg,#7f8b52,#7f8b52 60%,#4889a1)",color:"#fff"},
   countText:{fontFamily:"var(--mono)",fontSize:12,color:T.muted,margin:"0 0 16px"}, empty:{textAlign:"center",padding:"60px 20px",border:"1px dashed "+T.line,borderRadius:16,background:T.card}, catTag:{position:"absolute",bottom:10,left:10,background:"rgba(15,12,9,.82)",backdropFilter:"blur(4px)",color:T.inkSoft,fontSize:10.5,fontWeight:700,padding:"3px 8px",borderRadius:999,fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:".04em"},
-  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:20}, prodCard:{background:"linear-gradient(180deg,#221C16,#191510)",border:"1px solid rgba(255,255,255,.07)",borderRadius:18,overflow:"hidden",display:"flex",flexDirection:"column"}, imgWrap:{border:"none",padding:0,background:"#14110D",position:"relative",aspectRatio:"4/3",overflow:"hidden",display:"block"}, img:{width:"100%",height:"100%",objectFit:"cover",display:"block"}, soldOut:{position:"absolute",inset:0,background:"rgba(25,21,16,.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontFamily:"var(--mono)",fontSize:13}, discount:{position:"absolute",top:10,left:10,background:"linear-gradient(95deg,#27B3A3,#1f9e8c)",color:"#fff",fontSize:12,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(39,179,163,.4)"},
+  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:20}, prodCard:{background:"linear-gradient(180deg,#161d24,#131a20)",border:"1px solid rgba(255,255,255,.07)",borderRadius:18,overflow:"hidden",display:"flex",flexDirection:"column"}, imgWrap:{border:"none",padding:0,background:"#14110D",position:"relative",aspectRatio:"4/3",overflow:"hidden",display:"block"}, img:{width:"100%",height:"100%",objectFit:"cover",display:"block"}, soldOut:{position:"absolute",inset:0,background:"rgba(25,21,16,.55)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontFamily:"var(--mono)",fontSize:13}, discount:{position:"absolute",top:10,left:10,background:"linear-gradient(95deg,#4889a1,#1f9e8c)",color:"#fff",fontSize:12,fontWeight:800,padding:"5px 11px",borderRadius:999,fontFamily:"var(--mono)",boxShadow:"0 4px 14px rgba(39,179,163,.4)"},
   prodName:{fontFamily:"var(--display)",fontSize:17,fontWeight:600,margin:0,lineHeight:1.2}, prodDesc:{fontSize:12.5,color:T.inkSoft,marginTop:6,lineHeight:1.45,minHeight:36}, priceRow:{display:"flex",alignItems:"baseline",gap:8,marginTop:10}, price:{fontSize:18,fontWeight:800,color:T.ink}, mrp:{fontSize:13,color:T.muted,textDecoration:"line-through"},
   addBtn:{width:"100%",marginTop:12,border:"1.5px solid "+T.ink,background:T.ink,color:T.paper,borderRadius:10,padding:"10px",fontWeight:700,fontSize:13.5}, addBtnDisabled:{background:"transparent",color:T.muted,borderColor:T.line,cursor:"not-allowed"},
-  drawerScrim:{position:"fixed",inset:0,background:"rgba(6,5,3,.55)",zIndex:50,display:"flex",justifyContent:"flex-end"}, drawer:{width:"min(420px,100%)",background:T.paper,height:"100%",display:"flex",flexDirection:"column",boxShadow:"-20px 0 60px rgba(0,0,0,.18)"}, drawerHead:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",borderBottom:"1px solid "+T.line}, drawerTitle:{fontFamily:"var(--display)",fontSize:20,margin:0}, xBtn:{border:"none",background:"transparent",fontSize:18,color:T.inkSoft},
+  drawerScrim:{position:"fixed",inset:0,background:"rgba(5,7,10,.55)",zIndex:50,display:"flex",justifyContent:"flex-end"}, drawer:{width:"min(420px,100%)",background:T.paper,height:"100%",display:"flex",flexDirection:"column",boxShadow:"-20px 0 60px rgba(0,0,0,.18)"}, drawerHead:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",borderBottom:"1px solid "+T.line}, drawerTitle:{fontFamily:"var(--display)",fontSize:20,margin:0}, xBtn:{border:"none",background:"transparent",fontSize:18,color:T.inkSoft},
   cartRow:{display:"flex",gap:12,padding:"14px 0",borderBottom:"1px solid "+T.line}, cartThumb:{width:60,height:60,borderRadius:10,objectFit:"cover",background:"#221E18"}, cartName:{fontSize:14,fontWeight:600,margin:0}, cartPrice:{fontSize:13,color:T.inkSoft,marginTop:2}, qtyRow:{display:"flex",alignItems:"center",gap:8,marginTop:8}, qtyBtn:{width:26,height:26,borderRadius:7,border:"1px solid "+T.line,background:T.card,fontSize:15,lineHeight:1}, qtyNum:{minWidth:18,textAlign:"center",fontWeight:600,fontSize:14}, cartLine:{fontWeight:700,fontSize:14}, drawerFoot:{padding:20,borderTop:"1px solid "+T.line,background:T.card},
-  overlay:{position:"fixed",inset:0,background:"rgba(6,5,3,.6)",zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}, modal:{background:T.paper,borderRadius:18,padding:28,width:"100%",boxShadow:"0 30px 80px rgba(0,0,0,.25)"}, modalTitle:{fontFamily:"var(--display)",fontSize:24,margin:0}, linkBtn:{border:"none",background:"transparent",color:T.teal,fontWeight:600,fontSize:13},
-  fieldLabel:{display:"block",fontSize:12,fontWeight:600,color:T.inkSoft,marginBottom:5,fontFamily:"var(--mono)",letterSpacing:".02em"}, input:{width:"100%",border:"1px solid "+T.line,borderRadius:9,padding:"9px 11px",fontSize:14,background:T.card,color:T.ink,fontFamily:"var(--body)"}, two:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}, payChip:{border:"1.5px solid "+T.line,background:T.card,borderRadius:9,padding:"9px 14px",fontSize:12.5,fontWeight:600,color:T.inkSoft}, payChipOn:{borderColor:T.teal,color:T.teal,background:"rgba(44,187,169,.14)"},
-  payOpt:{display:"flex",alignItems:"center",gap:10,textAlign:"left",border:"1.5px solid "+T.line,background:T.card,borderRadius:12,padding:"12px 14px",color:T.ink}, payOptOn:{borderColor:T.teal,background:"rgba(44,187,169,.12)"}, payRadio:{flex:"0 0 auto",width:20,height:20,borderRadius:999,border:"2px solid "+T.line,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}, payRadioOn:{borderColor:T.teal,background:T.teal}, payTitle:{fontSize:14,fontWeight:700,color:T.ink}, paySub:{fontSize:11.5,color:T.inkSoft,marginTop:2,fontFamily:"var(--mono)"}, summary:{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:20,alignSelf:"start"}, summaryTitle:{fontFamily:"var(--display)",fontSize:16,margin:"0 0 12px"}, primaryBtn:{width:"100%",border:"none",background:T.marigold,color:"#fff",borderRadius:11,padding:"12px",fontWeight:700,fontSize:14.5},
+  overlay:{position:"fixed",inset:0,background:"rgba(5,7,10,.6)",zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}, modal:{background:T.paper,borderRadius:18,padding:28,width:"100%",boxShadow:"0 30px 80px rgba(0,0,0,.25)"}, modalTitle:{fontFamily:"var(--display)",fontSize:24,margin:0}, linkBtn:{border:"none",background:"transparent",color:T.teal,fontWeight:600,fontSize:13},
+  fieldLabel:{display:"block",fontSize:12,fontWeight:600,color:T.inkSoft,marginBottom:5,fontFamily:"var(--mono)",letterSpacing:".02em"}, input:{width:"100%",border:"1px solid "+T.line,borderRadius:9,padding:"9px 11px",fontSize:14,background:T.card,color:T.ink,fontFamily:"var(--body)"}, two:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}, payChip:{border:"1.5px solid "+T.line,background:T.card,borderRadius:9,padding:"9px 14px",fontSize:12.5,fontWeight:600,color:T.inkSoft}, payChipOn:{borderColor:T.teal,color:T.teal,background:"rgba(78,147,173,.14)"},
+  payOpt:{display:"flex",alignItems:"center",gap:10,textAlign:"left",border:"1.5px solid "+T.line,background:T.card,borderRadius:12,padding:"12px 14px",color:T.ink}, payOptOn:{borderColor:T.teal,background:"rgba(78,147,173,.12)"}, payRadio:{flex:"0 0 auto",width:20,height:20,borderRadius:999,border:"2px solid "+T.line,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}, payRadioOn:{borderColor:T.teal,background:T.teal}, payTitle:{fontSize:14,fontWeight:700,color:T.ink}, paySub:{fontSize:11.5,color:T.inkSoft,marginTop:2,fontFamily:"var(--mono)"}, summary:{background:T.card,border:"1px solid "+T.line,borderRadius:14,padding:20,alignSelf:"start"}, summaryTitle:{fontFamily:"var(--display)",fontSize:16,margin:"0 0 12px"}, primaryBtn:{width:"100%",border:"none",background:T.marigold,color:"#fff",borderRadius:11,padding:"12px",fontWeight:700,fontSize:14.5},
   checkCircle:{width:56,height:56,borderRadius:999,background:T.teal,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto"}, stepper:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:22}, stepDot:{width:30,height:30,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,margin:"0 auto 5px"}, stepLine:{width:34,height:2,background:T.line,marginBottom:18},
   footer:{maxWidth:1100,margin:"0 auto",padding:"26px 22px 50px",display:"block",borderTop:"1px solid "+T.line,fontSize:12.5,color:T.inkSoft,fontFamily:"var(--mono)"}, footLink:{border:"none",background:"transparent",color:T.inkSoft,fontFamily:"var(--mono)",fontSize:12.5,padding:0,textDecoration:"underline",textUnderlineOffset:"3px"},
   coTrust:{display:"flex",flexWrap:"wrap",gap:"8px 16px",padding:"10px 14px",background:T.tint,border:"1px solid "+T.line,borderRadius:10,marginBottom:18},
